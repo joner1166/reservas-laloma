@@ -3,14 +3,14 @@
   publish = "dist"
   functions = "netlify/functions"
 
-# SPA (React Router / Vite)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# API functions (opcional, recomendado si llamas /api/...)
+# 🔥 PRIMERO API
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
+  status = 200
+
+# 🔥 DESPUÉS SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
