@@ -147,12 +147,10 @@ export default function App() {
     }
   };
 
-  // ESTILOS RESPONSIVOS INYECTADOS
+  // ESTILOS RESPONSIVOS MEJORADOS PARA MOVIL
   const responsiveStyles = `
-    /* Ajustes generales */
     * { box-sizing: border-box; }
     
-    /* Layout Responsivo para Hostess */
     @media (max-width: 900px) {
       .hostess-layout {
         display: flex;
@@ -173,84 +171,50 @@ export default function App() {
         background: #fff;
         z-index: 10;
       }
-      .sr-logo-small {
-        height: 30px;
-        margin-right: 15px;
-      }
-      .sr-sidebar-nav {
-        flex-direction: row;
-        display: flex;
-        gap: 8px;
-        width: 100%;
-      }
-      .sr-sidebar-nav button {
-        padding: 6px 12px;
-        font-size: 0.85rem;
-        flex-shrink: 0;
-      }
+      .sr-logo-small { height: 30px; margin-right: 15px; }
+      .sr-sidebar-nav { flex-direction: row; display: flex; gap: 8px; width: 100%; }
+      .sr-sidebar-nav button { padding: 6px 12px; font-size: 0.85rem; flex-shrink: 0; }
       .sr-sidebar-footer { display: none; }
-      
-      .sr-hostess-main {
-        padding: 10px;
-        height: 100%;
-        overflow-y: auto;
-      }
-      
-      /* Ajuste Floor Plan Movil */
-      .sr-floor-manager {
-        height: 60vh;
-      }
-      .sr-map-canvas {
-        overflow: auto;
-      }
-      .sr-image-wrapper {
-        min-width: 600px; /* Force scroll on small screens for map */
-      }
+      .sr-hostess-main { padding: 10px; height: 100%; overflow-y: auto; }
+      .sr-floor-manager { height: 60vh; }
+      .sr-map-canvas { overflow: auto; }
+      .sr-image-wrapper { min-width: 600px; }
     }
 
-    /* Layout Responsivo para Cliente */
+    /* Ajustes específicos para Móvil (Cliente) */
     @media (max-width: 600px) {
       .sr-page {
         padding: 0;
         height: 100vh;
-        display: flex;
-        flex-direction: column;
-        background: #f9f9f9;
+        overflow: hidden; /* Evita doble scroll */
       }
       .sr-card {
-        width: 100%;
         height: 100%;
+        width: 100%;
         border-radius: 0;
         box-shadow: none;
+        overflow-y: auto; /* Habilita scroll dentro de la tarjeta */
         display: flex;
         flex-direction: column;
-        max-width: none;
-      }
-      .sr-header {
-        padding: 15px;
-      }
-      .sr-rows {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        gap: 20px;
-      }
-      .sr-row {
-        padding: 15px 0;
+        padding-bottom: 20px; /* Espacio extra al final */
       }
       .sr-form {
-        padding-bottom: 80px; /* Space for fixed bottom buttons if needed */
+        flex: 1; /* Ocupa el espacio disponible */
       }
+      .sr-formGrid {
+        gap: 20px; /* Más espacio entre campos para evitar "encimados" */
+        padding-bottom: 30px;
+      }
+      .sr-field {
+        margin-bottom: 5px;
+      }
+      /* Botón Hostess fijo abajo pero sin tapar */
       .sr-view-toggle {
-        position: relative;
-        bottom: 0;
-        width: 100%;
         border-radius: 0;
         padding: 15px;
-        margin-top: auto;
-        background: #333;
-        color: white;
+        margin-top: 0;
+        width: 100%;
+        flex-shrink: 0; /* No se encoge */
       }
     }
   `;
@@ -278,7 +242,6 @@ export default function App() {
               <button className={activeTab === 'floorplan' ? 'active' : ''} onClick={() => setActiveTab('floorplan')}>Floor Plan</button>
               <button className={activeTab === 'blackout' ? 'active' : ''} onClick={() => setActiveTab('blackout')} style={{marginTop: 'auto', borderTop: '1px solid #eee', color: '#666'}}>Blackout</button>
             </nav>
-            <div className="sr-sidebar-footer"><div className="sr-status-dot"></div> Hostess Online</div>
           </aside>
 
           <section className="sr-hostess-main">
