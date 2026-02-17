@@ -1,6 +1,12 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
 import "./App.css";
 import logo from "/logo.png";
+
+// --- CONFIGURACIÓN SUPABASE ---
+const supabaseUrl = 'https://nouxznpzaoerjcarohsu.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5vdXh6bnB6YW9lcmpjYXJvaHN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTg4MTcsImV4cCI6MjA4Njg3NDgxN30.ClpOylubz6_5tTCcZzYVqOyfasJNu2S_vW4sIqzi2a0'; // La que empieza por sb_publishable
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const MAX_GUESTS = 12;
 const SLOT_MINUTES = 15;
@@ -39,7 +45,7 @@ function clampGuests(n) {
   return Math.min(Math.max(Number.isFinite(x) ? x : 1, 1), MAX_GUESTS);
 }
 
-/* ✅ NUEVO (MÍNIMO): ISO local para Google Calendar */
+/* ISO local para Google Calendar */
 function toLocalDateTimeISO(dateISO, timeHHMM) {
   return `${dateISO}T${timeHHMM}:00`;
 }
@@ -48,7 +54,6 @@ function addMinutesToLocalDateTimeISO(dateISO, timeHHMM, addMins) {
   const [h, mi] = timeHHMM.split(":").map(Number);
   const dt = new Date(y, mo - 1, d, h, mi, 0);
   dt.setMinutes(dt.getMinutes() + addMins);
-
   const endDateISO = dateISOFromDate(dt);
   const endTimeHHMM = `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
   return toLocalDateTimeISO(endDateISO, endTimeHHMM);
@@ -85,30 +90,24 @@ export default function App() {
   const [step, setStep] = useState("search");
   const [activeTab, setActiveTab] = useState("reservations");
   const [activeFloor, setActiveFloor] = useState("BAR");
-
   const [dateISO, setDateISO] = useState(() => dateISOFromDate(new Date()));
   const [guests, setGuests] = useState(2);
   const [timeHHMM, setTimeHHMM] = useState("19:00");
-
   const [blackoutDates, setBlackoutDates] = useState([]);
-
   const dateInputRef = useRef(null);
   const timeInputRef = useRef(null);
   const blackoutInputRef = useRef(null);
-
   const dateLabel = useMemo(() => formatDateLabel(dateISO), [dateISO]);
   const timeLabel = useMemo(() => formatTimeLabel(timeHHMM), [timeHHMM]);
-
   const isBlackout = useMemo(() => blackoutDates.includes(dateISO), [dateISO, blackoutDates]);
 
-  const [history, setHistory] = useState([
-    { id: 1, firstName: "JONATHAN", lastName: "ORTIZ-H", guests: 5, time: "5:45 PM", celebration: "Anniversary", dietary: "None", notes: "tacos" }
-  ]);
+  // Listas de datos
+  const [history, setHistory] = useState([]);
   const [waitList, setWaitList] = useState([]);
   const [seatedList, setSeatedList] = useState([]);
 
+  // Formulario
   const [walkInForm, setWalkInForm] = useState({ firstName: "", lastName: "", phone: "", celebration: "None", dietary: "None", notes: "" });
-
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -116,6 +115,31 @@ export default function App() {
   const [celebration, setCelebration] = useState("None");
   const [dietary, setDietary] = useState("None");
   const [notes, setNotes] = useState("");
+
+  // --- EFECTO TIEMPO REAL Y CARGA INICIAL ---
+  useEffect(() => {
+    const fetchReservations = async () => {
+      const { data } = await supabase
+        .from('reservations')
+        .select('*')
+        .order('id', { ascending: false });
+      if (data) setHistory(data);
+    };
+
+    fetchReservations();
+
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', 
+          { event: 'INSERT', schema: 'public', table: 'reservations' }, 
+          (payload) => {
+            setHistory((prev) => [payload.new, ...prev]);
+          }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const stepDate = (dir) => setDateISO(prev => addDaysISO(prev, dir));
   const stepGuests = (dir) => setGuests(prev => clampGuests(prev + dir));
@@ -162,30 +186,11 @@ export default function App() {
     }
   };
 
-  // ESTILOS RESPONSIVOS MEJORADOS PARA MOVIL
   const responsiveStyles = `
     * { box-sizing: border-box; }
-    
     @media (max-width: 900px) {
-      .hostess-layout {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        overflow: hidden;
-      }
-      .sr-hostess-sidebar {
-        width: 100%;
-        min-height: auto;
-        flex-direction: row;
-        align-items: center;
-        padding: 10px;
-        border-right: none;
-        border-bottom: 1px solid #eee;
-        overflow-x: auto;
-        white-space: nowrap;
-        background: #fff;
-        z-index: 10;
-      }
+      .hostess-layout { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+      .sr-hostess-sidebar { width: 100%; min-height: auto; flex-direction: row; align-items: center; padding: 10px; border-right: none; border-bottom: 1px solid #eee; overflow-x: auto; white-space: nowrap; background: #fff; z-index: 10; }
       .sr-logo-small { height: 30px; margin-right: 15px; }
       .sr-sidebar-nav { flex-direction: row; display: flex; gap: 8px; width: 100%; }
       .sr-sidebar-nav button { padding: 6px 12px; font-size: 0.85rem; flex-shrink: 0; }
@@ -195,46 +200,16 @@ export default function App() {
       .sr-map-canvas { overflow: auto; }
       .sr-image-wrapper { min-width: 600px; }
     }
-
-    /* Ajustes específicos para Móvil (Cliente) */
     @media (max-width: 600px) {
-      .sr-page {
-        padding: 0;
-        height: 100vh;
-        overflow: hidden; /* Evita doble scroll */
-      }
-      .sr-card {
-        height: 100%;
-        width: 100%;
-        border-radius: 0;
-        box-shadow: none;
-        overflow-y: auto; /* Habilita scroll dentro de la tarjeta */
-        display: flex;
-        flex-direction: column;
-        padding-bottom: 20px; /* Espacio extra al final */
-      }
-      .sr-form {
-        flex: 1; /* Ocupa el espacio disponible */
-      }
-      .sr-formGrid {
-        gap: 20px; /* Más espacio entre campos para evitar "encimados" */
-        padding-bottom: 30px;
-      }
-      .sr-field {
-        margin-bottom: 5px;
-      }
-      /* Botón Hostess fijo abajo pero sin tapar */
-      .sr-view-toggle {
-        border-radius: 0;
-        padding: 15px;
-        margin-top: 0;
-        width: 100%;
-        flex-shrink: 0; /* No se encoge */
-      }
+      .sr-page { padding: 0; height: 100vh; overflow: hidden; }
+      .sr-card { height: 100%; width: 100%; border-radius: 0; box-shadow: none; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 20px; }
+      .sr-form { flex: 1; }
+      .sr-formGrid { gap: 20px; padding-bottom: 30px; }
+      .sr-field { margin-bottom: 5px; }
+      .sr-view-toggle { border-radius: 0; padding: 15px; margin-top: 0; width: 100%; flex-shrink: 0; }
     }
   `;
 
-  /* --- VISTA HOSTESS --- */
   if (viewMode === "hostess") {
     const seatButtonStyle = {
       background: 'linear-gradient(135deg, #f2c300 0%, #d4ab00 100%)',
@@ -242,7 +217,6 @@ export default function App() {
       fontSize: '0.85rem', letterSpacing: '0.5px', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
       transition: 'all 0.2s ease', textTransform: 'uppercase'
     };
-
     return (
       <div className="sr-page hostess-view">
         <style>{responsiveStyles}</style>
@@ -258,7 +232,6 @@ export default function App() {
               <button className={activeTab === 'blackout' ? 'active' : ''} onClick={() => setActiveTab('blackout')} style={{marginTop: 'auto', borderTop: '1px solid #eee', color: '#666'}}>Blackout</button>
             </nav>
           </aside>
-
           <section className="sr-hostess-main">
             <header className="sr-main-header">
               <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
@@ -272,22 +245,14 @@ export default function App() {
                 <button className="sr-btn-mini" onClick={() => stepDate(1)}>›</button>
               </div>
             </header>
-            
             <div className="sr-main-content">
               {activeTab === 'walkin' && (
                 <div className="sr-walkin-form">
-                   {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed on this date. Walk-ins disabled.</div>}
+                   {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed.</div>}
                   <div className="sr-center"><label className="sr-fieldLabel">PARTY SIZE</label>
                     <div className="sr-row-simple">
                       <button className="sr-btn-mini" onClick={() => stepGuests(-1)} disabled={isBlackout}>−</button>
-                      <input 
-                        type="number" 
-                        className="sr-guests-count" 
-                        value={guests} 
-                        onChange={(e) => { const val = e.target.value; if (val === "") setGuests(""); else { const num = parseInt(val); if (!isNaN(num)) setGuests(num); } }}
-                        style={{width: '60px', textAlign: 'center', border: 'none', background: 'transparent', fontSize: '2rem', fontWeight: 'bold', color: '#000', padding: '0'}} 
-                        disabled={isBlackout}
-                      />
+                      <input type="number" className="sr-guests-count" value={guests} onChange={(e) => setGuests(parseInt(e.target.value) || 1)} style={{width: '60px', textAlign: 'center', border: 'none', background: 'transparent', fontSize: '2rem', fontWeight: 'bold', color: '#000'}} disabled={isBlackout} />
                       <button className="sr-btn-mini" onClick={() => stepGuests(1)} disabled={isBlackout}>+</button>
                     </div>
                   </div>
@@ -302,16 +267,12 @@ export default function App() {
                   <button className="sr-btn sr-btnPrimary" style={{marginTop: '20px', opacity: isBlackout ? 0.5 : 1}} onClick={handleAddToWaitlist} disabled={isBlackout}>Add to Wait List</button>
                 </div>
               )}
-
               {activeTab === 'waitlist' && (
                 <div className="sr-res-list">
                   {waitList.length === 0 ? <p>No guests in wait list.</p> : waitList.map(item => (
                     <div key={item.id} className="sr-list-item" style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                       <div style={{ flex: 1 }}>
                         <strong>{item.firstName} {item.lastName}</strong> ({item.guests} pax)<br/>
-                        {item.celebration !== "None" && <small style={{color: '#d97706', display: 'block', fontWeight: '600'}}>🎉 {item.celebration}</small>}
-                        {item.dietary && item.dietary !== "None" && <small style={{color: '#e11d48', display: 'block', fontWeight: '600'}}>🥗 {item.dietary}</small>}
-                        {item.notes && <small style={{color: '#666', fontStyle: 'italic', display: 'block'}}>{item.notes}</small>}
                         <small style={{ color: '#999' }}>Added at: {item.timeAdded}</small>
                       </div>
                       <button style={seatButtonStyle} onClick={() => handleSeatParty(item, 'waitlist')}>Seat</button>
@@ -319,7 +280,6 @@ export default function App() {
                   ))}
                 </div>
               )}
-
               {activeTab === 'reservations' && (
                 <div className="sr-res-list">
                   {history.length === 0 ? <p>No active reservations.</p> : history.map(res => (
@@ -327,10 +287,8 @@ export default function App() {
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
                           <div><strong style={{ fontSize: '1.1rem' }}>{res.firstName} {res.lastName}</strong><span style={{ color: '#666', marginLeft: '8px' }}>({res.guests} pax)</span></div>
-                          <span style={{ fontWeight: '700' }}>{res.time}</span>
+                          <span style={{ fontWeight: '700' }}>{res.time || formatTimeLabel(res.timeHHMM)}</span>
                         </div>
-                        {res.celebration !== "None" && <div style={{ color: '#d97706', fontSize: '0.85rem', fontWeight: '600', marginTop: '4px' }}>✨ Celebration: {res.celebration}</div>}
-                        {res.dietary && res.dietary !== "None" && <div style={{ color: '#e11d48', fontSize: '0.85rem', fontWeight: '600', marginTop: '4px' }}>🥗 Dietary: {res.dietary}</div>}
                         {res.notes && <div style={{ color: '#555', fontSize: '0.85rem', background: '#f8f8f8', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{res.notes}"</div>}
                       </div>
                       <button style={seatButtonStyle} onClick={() => handleSeatParty(res, 'reservations')}>Seat</button>
@@ -338,21 +296,15 @@ export default function App() {
                   ))}
                 </div>
               )}
-
               {activeTab === 'seated' && (
                 <div className="sr-res-list">
                   {seatedList.length === 0 ? <p>No seated guests today.</p> : seatedList.map(item => (
                     <div key={item.id} style={{padding: '15px', borderBottom: '1px solid #eee'}}>
-                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                        <strong>{item.firstName} {item.lastName}</strong>
-                        <span style={{color: '#10b981', fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase'}}>Seated</span>
-                      </div>
-                      <small>{item.guests} pax | Seated at: {item.seatedTime}</small>
+                      <strong>{item.firstName} {item.lastName}</strong> - Seated at: {item.seatedTime}
                     </div>
                   ))}
                 </div>
               )}
-
               {activeTab === 'floorplan' && (
                 <div className="sr-floor-manager">
                   <div className="sr-zone-selector">
@@ -372,26 +324,12 @@ export default function App() {
                   </div>
                 </div>
               )}
-
               {activeTab === 'blackout' && (
                 <div className="sr-walkin-form">
-                  <p style={{marginBottom: '20px', color: '#666'}}>Select a date to block or unblock reservations.</p>
-                  <div className="sr-row-simple" style={{justifyContent: 'flex-start', gap: '15px'}}>
-                    <input ref={blackoutInputRef} type="date" className="sr-input" style={{width: 'auto'}} />
-                    <button className="sr-btn sr-btnPrimary" style={{width: 'auto'}} onClick={() => toggleBlackoutDate(blackoutInputRef.current?.value)}>Toggle Block</button>
-                  </div>
-                  <div style={{marginTop: '30px'}}>
-                    <h3>Blocked Dates ({blackoutDates.length})</h3>
-                    {blackoutDates.length === 0 ? <p style={{fontStyle: 'italic', color: '#999'}}>No blackout dates set.</p> : (
-                      <div style={{display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px'}}>
-                        {blackoutDates.sort().map(d => (
-                          <div key={d} style={{background: '#f2f2f2', padding: '8px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '10px'}}>
-                            <span>{formatDateLabel(d)}</span>
-                            <button onClick={() => toggleBlackoutDate(d)} style={{border: 'none', background: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer'}}>×</button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                  <input ref={blackoutInputRef} type="date" className="sr-input" />
+                  <button className="sr-btn sr-btnPrimary" style={{marginTop: '10px'}} onClick={() => toggleBlackoutDate(blackoutInputRef.current?.value)}>Toggle Block</button>
+                  <div style={{marginTop: '20px'}}>
+                    {blackoutDates.map(d => <div key={d}>{d} <button onClick={() => toggleBlackoutDate(d)}>x</button></div>)}
                   </div>
                 </div>
               )}
@@ -403,7 +341,6 @@ export default function App() {
     );
   }
 
-  /* --- VISTA CLIENTE --- */
   if (step === "search") {
     return (
       <div className="sr-page">
@@ -429,15 +366,11 @@ export default function App() {
               <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepTime(1); }}>›</button>
             </div>
           </div>
-
           {isBlackout ? (
-            <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px', fontWeight: 'bold'}}>
-              Sorry, we are closed on this date.
-            </div>
+            <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px'}}>Closed today.</div>
           ) : (
             <button className="sr-search" onClick={() => setStep("details")}>Search</button>
           )}
-
           <div className="sr-foot">Max party size: {MAX_GUESTS} · 15 min slots</div>
         </main>
         <button className="sr-view-toggle" onClick={handleSwitchToHostess}>Switch to Hostess View</button>
@@ -464,19 +397,14 @@ export default function App() {
           <div className="sr-actions">
             <button className="sr-btn" onClick={() => setStep("search")}>Back</button>
             <button className="sr-btn sr-btnPrimary" onClick={async () => {
-              // Validaciones básicas antes de enviar
-              if (!firstName || !lastName || !phone) {
-                return alert("Por favor completa Nombre, Apellido y Teléfono.");
-              }
+              if (!firstName || !lastName || !phone) return alert("Por favor completa Nombre, Apellido y Teléfono.");
 
-              const newReservation = {
-                id: Date.now(),
+              const newRes = {
                 firstName: firstName.toUpperCase(),
                 lastName: lastName.toUpperCase(),
                 guests,
-                time: timeLabel,
-                dateISO,         // Importante para el backend
-                timeHHMM,        // Importante para el backend
+                dateISO,
+                timeHHMM,
                 phone,
                 email,
                 celebration,
@@ -484,43 +412,32 @@ export default function App() {
                 notes
               };
 
-              // 1. Guardar visualmente en la lista (UI Update)
-              setHistory([newReservation, ...history]);
+              // 1. Guardar en SUPABASE
+              try {
+                const { error: sbError } = await supabase.from('reservations').insert([newRes]);
+                if (sbError) throw sbError;
+              } catch (e) {
+                console.error("Supabase Error:", e);
+              }
 
-              // ✅ 2. Enviar al Backend para crear el evento en Calendar
+              // 2. Enviar a GOOGLE CALENDAR (Netlify Function)
               try {
                 const startISO = toLocalDateTimeISO(dateISO, timeHHMM);
-                const endISO = addMinutesToLocalDateTimeISO(dateISO, timeHHMM, 90); // 90 min por default
-
-                const response = await fetch("/.netlify/functions/create-event", {
+                const endISO = addMinutesToLocalDateTimeISO(dateISO, timeHHMM, 90);
+                await fetch("/.netlify/functions/create-event", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
-                    firstName: newReservation.firstName,
-                    lastName: newReservation.lastName,
-                    guests: newReservation.guests,
-                    notes: newReservation.notes,
-                    startISO,
-                    endISO
+                    reservation: { ...newRes, startISO, endISO }
                   })
                 });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                  alert("✅ ¡Reserva confirmada y agendada en Google Calendar!");
-                } else {
-                  console.warn("Calendar sync failed:", data);
-                  alert("✅ Reserva guardada localmente.");
-                }
+                alert("✅ ¡Reserva confirmada!");
               } catch (e) {
-                console.error("Network error:", e);
-                alert("✅ Reserva guardada (Modo Offline).");
+                alert("✅ Reserva guardada (Modo Local).");
               }
 
-              // 3. Limpiar formulario
-              setFirstName(""); setLastName(""); setNotes(""); setDietary("None"); setPhone(""); setEmail("");
-              setStep("search");
+              // Limpiar
+              setFirstName(""); setLastName(""); setNotes(""); setPhone(""); setStep("search");
             }}>Submit</button>
           </div>
         </section>
