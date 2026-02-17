@@ -448,9 +448,52 @@ export default function App() {
           </div>
           <div className="sr-actions">
             <button className="sr-btn" onClick={() => setStep("search")}>Back</button>
-            <button className="sr-btn sr-btnPrimary" onClick={() => {
-              setHistory([{id: Date.now(), firstName: firstName.toUpperCase(), lastName: lastName.toUpperCase(), guests, time: timeLabel, celebration, dietary, notes}, ...history]);
-              setFirstName(""); setLastName(""); setNotes(""); setDietary("None"); setStep("search");
+            <button className="sr-btn sr-btnPrimary" onClick={async () => {
+              // Validaciones básicas antes de enviar
+              if (!firstName || !lastName || !phone) {
+                return alert("Por favor completa Nombre, Apellido y Teléfono.");
+              }
+
+              const newReservation = {
+                id: Date.now(), 
+                firstName: firstName.toUpperCase(), 
+                lastName: lastName.toUpperCase(), 
+                guests, 
+                time: timeLabel,
+                dateISO,         // Importante para el backend
+                timeHHMM,        // Importante para el backend
+                phone,
+                email, 
+                celebration, 
+                dietary, 
+                notes
+              };
+
+              // 1. Guardar visualmente en la lista (UI Update)
+              setHistory([newReservation, ...history]);
+
+              // 2. Enviar al Backend para crear el evento en Calendar
+              try {
+                const response = await fetch("/.netlify/functions/create-event", {
+                  method: "POST",
+                  body: JSON.stringify({ reservation: newReservation }) // Ya no necesitamos 'user'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                  alert("✅ ¡Reserva confirmada y agendada en Google Calendar!");
+                } else {
+                  console.warn("Calendar sync failed:", data);
+                  alert("✅ Reserva guardada localmente.");
+                }
+              } catch (e) {
+                console.error("Network error:", e);
+                alert("✅ Reserva guardada (Modo Offline).");
+              }
+
+              // 3. Limpiar formulario
+              setFirstName(""); setLastName(""); setNotes(""); setDietary("None"); setPhone(""); setEmail("");
+              setStep("search");
             }}>Submit</button>
           </div>
         </section>
