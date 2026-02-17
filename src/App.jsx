@@ -39,6 +39,21 @@ function clampGuests(n) {
   return Math.min(Math.max(Number.isFinite(x) ? x : 1, 1), MAX_GUESTS);
 }
 
+/* ✅ NUEVO (MÍNIMO): ISO local para Google Calendar */
+function toLocalDateTimeISO(dateISO, timeHHMM) {
+  return `${dateISO}T${timeHHMM}:00`;
+}
+function addMinutesToLocalDateTimeISO(dateISO, timeHHMM, addMins) {
+  const [y, mo, d] = dateISO.split("-").map(Number);
+  const [h, mi] = timeHHMM.split(":").map(Number);
+  const dt = new Date(y, mo - 1, d, h, mi, 0);
+  dt.setMinutes(dt.getMinutes() + addMins);
+
+  const endDateISO = dateISOFromDate(dt);
+  const endTimeHHMM = `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+  return toLocalDateTimeISO(endDateISO, endTimeHHMM);
+}
+
 /* CONFIGURACIÓN DE MESAS POR SALA */
 const FLOOR_CONFIG = {
   BAR: [
@@ -66,15 +81,15 @@ const FLOOR_CONFIG = {
 };
 
 export default function App() {
-  const [viewMode, setViewMode] = useState("client"); 
+  const [viewMode, setViewMode] = useState("client");
   const [step, setStep] = useState("search");
   const [activeTab, setActiveTab] = useState("reservations");
   const [activeFloor, setActiveFloor] = useState("BAR");
-  
+
   const [dateISO, setDateISO] = useState(() => dateISOFromDate(new Date()));
   const [guests, setGuests] = useState(2);
   const [timeHHMM, setTimeHHMM] = useState("19:00");
-  
+
   const [blackoutDates, setBlackoutDates] = useState([]);
 
   const dateInputRef = useRef(null);
@@ -83,17 +98,17 @@ export default function App() {
 
   const dateLabel = useMemo(() => formatDateLabel(dateISO), [dateISO]);
   const timeLabel = useMemo(() => formatTimeLabel(timeHHMM), [timeHHMM]);
-  
+
   const isBlackout = useMemo(() => blackoutDates.includes(dateISO), [dateISO, blackoutDates]);
 
   const [history, setHistory] = useState([
     { id: 1, firstName: "JONATHAN", lastName: "ORTIZ-H", guests: 5, time: "5:45 PM", celebration: "Anniversary", dietary: "None", notes: "tacos" }
-  ]);      
-  const [waitList, setWaitList] = useState([]);    
-  const [seatedList, setSeatedList] = useState([]); 
+  ]);
+  const [waitList, setWaitList] = useState([]);
+  const [seatedList, setSeatedList] = useState([]);
 
   const [walkInForm, setWalkInForm] = useState({ firstName: "", lastName: "", phone: "", celebration: "None", dietary: "None", notes: "" });
-  
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -118,7 +133,7 @@ export default function App() {
 
   const handleAddToWaitlist = () => {
     if (isBlackout) return alert("Cannot add to waitlist on a closed day.");
-    if(!walkInForm.firstName) return alert("First name is required.");
+    if (!walkInForm.firstName) return alert("First name is required.");
     const finalGuests = guests === "" ? 1 : guests;
     const newWaitEntry = { ...walkInForm, guests: finalGuests, id: Date.now(), timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
     setWaitList([newWaitEntry, ...waitList]);
@@ -414,7 +429,7 @@ export default function App() {
               <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepTime(1); }}>›</button>
             </div>
           </div>
-          
+
           {isBlackout ? (
             <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px', fontWeight: 'bold'}}>
               Sorry, we are closed on this date.
@@ -422,7 +437,7 @@ export default function App() {
           ) : (
             <button className="sr-search" onClick={() => setStep("details")}>Search</button>
           )}
-          
+
           <div className="sr-foot">Max party size: {MAX_GUESTS} · 15 min slots</div>
         </main>
         <button className="sr-view-toggle" onClick={handleSwitchToHostess}>Switch to Hostess View</button>
@@ -455,32 +470,44 @@ export default function App() {
               }
 
               const newReservation = {
-                id: Date.now(), 
-                firstName: firstName.toUpperCase(), 
-                lastName: lastName.toUpperCase(), 
-                guests, 
+                id: Date.now(),
+                firstName: firstName.toUpperCase(),
+                lastName: lastName.toUpperCase(),
+                guests,
                 time: timeLabel,
                 dateISO,         // Importante para el backend
                 timeHHMM,        // Importante para el backend
                 phone,
-                email, 
-                celebration, 
-                dietary, 
+                email,
+                celebration,
+                dietary,
                 notes
               };
 
               // 1. Guardar visualmente en la lista (UI Update)
               setHistory([newReservation, ...history]);
 
-              // 2. Enviar al Backend para crear el evento en Calendar
+              // ✅ 2. Enviar al Backend para crear el evento en Calendar
               try {
+                const startISO = toLocalDateTimeISO(dateISO, timeHHMM);
+                const endISO = addMinutesToLocalDateTimeISO(dateISO, timeHHMM, 90); // 90 min por default
+
                 const response = await fetch("/.netlify/functions/create-event", {
                   method: "POST",
-                  body: JSON.stringify({ reservation: newReservation }) // Ya no necesitamos 'user'
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    firstName: newReservation.firstName,
+                    lastName: newReservation.lastName,
+                    guests: newReservation.guests,
+                    notes: newReservation.notes,
+                    startISO,
+                    endISO
+                  })
                 });
+
                 const data = await response.json();
-                
-                if (data.success) {
+
+                if (response.ok) {
                   alert("✅ ¡Reserva confirmada y agendada en Google Calendar!");
                 } else {
                   console.warn("Calendar sync failed:", data);
