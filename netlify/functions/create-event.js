@@ -1,7 +1,7 @@
 const { google } = require('googleapis');
 
 exports.handler = async (event) => {
-  // Solo permitimos peticiones POST desde tu web
+  // Solo permitimos peticiones POST
   if (event.httpMethod !== 'POST') {
     return { 
       statusCode: 405, 
@@ -9,7 +9,7 @@ exports.handler = async (event) => {
     };
   }
 
-  // 1. Cargamos tus credenciales desde las variables de entorno de Netlify
+  // 1. Cargamos credenciales desde las variables de entorno de Netlify
   const { 
     GOOGLE_CLIENT_ID, 
     GOOGLE_CLIENT_SECRET, 
@@ -17,34 +17,44 @@ exports.handler = async (event) => {
     GOOGLE_REFRESH_TOKEN 
   } = process.env;
 
-  // Configuramos el cliente de Google
   const oauth2Client = new google.auth.OAuth2(
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET
   );
 
-  // 2. IMPORTANTE: Usamos el Refresh Token para que funcione siempre en automático
+  // 2. Usar Refresh Token para mantener la sesión activa
   oauth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
 
   try {
     const data = JSON.parse(event.body);
+    // Extraemos la reserva del objeto enviado desde el frontend
+    const res = data.reservation; 
+
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-    // 3. Definimos los detalles de la reserva
+    // 3. Definimos los detalles con los nuevos nombres de campos (firstName, lastName)
     const eventDetails = {
-      summary: `Reserva: ${data.firstName} ${data.lastName}`,
-      description: `Personas: ${data.guests} | Notas: ${data.notes || 'Sin notas'}`,
+      summary: `🍴 Reserva: ${res.firstName} ${res.lastName}`,
+      description: `
+        Pax: ${res.guests}
+        Tel: ${res.phone}
+        Email: ${res.email || 'N/A'}
+        Celebración: ${res.celebration || 'None'}
+        Dieta: ${res.dietary || 'None'}
+        Notas: ${res.notes || 'Sin notas'}
+        Fuente: ${res.source || 'online'}
+      `.replace(/  +/g, ''), // Limpia espacios extra
       start: {
-        dateTime: data.startISO, // Asegúrate de enviar el formato ISO desde el frontend
+        dateTime: res.startISO, // Viene calculado desde el App.jsx
         timeZone: 'America/Los_Angeles',
       },
       end: {
-        dateTime: data.endISO, 
+        dateTime: res.endISO, 
         timeZone: 'America/Los_Angeles',
       },
     };
 
-    // 4. Insertamos el evento en tu Google Calendar
+    // 4. Insertamos el evento
     const response = await calendar.events.insert({
       calendarId: GOOGLE_CALENDAR_ID,
       resource: eventDetails,
@@ -54,7 +64,7 @@ exports.handler = async (event) => {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        message: 'Reserva creada con éxito', 
+        message: 'Reserva creada en Google Calendar', 
         id: response.data.id 
       }),
     };
@@ -64,7 +74,7 @@ exports.handler = async (event) => {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        error: 'No se pudo crear la reserva', 
+        error: 'No se pudo crear el evento en el calendario', 
         details: error.message 
       }),
     };

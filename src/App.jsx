@@ -5,7 +5,7 @@ import logo from "/logo.png";
 
 // --- CONFIGURACIÓN SUPABASE ---
 const supabaseUrl = 'https://nouxznpzaoerjcarohsu.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5vdXh6bnB6YW9lcmpjYXJvaHN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTg4MTcsImV4cCI6MjA4Njg3NDgxN30.ClpOylubz6_5tTCcZzYVqOyfasJNu2S_vW4sIqzi2a0'; // La que empieza por sb_publishable
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5vdXh6bnB6YW9lcmpjYXJvaHN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTg4MTcsImV4cCI6MjA4Njg3NDgxN30.ClpOylubz6_5tTCcZzYVqOyfasJNu2S_vW4sIqzi2a0';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const MAX_GUESTS = 12;
@@ -101,7 +101,7 @@ export default function App() {
   const timeLabel = useMemo(() => formatTimeLabel(timeHHMM), [timeHHMM]);
   const isBlackout = useMemo(() => blackoutDates.includes(dateISO), [dateISO, blackoutDates]);
 
-  // Listas de datos (ahora vienen de Supabase)
+  // Listas de datos (vienen de Supabase)
   const [rows, setRows] = useState([]);
 
   const history = useMemo(() => rows.filter(r => r.status === "reserved"), [rows]);
@@ -158,16 +158,13 @@ export default function App() {
             if (payload.eventType === 'DELETE') {
               return prev.filter((r) => r.id !== oldRow.id);
             }
-
             if (payload.eventType === 'INSERT') {
               if (prev.some((r) => r.id === newRow.id)) return prev;
               return [newRow, ...prev];
             }
-
             if (payload.eventType === 'UPDATE') {
               return prev.map((r) => (r.id === newRow.id ? newRow : r));
             }
-
             return prev;
           });
         }
@@ -197,12 +194,11 @@ export default function App() {
   const handleAddToWaitlist = async () => {
     if (isBlackout) return alert("Cannot add to waitlist on a closed day.");
     if (!walkInForm.firstName) return alert("First name is required.");
-    const finalGuests = guests === "" ? 1 : guests;
-
+    
     const newWaitEntry = {
       firstName: walkInForm.firstName.toUpperCase(),
       lastName: (walkInForm.lastName || "").toUpperCase(),
-      guests: finalGuests,
+      guests: guests || 1,
       dateISO,
       timeHHMM,
       phone: walkInForm.phone || "",
@@ -210,14 +206,14 @@ export default function App() {
       celebration: walkInForm.celebration || "None",
       dietary: walkInForm.dietary || "None",
       notes: walkInForm.notes || null,
-      status: "waitlist",
-      source: "walkin"
+      status: "waitlist", // Match SQL constraint
+      source: "walkin"    // Match SQL constraint
     };
 
     const { error } = await supabase.from('reservations').insert([newWaitEntry]);
     if (error) {
-      console.error("Supabase insert waitlist error:", error);
-      return alert("Error adding to wait list.");
+      console.error("Supabase insert error:", error);
+      return alert("Error adding to wait list: " + error.message);
     }
 
     setWalkInForm({ firstName: "", lastName: "", phone: "", celebration: "None", dietary: "None", notes: "" });
@@ -340,7 +336,6 @@ export default function App() {
                         <small style={{ color: '#999' }}>
                           Added at: {item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                         </small>
-                        {/* Se agregan datos extras en Waitlist */}
                         {item.celebration && item.celebration !== "None" && <div style={{ fontSize: '0.85rem', color: '#d4ab00', marginTop: '2px' }}>🎉 {item.celebration}</div>}
                         {item.dietary && item.dietary !== "None" && <div style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '2px' }}>🥗 {item.dietary}</div>}
                         {item.notes && <div style={{ fontSize: '0.85rem', fontStyle: 'italic', color: '#666', marginTop: '2px' }}>📝 "{item.notes}"</div>}
@@ -357,9 +352,8 @@ export default function App() {
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
                           <div><strong style={{ fontSize: '1.1rem' }}>{res.firstName} {res.lastName}</strong><span style={{ color: '#666', marginLeft: '8px' }}>({res.guests} pax)</span></div>
-                          <span style={{ fontWeight: '700' }}>{res.time || formatTimeLabel(res.timeHHMM)}</span>
+                          <span style={{ fontWeight: '700' }}>{res.timeHHMM || formatTimeLabel(res.timeHHMM)}</span>
                         </div>
-                        {/* Se agregan datos extras en Reservations */}
                         {res.celebration && res.celebration !== "None" && <div style={{ fontSize: '0.85rem', color: '#d4ab00', marginTop: '4px' }}>🎉 {res.celebration}</div>}
                         {res.dietary && res.dietary !== "None" && <div style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '2px' }}>🥗 {res.dietary}</div>}
                         {res.notes && <div style={{ color: '#555', fontSize: '0.85rem', background: '#f8f8f8', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{res.notes}"</div>}
@@ -483,7 +477,9 @@ export default function App() {
                 email,
                 celebration,
                 dietary,
-                notes
+                notes,
+                status: 'reserved', // Match SQL constraint
+                source: 'reservation'
               };
 
               // 1. Guardar en SUPABASE
@@ -492,12 +488,14 @@ export default function App() {
                 if (sbError) throw sbError;
               } catch (e) {
                 console.error("Supabase Error:", e);
+                return alert("Error saving reservation: " + e.message);
               }
 
-              // 2. Enviar a GOOGLE CALENDAR (Netlify Function)
+              // 2. Enviar a GOOGLE CALENDAR
               try {
                 const startISO = toLocalDateTimeISO(dateISO, timeHHMM);
                 const endISO = addMinutesToLocalDateTimeISO(dateISO, timeHHMM, 90);
+
                 await fetch("/.netlify/functions/create-event", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -505,12 +503,13 @@ export default function App() {
                     reservation: { ...newRes, startISO, endISO }
                   })
                 });
+
                 alert("✅ ¡Reserva confirmada!");
               } catch (e) {
+                console.error("Calendar Error:", e);
                 alert("✅ Reserva guardada (Modo Local).");
               }
 
-              // Limpiar
               setFirstName(""); setLastName(""); setNotes(""); setPhone(""); setStep("search");
             }}>Submit</button>
           </div>
