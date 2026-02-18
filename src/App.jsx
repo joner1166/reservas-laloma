@@ -110,6 +110,7 @@ export default function App() {
 
   // Formulario
   const [walkInForm, setWalkInForm] = useState({ firstName: "", lastName: "", phone: "", celebration: "None", dietary: "None", notes: "" });
+  const [phoneResForm, setPhoneResForm] = useState({ firstName: "", lastName: "", phone: "", email: "", celebration: "None", dietary: "None", notes: "" });
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -206,8 +207,8 @@ export default function App() {
       celebration: walkInForm.celebration || "None",
       dietary: walkInForm.dietary || "None",
       notes: walkInForm.notes || null,
-      status: "waitlist", // Match SQL constraint
-      source: "walkin"    // Match SQL constraint
+      status: "waitlist", 
+      source: "walkin"   
     };
 
     const { error } = await supabase.from('reservations').insert([newWaitEntry]);
@@ -218,6 +219,49 @@ export default function App() {
 
     setWalkInForm({ firstName: "", lastName: "", phone: "", celebration: "None", dietary: "None", notes: "" });
     setActiveTab('waitlist');
+  };
+
+  const handleAddPhoneReservation = async () => {
+    if (isBlackout) return alert("Cannot make reservations on a closed day.");
+    if (!phoneResForm.firstName || !phoneResForm.lastName || !phoneResForm.phone) {
+        return alert("Name, Last Name and Phone are required.");
+    }
+
+    const newRes = {
+      firstName: phoneResForm.firstName.toUpperCase(),
+      lastName: phoneResForm.lastName.toUpperCase(),
+      guests: guests || 1,
+      dateISO,
+      timeHHMM,
+      phone: phoneResForm.phone,
+      email: phoneResForm.email || null,
+      celebration: phoneResForm.celebration || "None",
+      dietary: phoneResForm.dietary || "None",
+      notes: phoneResForm.notes || null,
+      status: 'reserved',
+      source: 'reservation'
+    };
+
+    try {
+      const { error: sbError } = await supabase.from('reservations').insert([newRes]);
+      if (sbError) throw sbError;
+
+      const startISO = toLocalDateTimeISO(dateISO, timeHHMM);
+      const endISO = addMinutesToLocalDateTimeISO(dateISO, timeHHMM, 90);
+
+      await fetch("/.netlify/functions/create-event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reservation: { ...newRes, startISO, endISO } })
+      });
+
+      alert("✅ Phone reservation confirmed!");
+      setPhoneResForm({ firstName: "", lastName: "", phone: "", email: "", celebration: "None", dietary: "None", notes: "" });
+      setActiveTab('reservations');
+    } catch (e) {
+      console.error("Phone Reservation Error:", e);
+      alert("Error saving reservation.");
+    }
   };
 
   const handleSeatParty = async (party) => {
@@ -285,6 +329,7 @@ export default function App() {
             <div className="sr-sidebar-header"><img src={logo} alt="Lindo Michoacán" className="sr-logo-small" /></div>
             <nav className="sr-sidebar-nav">
               <button className={activeTab === 'walkin' ? 'active' : ''} onClick={() => setActiveTab('walkin')}>Walk-in</button>
+              <button className={activeTab === 'phoneres' ? 'active' : ''} onClick={() => setActiveTab('phoneres')}>Phone Res</button>
               <button className={activeTab === 'waitlist' ? 'active' : ''} onClick={() => setActiveTab('waitlist')}>Wait List ({waitList.length})</button>
               <button className={activeTab === 'reservations' ? 'active' : ''} onClick={() => setActiveTab('reservations')}>Reservations ({history.length})</button>
               <button className={activeTab === 'seated' ? 'active' : ''} onClick={() => setActiveTab('seated')}>Seated ({seatedList.length})</button>
@@ -295,7 +340,7 @@ export default function App() {
           <section className="sr-hostess-main">
             <header className="sr-main-header">
               <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
-                <h2>{activeTab === 'walkin' ? 'New Walk-in' : activeTab === 'waitlist' ? 'Wait List' : activeTab === 'reservations' ? 'Reservations' : activeTab === 'seated' ? 'Seated History' : activeTab === 'blackout' ? 'Manage Blackout' : 'Floor Plan'}</h2>
+                <h2>{activeTab === 'walkin' ? 'New Walk-in' : activeTab === 'phoneres' ? 'New Phone Reservation' : activeTab === 'waitlist' ? 'Wait List' : activeTab === 'reservations' ? 'Reservations' : activeTab === 'seated' ? 'Seated History' : activeTab === 'blackout' ? 'Manage Blackout' : 'Floor Plan'}</h2>
                 {isBlackout && <span style={{background: '#ef4444', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold'}}>CLOSED TODAY</span>}
               </div>
               <div className="sr-hostess-date-picker" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -312,7 +357,15 @@ export default function App() {
                   <div className="sr-center"><label className="sr-fieldLabel">PARTY SIZE</label>
                     <div className="sr-row-simple">
                       <button className="sr-btn-mini" onClick={() => stepGuests(-1)} disabled={isBlackout}>−</button>
-                      <input type="number" className="sr-guests-count" value={guests} onChange={(e) => setGuests(parseInt(e.target.value) || 1)} style={{width: '60px', textAlign: 'center', border: 'none', background: 'transparent', fontSize: '2rem', fontWeight: 'bold', color: '#000'}} disabled={isBlackout} />
+                      <input 
+                        type="number" 
+                        className="sr-guests-count" 
+                        value={guests === null ? "" : guests} 
+                        onChange={(e) => setGuests(e.target.value === "" ? null : parseInt(e.target.value))} 
+                        onFocus={() => setGuests(null)}
+                        style={{width: '60px', textAlign: 'center', border: 'none', background: 'transparent', fontSize: '2rem', fontWeight: 'bold', color: '#000'}} 
+                        disabled={isBlackout} 
+                      />
                       <button className="sr-btn-mini" onClick={() => stepGuests(1)} disabled={isBlackout}>+</button>
                     </div>
                   </div>
@@ -320,11 +373,42 @@ export default function App() {
                     <div className="sr-field"><label className="sr-fieldLabel">First Name</label><input className="sr-input" value={walkInForm.firstName} onChange={e => setWalkInForm({...walkInForm, firstName: e.target.value})} disabled={isBlackout}/></div>
                     <div className="sr-field"><label className="sr-fieldLabel">Last Name</label><input className="sr-input" value={walkInForm.lastName} onChange={e => setWalkInForm({...walkInForm, lastName: e.target.value})} disabled={isBlackout}/></div>
                     <div className="sr-field"><label className="sr-fieldLabel">Phone</label><input className="sr-input" value={walkInForm.phone} onChange={e => setWalkInForm({...walkInForm, phone: e.target.value})} disabled={isBlackout}/></div>
-                    <div className="sr-field"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={walkInForm.celebration} onChange={e => setWalkInForm({...walkInForm, celebration: e.target.value})} disabled={isBlackout}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Other</option></select></div>
+                    <div className="sr-field"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={walkInForm.celebration} onChange={e => setWalkInForm({...walkInForm, celebration: e.target.value})} disabled={isBlackout}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Wedding</option><option>Graduation</option><option>Other</option></select></div>
                     <div className="sr-field"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={walkInForm.dietary} onChange={e => setWalkInForm({...walkInForm, dietary: e.target.value})} disabled={isBlackout}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
                     <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={walkInForm.notes} onChange={e => setWalkInForm({...walkInForm, notes: e.target.value})} disabled={isBlackout}/></div>
                   </div>
                   <button className="sr-btn sr-btnPrimary" style={{marginTop: '20px', opacity: isBlackout ? 0.5 : 1}} onClick={handleAddToWaitlist} disabled={isBlackout}>Add to Wait List</button>
+                </div>
+              )}
+              {activeTab === 'phoneres' && (
+                <div className="sr-walkin-form">
+                  {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed.</div>}
+                  <div style={{display: 'flex', gap: '30px', justifyContent: 'center', marginBottom: '25px'}}>
+                    <div className="sr-center"><label className="sr-fieldLabel">GUESTS</label>
+                      <div className="sr-row-simple">
+                        <button className="sr-btn-mini" onClick={() => stepGuests(-1)} disabled={isBlackout}>−</button>
+                        <input type="number" className="sr-guests-count" value={guests === null ? "" : guests} onChange={(e) => setGuests(e.target.value === "" ? null : parseInt(e.target.value))} onFocus={() => setGuests(null)} style={{width: '60px', textAlign: 'center', border: 'none', background: 'transparent', fontSize: '2rem', fontWeight: 'bold', color: '#000'}} disabled={isBlackout} />
+                        <button className="sr-btn-mini" onClick={() => stepGuests(1)} disabled={isBlackout}>+</button>
+                      </div>
+                    </div>
+                    <div className="sr-center"><label className="sr-fieldLabel">TIME</label>
+                      <div className="sr-row-simple">
+                        <button className="sr-btn-mini" onClick={() => stepTime(-1)} disabled={isBlackout}>−</button>
+                        <span style={{fontSize: '1.8rem', fontWeight: 'bold', minWidth: '120px', textAlign: 'center'}}>{timeLabel}</span>
+                        <button className="sr-btn-mini" onClick={() => stepTime(1)} disabled={isBlackout}>+</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="sr-formGrid">
+                    <div className="sr-field"><label className="sr-fieldLabel">First Name</label><input className="sr-input" value={phoneResForm.firstName} onChange={e => setPhoneResForm({...phoneResForm, firstName: e.target.value})} disabled={isBlackout}/></div>
+                    <div className="sr-field"><label className="sr-fieldLabel">Last Name</label><input className="sr-input" value={phoneResForm.lastName} onChange={e => setPhoneResForm({...phoneResForm, lastName: e.target.value})} disabled={isBlackout}/></div>
+                    <div className="sr-field"><label className="sr-fieldLabel">Phone</label><input className="sr-input" value={phoneResForm.phone} onChange={e => setPhoneResForm({...phoneResForm, phone: e.target.value})} disabled={isBlackout}/></div>
+                    <div className="sr-field"><label className="sr-fieldLabel">Email</label><input className="sr-input" value={phoneResForm.email} onChange={e => setPhoneResForm({...phoneResForm, email: e.target.value})} disabled={isBlackout}/></div>
+                    <div className="sr-field"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={phoneResForm.celebration} onChange={e => setPhoneResForm({...phoneResForm, celebration: e.target.value})} disabled={isBlackout}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Wedding</option><option>Graduation</option><option>Other</option></select></div>
+                    <div className="sr-field"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={phoneResForm.dietary} onChange={e => setPhoneResForm({...phoneResForm, dietary: e.target.value})} disabled={isBlackout}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
+                    <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={phoneResForm.notes} onChange={e => setPhoneResForm({...phoneResForm, notes: e.target.value})} disabled={isBlackout}/></div>
+                  </div>
+                  <button className="sr-btn sr-btnPrimary" style={{marginTop: '20px'}} onClick={handleAddPhoneReservation} disabled={isBlackout}>Confirm Phone Reservation</button>
                 </div>
               )}
               {activeTab === 'waitlist' && (
@@ -425,7 +509,16 @@ export default function App() {
             </div>
             <div className="sr-row">
               <button className="sr-arrow" onClick={() => stepGuests(-1)}>‹</button>
-              <div className="sr-center"><div className="sr-value">{guests}</div><div className="sr-label">Guests</div></div>
+              <div className="sr-center">
+                <input 
+                  type="number" 
+                  value={guests === null ? "" : guests} 
+                  onChange={(e) => setGuests(e.target.value === "" ? null : parseInt(e.target.value))} 
+                  onFocus={() => setGuests(null)}
+                  style={{width: '60px', textAlign: 'center', border: 'none', background: 'transparent', fontSize: '1.5rem', fontWeight: 'bold', color: '#000'}} 
+                />
+                <div className="sr-label">Guests</div>
+              </div>
               <button className="sr-arrow" onClick={() => stepGuests(1)}>›</button>
             </div>
             <div className="sr-row" onClick={() => timeInputRef.current?.showPicker()}>
@@ -458,7 +551,7 @@ export default function App() {
             <div className="sr-field"><label className="sr-fieldLabel">Last name</label><input className="sr-input" value={lastName} onChange={e => setLastName(e.target.value)} /></div>
             <div className="sr-field"><label className="sr-fieldLabel">Telephone</label><input className="sr-input" value={phone} onChange={e => setPhone(e.target.value)} /></div>
             <div className="sr-field"><label className="sr-fieldLabel">Email</label><input className="sr-input" value={email} onChange={e => setEmail(e.target.value)} /></div>
-            <div className="sr-field sr-span2"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={celebration} onChange={e => setCelebration(e.target.value)}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Other</option></select></div>
+            <div className="sr-field sr-span2"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={celebration} onChange={e => setCelebration(e.target.value)}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Wedding</option><option>Graduation</option><option>Other</option></select></div>
             <div className="sr-field"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={dietary} onChange={e => setDietary(e.target.value)}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
             <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={notes} onChange={e => setNotes(e.target.value)} /></div>
           </div>
@@ -478,11 +571,10 @@ export default function App() {
                 celebration,
                 dietary,
                 notes,
-                status: 'reserved', // Match SQL constraint
+                status: 'reserved',
                 source: 'reservation'
               };
 
-              // 1. Guardar en SUPABASE
               try {
                 const { error: sbError } = await supabase.from('reservations').insert([newRes]);
                 if (sbError) throw sbError;
@@ -491,7 +583,6 @@ export default function App() {
                 return alert("Error saving reservation: " + e.message);
               }
 
-              // 2. Enviar a GOOGLE CALENDAR
               try {
                 const startISO = toLocalDateTimeISO(dateISO, timeHHMM);
                 const endISO = addMinutesToLocalDateTimeISO(dateISO, timeHHMM, 90);

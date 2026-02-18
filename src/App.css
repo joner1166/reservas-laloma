@@ -1,5 +1,10 @@
 :root { color-scheme: dark; }
-body { background: #000; margin: 0; font-family: system-ui, sans-serif; }
+body { 
+  background: #000; 
+  margin: 0; 
+  /* Tipografía Profesional Inter/System */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+}
 
 /* Contenedor Principal */
 .sr-page { 
@@ -89,7 +94,7 @@ body { background: #000; margin: 0; font-family: system-ui, sans-serif; }
 
 .sr-main-content { padding: 35px; }
 
-/* --- NUEVOS: INTEGRACIÓN FLOOR PLAN (CORREGIDO) --- */
+/* --- INTEGRACIÓN FLOOR PLAN --- */
 .sr-floor-manager { display: flex; flex-direction: column; gap: 20px; }
 
 .sr-zone-selector { 
@@ -154,24 +159,9 @@ body { background: #000; margin: 0; font-family: system-ui, sans-serif; }
   z-index: 5;
 }
 
-/* Lógica de formas y tamaños */
-.sr-table-marker.shape-circle { 
-  width: 46px; 
-  height: 46px; 
-  border-radius: 50%; 
-}
-
-.sr-table-marker.shape-square { 
-  width: 44px; 
-  height: 44px; 
-  border-radius: 6px; 
-}
-
-.sr-table-marker.shape-rect { 
-  width: 85px; 
-  height: 44px; 
-  border-radius: 6px; 
-}
+.sr-table-marker.shape-circle { width: 46px; height: 46px; border-radius: 50%; }
+.sr-table-marker.shape-square { width: 44px; height: 44px; border-radius: 6px; }
+.sr-table-marker.shape-rect { width: 85px; height: 44px; border-radius: 6px; }
 
 .sr-table-marker:hover { transform: translate(-50%, -50%) scale(1.1); z-index: 10; }
 .sr-table-marker.is-available { background: rgba(108, 117, 125, 0.9); color: #fff; }
@@ -180,9 +170,7 @@ body { background: #000; margin: 0; font-family: system-ui, sans-serif; }
 .table-id { font-size: 11px; }
 .table-cap { font-size: 8px; opacity: 0.8; margin-top: -2px; }
 
-/* --- FIN INTEGRACIÓN FLOOR PLAN --- */
-
-/* --- ESTILOS WALK-IN (AJUSTADOS A SCREENSHOT) --- */
+/* --- ESTILOS WALK-IN --- */
 .sr-walkin-form { 
   max-width: 500px; 
   margin: 0 auto;
@@ -223,13 +211,6 @@ body { background: #000; margin: 0; font-family: system-ui, sans-serif; }
   transition: 0.2s;
 }
 
-.sr-btn-mini:hover {
-  background: #f8f8f8;
-  border-color: #bbb;
-}
-
-/* --- FIN ESTILOS WALK-IN --- */
-
 /* --- ESTILOS VISTA CLIENTE --- */
 .sr-header { padding: 30px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: center; }
 .sr-logo { width: 100%; max-width: 450px; height: auto; display: block; }
@@ -255,13 +236,35 @@ body { background: #000; margin: 0; font-family: system-ui, sans-serif; }
 
 .sr-actions { display: flex; justify-content: space-between; margin-top: 24px; gap: 12px; }
 .sr-btn { padding: 16px; border-radius: 14px; border: none; background: #f2c300; color: #000; font-weight: 700; cursor: pointer; flex: 1; text-align: center; font-size: 16px; transition: opacity 0.2s; }
-.sr-btnPrimary { background: #f2c300 !important; }
 
-.sr-pillRow { display: flex; gap: 12px; }
-.sr-pill { padding: 14px; border-radius: 14px; border: 1px solid #ddd; background: #fff; cursor: pointer; font-weight: 700; color: #666; flex: 1; text-align: center; }
-.sr-pill.is-active { background: #f2c300 !important; border-color: #f2c300 !important; color: #000 !important; }
+/* BOTÓN SEARCH PREMIUM */
+.sr-search { 
+  width: calc(100% - 40px); 
+  margin: 20px; 
+  padding: 18px; 
+  /* Look Profesional */
+  background: linear-gradient(135deg, #f2c300 0%, #d4ab00 100%);
+  color: #000; 
+  border: none;
+  border-radius: 14px; 
+  font-size: 1.1rem;
+  font-weight: 800; 
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  cursor: pointer; 
+  box-shadow: 0 4px 15px rgba(242, 195, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-.sr-search { width: calc(100% - 40px); margin: 20px; padding: 18px; background: #f2c300; color: #000; border-radius: 14px; font-weight: 800; cursor: pointer; border: none; font-size: 19px; }
+.sr-search:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(242, 195, 0, 0.4);
+  filter: brightness(1.05);
+}
+
+.sr-search:active {
+  transform: translateY(1px);
+}
 
 .sr-view-toggle { margin-top: 25px; background: transparent; border: none; color: #555; cursor: pointer; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
 .sr-view-toggle:hover { color: #f2c300; }
