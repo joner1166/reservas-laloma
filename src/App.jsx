@@ -101,10 +101,12 @@ export default function App() {
   const timeLabel = useMemo(() => formatTimeLabel(timeHHMM), [timeHHMM]);
   const isBlackout = useMemo(() => blackoutDates.includes(dateISO), [dateISO, blackoutDates]);
 
-  // Listas de datos
-  const [history, setHistory] = useState([]);
-  const [waitList, setWaitList] = useState([]);
-  const [seatedList, setSeatedList] = useState([]);
+  // Listas de datos (ahora vienen de Supabase)
+  const [rows, setRows] = useState([]);
+
+  const history = useMemo(() => rows.filter(r => r.status === "reserved"), [rows]);
+  const waitList = useMemo(() => rows.filter(r => r.status === "waitlist"), [rows]);
+  const seatedList = useMemo(() => rows.filter(r => r.status === "seated"), [rows]);
 
   // Formulario
   const [walkInForm, setWalkInForm] = useState({ firstName: "", lastName: "", phone: "", celebration: "None", dietary: "None", notes: "" });
@@ -116,30 +118,67 @@ export default function App() {
   const [dietary, setDietary] = useState("None");
   const [notes, setNotes] = useState("");
 
-  // --- EFECTO TIEMPO REAL Y CARGA INICIAL ---
+  // --- EFECTO TIEMPO REAL Y CARGA INICIAL (por día seleccionado) ---
   useEffect(() => {
-    const fetchReservations = async () => {
-      const { data } = await supabase
+    let isMounted = true;
+
+    const fetchRowsForDay = async () => {
+      const { data, error } = await supabase
         .from('reservations')
         .select('*')
+        .eq('dateISO', dateISO)
+        .in('status', ['reserved', 'waitlist', 'seated'])
         .order('id', { ascending: false });
-      if (data) setHistory(data);
+
+      if (error) {
+        console.error("Supabase fetch error:", error);
+        return;
+      }
+      if (isMounted) setRows(data || []);
     };
 
-    fetchReservations();
+    fetchRowsForDay();
 
     const channel = supabase
-      .channel('schema-db-changes')
-      .on('postgres_changes', 
-          { event: 'INSERT', schema: 'public', table: 'reservations' }, 
-          (payload) => {
-            setHistory((prev) => [payload.new, ...prev]);
-          }
+      .channel(`reservations-realtime-${dateISO}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reservations' },
+        (payload) => {
+          const newRow = payload.new;
+          const oldRow = payload.old;
+
+          const affectsThisDay =
+            (newRow && newRow.dateISO === dateISO) ||
+            (oldRow && oldRow.dateISO === dateISO);
+
+          if (!affectsThisDay) return;
+
+          setRows((prev) => {
+            if (payload.eventType === 'DELETE') {
+              return prev.filter((r) => r.id !== oldRow.id);
+            }
+
+            if (payload.eventType === 'INSERT') {
+              if (prev.some((r) => r.id === newRow.id)) return prev;
+              return [newRow, ...prev];
+            }
+
+            if (payload.eventType === 'UPDATE') {
+              return prev.map((r) => (r.id === newRow.id ? newRow : r));
+            }
+
+            return prev;
+          });
+        }
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, []);
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [dateISO]);
 
   const stepDate = (dir) => setDateISO(prev => addDaysISO(prev, dir));
   const stepGuests = (dir) => setGuests(prev => clampGuests(prev + dir));
@@ -155,21 +194,46 @@ export default function App() {
     else if (pass !== null) alert("Incorrect password");
   };
 
-  const handleAddToWaitlist = () => {
+  const handleAddToWaitlist = async () => {
     if (isBlackout) return alert("Cannot add to waitlist on a closed day.");
     if (!walkInForm.firstName) return alert("First name is required.");
     const finalGuests = guests === "" ? 1 : guests;
-    const newWaitEntry = { ...walkInForm, guests: finalGuests, id: Date.now(), timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-    setWaitList([newWaitEntry, ...waitList]);
+
+    const newWaitEntry = {
+      firstName: walkInForm.firstName.toUpperCase(),
+      lastName: (walkInForm.lastName || "").toUpperCase(),
+      guests: finalGuests,
+      dateISO,
+      timeHHMM,
+      phone: walkInForm.phone || "",
+      email: null,
+      celebration: walkInForm.celebration || "None",
+      dietary: walkInForm.dietary || "None",
+      notes: walkInForm.notes || null,
+      status: "waitlist",
+      source: "walkin"
+    };
+
+    const { error } = await supabase.from('reservations').insert([newWaitEntry]);
+    if (error) {
+      console.error("Supabase insert waitlist error:", error);
+      return alert("Error adding to wait list.");
+    }
+
     setWalkInForm({ firstName: "", lastName: "", phone: "", celebration: "None", dietary: "None", notes: "" });
     setActiveTab('waitlist');
   };
 
-  const handleSeatParty = (party, fromList) => {
-    const seatedParty = { ...party, seatedTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-    if (fromList === 'waitlist') setWaitList(waitList.filter(item => item.id !== party.id));
-    else setHistory(history.filter(item => item.id !== party.id));
-    setSeatedList([seatedParty, ...seatedList]);
+  const handleSeatParty = async (party) => {
+    const { error } = await supabase
+      .from('reservations')
+      .update({ status: 'seated', seated_at: new Date().toISOString() })
+      .eq('id', party.id);
+
+    if (error) {
+      console.error("Supabase seat error:", error);
+      alert("Error seating party.");
+    }
   };
 
   const handleTableSelection = (table) => {
@@ -273,9 +337,15 @@ export default function App() {
                     <div key={item.id} className="sr-list-item" style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                       <div style={{ flex: 1 }}>
                         <strong>{item.firstName} {item.lastName}</strong> ({item.guests} pax)<br/>
-                        <small style={{ color: '#999' }}>Added at: {item.timeAdded}</small>
+                        <small style={{ color: '#999' }}>
+                          Added at: {item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                        </small>
+                        {/* Se agregan datos extras en Waitlist */}
+                        {item.celebration && item.celebration !== "None" && <div style={{ fontSize: '0.85rem', color: '#d4ab00', marginTop: '2px' }}>🎉 {item.celebration}</div>}
+                        {item.dietary && item.dietary !== "None" && <div style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '2px' }}>🥗 {item.dietary}</div>}
+                        {item.notes && <div style={{ fontSize: '0.85rem', fontStyle: 'italic', color: '#666', marginTop: '2px' }}>📝 "{item.notes}"</div>}
                       </div>
-                      <button style={seatButtonStyle} onClick={() => handleSeatParty(item, 'waitlist')}>Seat</button>
+                      <button style={seatButtonStyle} onClick={() => handleSeatParty(item)}>Seat</button>
                     </div>
                   ))}
                 </div>
@@ -289,9 +359,12 @@ export default function App() {
                           <div><strong style={{ fontSize: '1.1rem' }}>{res.firstName} {res.lastName}</strong><span style={{ color: '#666', marginLeft: '8px' }}>({res.guests} pax)</span></div>
                           <span style={{ fontWeight: '700' }}>{res.time || formatTimeLabel(res.timeHHMM)}</span>
                         </div>
+                        {/* Se agregan datos extras en Reservations */}
+                        {res.celebration && res.celebration !== "None" && <div style={{ fontSize: '0.85rem', color: '#d4ab00', marginTop: '4px' }}>🎉 {res.celebration}</div>}
+                        {res.dietary && res.dietary !== "None" && <div style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '2px' }}>🥗 {res.dietary}</div>}
                         {res.notes && <div style={{ color: '#555', fontSize: '0.85rem', background: '#f8f8f8', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{res.notes}"</div>}
                       </div>
-                      <button style={seatButtonStyle} onClick={() => handleSeatParty(res, 'reservations')}>Seat</button>
+                      <button style={seatButtonStyle} onClick={() => handleSeatParty(res)}>Seat</button>
                     </div>
                   ))}
                 </div>
@@ -300,7 +373,8 @@ export default function App() {
                 <div className="sr-res-list">
                   {seatedList.length === 0 ? <p>No seated guests today.</p> : seatedList.map(item => (
                     <div key={item.id} style={{padding: '15px', borderBottom: '1px solid #eee'}}>
-                      <strong>{item.firstName} {item.lastName}</strong> - Seated at: {item.seatedTime}
+                      <strong>{item.firstName} {item.lastName}</strong> - Seated at:{" "}
+                      {item.seated_at ? new Date(item.seated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                     </div>
                   ))}
                 </div>
