@@ -5,6 +5,10 @@ body {
   /* Tipografía Profesional Inter/System */
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
 }
+:root {
+  /* Esto evita que el logo o botones queden tapados por la barra del iPad */
+  padding-top: env(safe-area-inset-top);
+}
 
 /* Contenedor Principal */
 .sr-page { 
