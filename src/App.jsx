@@ -298,7 +298,6 @@ function HostessView({
   walkInForm, setWalkInForm, phoneResForm, setPhoneResForm,
   waitList, history, seatedList, canceledList, blackoutDates, tableStatuses
 }) {
-  const dateInputRef = useRef(null);
   const blackoutInputRef = useRef(null);
   const bookingDateRef = useRef(null);
   const [editingRes, setEditingRes] = useState(null);
@@ -325,7 +324,7 @@ function HostessView({
           <div className="sr-sidebar-header"><img src="/logo.png" alt="Lindo Michoacán" className="sr-logo-small" /></div>
           <nav className="sr-sidebar-nav">
             <button className={activeTab === 'walkin' ? 'active' : ''} onClick={() => setActiveTab('walkin')}>Walk-in</button>
-            <button className={activeTab === 'phoneres' ? 'active' : ''} onClick={() => setActiveTab('phoneres')}>Phone Res</button>
+            <button className={activeTab === 'phoneres' ? 'active' : ''} onClick={() => setActiveTab('phoneres')}>Phone Reservation</button>
             <button className={activeTab === 'waitlist' ? 'active' : ''} onClick={() => setActiveTab('waitlist')}>Wait List ({waitList.length})</button>
             <button className={activeTab === 'reservations' ? 'active' : ''} onClick={() => setActiveTab('reservations')}>Reservations ({history.length})</button>
             <button className={activeTab === 'seated' ? 'active' : ''} onClick={() => setActiveTab('seated')}>Seated ({seatedList.length})</button>
@@ -341,9 +340,12 @@ function HostessView({
               {isBlackout && <span style={{background: '#ef4444', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold'}}>CLOSED TODAY</span>}
             </div>
             <div className="sr-hostess-date-picker" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input ref={dateInputRef} type="date" className="sr-hidden" value={dateISO} onChange={(e) => setDateISO(e.target.value)} />
               <button className="sr-btn-mini" onClick={() => stepDate(-1)}>‹</button>
-              <div className="sr-current-date" style={{ cursor: 'pointer', fontWeight: '500' }} onClick={() => dateInputRef.current?.showPicker()}>{dateLabel}</div>
+              <div style={{ position: 'relative', cursor: 'pointer' }}>
+                <div className="sr-current-date" style={{ fontWeight: '500' }}>{dateLabel}</div>
+                <input type="date" value={dateISO} onChange={e => setDateISO(e.target.value)}
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
+              </div>
               <button className="sr-btn-mini" onClick={() => stepDate(1)}>›</button>
             </div>
           </header>
@@ -639,8 +641,6 @@ function ClientSearchView({
   timeHHMM, setTimeHHMM,
   isBlackout, setStep, handleSwitchToHostess
 }) {
-  const dateInputRef = useRef(null);
-
   const range = getAvailableTimeRange(dateISO);
   const availableSlots = getTimeSlots(dateISO, true);
 
@@ -656,12 +656,16 @@ function ClientSearchView({
     <div className="sr-page">
       <main className="sr-card">
         <header className="sr-header"><img className="sr-logo" src="/logo.png" alt="Logo" /></header>
-        <input ref={dateInputRef} type="date" className="sr-hidden" value={dateISO} onChange={(e) => onDateChange(e.target.value)} />
         <div className="sr-rows">
-          <div className="sr-row" onClick={() => dateInputRef.current?.showPicker()}>
-            <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepDate(-1); }}>‹</button>
-            <div className="sr-center"><div className="sr-value">{dateLabel}</div><div className="sr-label">Date</div></div>
-            <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepDate(1); }}>›</button>
+          <div className="sr-row">
+            <button className="sr-arrow" style={{ position: 'relative', zIndex: 2 }} onClick={(e) => { e.stopPropagation(); stepDate(-1); }}>‹</button>
+            <div className="sr-center" style={{ position: 'relative' }}>
+              <div className="sr-value">{dateLabel}</div>
+              <div className="sr-label">Date</div>
+              <input type="date" value={dateISO} onChange={(e) => onDateChange(e.target.value)}
+                style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 1 }} />
+            </div>
+            <button className="sr-arrow" style={{ position: 'relative', zIndex: 2 }} onClick={(e) => { e.stopPropagation(); stepDate(1); }}>›</button>
           </div>
           <div className="sr-row" style={{cursor: 'default'}}>
             <div className="sr-center" style={{gridColumn: '1 / -1'}}>
