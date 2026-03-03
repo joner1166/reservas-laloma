@@ -290,18 +290,19 @@ function HostessView({
 
   // Estado y UI
   activeTab, setActiveTab, activeFloor, setActiveFloor, isBlackout,
-  dateISO, setDateISO, dateLabel, stepDate,
+  dateISO, setDateISO, onDateChange, dateLabel, stepDate,
   guests, setGuests, stepGuests,
   timeHHMM, setTimeHHMM, timeLabel, stepTime,
 
   // Datos
   walkInForm, setWalkInForm, phoneResForm, setPhoneResForm,
-  waitList, history, seatedList, canceledList, blackoutDates
+  waitList, history, seatedList, canceledList, blackoutDates, tableStatuses
 }) {
   const dateInputRef = useRef(null);
   const blackoutInputRef = useRef(null);
   const bookingDateRef = useRef(null);
   const [editingRes, setEditingRes] = useState(null);
+  const [blackoutForm, setBlackoutForm] = useState({ date: '', notes: '' });
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60000);
@@ -379,7 +380,7 @@ function HostessView({
                 <div className="sr-booking-bar" style={{marginBottom: '25px'}}>
                   <div className="sr-booking-field" style={{cursor: 'pointer'}} onClick={() => bookingDateRef.current?.showPicker()}>
                     <label className="sr-fieldLabel" style={{cursor: 'pointer'}}>Date</label>
-                    <input ref={bookingDateRef} type="date" className="sr-booking-input" value={dateISO} onChange={e => setDateISO(e.target.value)} disabled={isBlackout} />
+                    <input ref={bookingDateRef} type="date" className="sr-booking-input" value={dateISO} onChange={e => onDateChange(e.target.value)} disabled={isBlackout} />
                   </div>
                   <div className="sr-booking-divider" />
                   <div className="sr-booking-field">
@@ -521,29 +522,83 @@ function HostessView({
             )}
             {activeTab === 'floorplan' && (
               <div className="sr-floor-manager">
-                <div className="sr-zone-selector">
-                  {Object.keys(FLOOR_CONFIG).map(f => (
-                    <button key={f} className={activeFloor === f ? 'active' : ''} onClick={() => setActiveFloor(f)}>{f}</button>
-                  ))}
+                <div className="sr-floor-header">
+                  <div className="sr-zone-selector">
+                    {Object.keys(FLOOR_CONFIG).map(f => (
+                      <button key={f} className={activeFloor === f ? 'active' : ''} onClick={() => setActiveFloor(f)}>{f}</button>
+                    ))}
+                  </div>
+                  <div className="sr-floor-legend">
+                    <span className="sr-legend-dot available" /><span>Available</span>
+                    <span className="sr-legend-dot occupied" /><span>Occupied</span>
+                  </div>
                 </div>
                 <div className="sr-map-canvas">
                   <div className="sr-image-wrapper">
                     <img src={activeFloor === 'BAR' ? '/BAR.png' : activeFloor === 'ROOM1' ? '/FLOOR 1.jpg' : activeFloor === 'ROOM2' ? '/ROOM 2.jpg' : '/ROOM 3.jpg'} alt={activeFloor} className="sr-floor-img" />
-                    {FLOOR_CONFIG[activeFloor].map(table => (
-                      <button key={table.id} className={`sr-table-marker shape-${table.shape || 'square'} ${table.status === 'occ' ? 'is-occupied' : 'is-available'}`} style={{ top: table.top, left: table.left }} onClick={() => handleTableSelection(table)}>
-                        <span className="table-id">{table.id}</span>
-                      </button>
-                    ))}
+                    {FLOOR_CONFIG[activeFloor].map(table => {
+                      const status = tableStatuses[`${activeFloor}-${table.id}`] ?? 'av';
+                      return (
+                        <button key={table.id} className={`sr-table-marker shape-${table.shape || 'square'} ${status === 'occ' ? 'is-occupied' : 'is-available'}`} style={{ top: table.top, left: table.left }} onClick={() => handleTableSelection(table)}>
+                          <span className="table-id">{table.id}</span>
+                          <span className="table-cap">{table.cap}p</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
             )}
             {activeTab === 'blackout' && (
               <div className="sr-walkin-form">
-                <input ref={blackoutInputRef} type="date" className="sr-input" />
-                <button className="sr-btn sr-btnPrimary" style={{marginTop: '10px'}} onClick={() => toggleBlackoutDate(blackoutInputRef.current?.value)}>Toggle Block</button>
-                <div style={{marginTop: '20px'}}>
-                  {blackoutDates.map(d => <div key={d}>{d} <button onClick={() => toggleBlackoutDate(d)}>x</button></div>)}
+                <div className="sr-formGrid" style={{marginBottom: '16px'}}>
+                  <div className="sr-field">
+                    <label className="sr-fieldLabel">Date</label>
+                    <input
+                      ref={blackoutInputRef}
+                      type="date"
+                      className="sr-input"
+                      style={{cursor: 'pointer'}}
+                      value={blackoutForm.date}
+                      onChange={e => setBlackoutForm(f => ({ ...f, date: e.target.value }))}
+                      onClick={() => blackoutInputRef.current?.showPicker()}
+                    />
+                  </div>
+                  <div className="sr-field">
+                    <label className="sr-fieldLabel">Reason</label>
+                    <input
+                      className="sr-input"
+                      placeholder="e.g. Evento privado, Chismas…"
+                      value={blackoutForm.notes}
+                      onChange={e => setBlackoutForm(f => ({ ...f, notes: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <button
+                  className="sr-btn sr-btnPrimary"
+                  disabled={!blackoutForm.date}
+                  onClick={async () => {
+                    await toggleBlackoutDate(blackoutForm.date, blackoutForm.notes);
+                    setBlackoutForm({ date: '', notes: '' });
+                  }}
+                >
+                  Block Date
+                </button>
+
+                <div style={{marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                  {blackoutDates.length === 0 && <p style={{color: '#999', fontSize: '0.9rem'}}>No blocked dates.</p>}
+                  {blackoutDates.map(b => (
+                    <div key={b.date_iso} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff5f5', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 16px'}}>
+                      <div>
+                        <div style={{fontWeight: '700', fontSize: '0.95rem'}}>{b.date_iso}</div>
+                        {b.notes && <div style={{fontSize: '0.82rem', color: '#b91c1c', marginTop: '2px'}}>{b.notes}</div>}
+                      </div>
+                      <button
+                        style={{background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '1.1rem', fontWeight: '700', padding: '4px 8px'}}
+                        onClick={() => toggleBlackoutDate(b.date_iso)}
+                      >✕</button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -579,7 +634,7 @@ function HostessView({
 
 // --- COMPONENTE CLIENT SEARCH (Paso 1) ---
 function ClientSearchView({
-  dateISO, setDateISO, dateLabel, stepDate,
+  dateISO, onDateChange, dateLabel, stepDate,
   guests, setGuests,
   timeHHMM, setTimeHHMM,
   isBlackout, setStep, handleSwitchToHostess
@@ -601,7 +656,7 @@ function ClientSearchView({
     <div className="sr-page">
       <main className="sr-card">
         <header className="sr-header"><img className="sr-logo" src="/logo.png" alt="Logo" /></header>
-        <input ref={dateInputRef} type="date" className="sr-hidden" value={dateISO} onChange={(e) => setDateISO(e.target.value)} />
+        <input ref={dateInputRef} type="date" className="sr-hidden" value={dateISO} onChange={(e) => onDateChange(e.target.value)} />
         <div className="sr-rows">
           <div className="sr-row" onClick={() => dateInputRef.current?.showPicker()}>
             <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepDate(-1); }}>‹</button>
@@ -693,6 +748,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("reservations");
   const [activeFloor, setActiveFloor] = useState("BAR");
   const [rows, setRows] = useState([]);
+  const [tableStatuses, setTableStatuses] = useState({});
   const [walkInForm, setWalkInForm] = useState({
     firstName: "",
     lastName: "",
@@ -725,7 +781,7 @@ export default function App() {
 
   // isBlackout ahora también cubre días fuera del horario del restaurante
   const isBlackout = useMemo(
-    () => blackoutDates.includes(dateISO) || !isRestaurantOpen(dateISO),
+    () => blackoutDates.some(b => b.date_iso === dateISO) || !isRestaurantOpen(dateISO),
     [dateISO, blackoutDates]
   );
 
@@ -736,7 +792,55 @@ export default function App() {
 
   useReservationsRealtime({ supabase, dateISO, setRows });
 
-  const stepDate = (dir) => setDateISO((prev) => addDaysISO(prev, dir));
+  // Cargar y sincronizar table_status en tiempo real
+  useEffect(() => {
+    supabase.from('table_status').select('id, status').then(({ data }) => {
+      if (data) {
+        const map = {};
+        data.forEach(r => { map[r.id] = r.status; });
+        setTableStatuses(map);
+      }
+    });
+    const channel = supabase
+      .channel('table_status_rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'table_status' }, ({ new: row }) => {
+        if (row?.id) setTableStatuses(prev => ({ ...prev, [row.id]: row.status }));
+      })
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, []);
+
+  // Cargar y sincronizar blackout_dates en tiempo real
+  useEffect(() => {
+    const load = () =>
+      supabase.from('blackout_dates').select('date_iso, notes').then(({ data }) => {
+        if (data) setBlackoutDates(data.map(r => ({ date_iso: r.date_iso, notes: r.notes || '' })));
+      });
+    load();
+    const channel = supabase
+      .channel('blackout_dates_rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blackout_dates' }, load)
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, []);
+
+  const isDateBlocked = (d) => blackoutDates.some(b => b.date_iso === d) || !isRestaurantOpen(d);
+
+  const stepDate = (dir) => {
+    setDateISO(prev => {
+      let next = addDaysISO(prev, dir);
+      let i = 0;
+      while (isDateBlocked(next) && i++ < 14) next = addDaysISO(next, dir);
+      return next;
+    });
+  };
+
+  const handleDateChange = (val) => {
+    let date = val;
+    let i = 0;
+    while (isDateBlocked(date) && i++ < 14) date = addDaysISO(date, 1);
+    setDateISO(date);
+  };
   const stepGuests = (dir) => setGuests((prev) => clampGuests((prev ?? 0) + dir));
 
   // stepTime ahora respeta el horario del restaurante: no puede salir del rango permitido
@@ -757,14 +861,21 @@ export default function App() {
     else if (pass !== null) alert("Incorrect password");
   };
 
-  const toggleBlackoutDate = (dateToToggle) => {
+  const toggleBlackoutDate = async (dateToToggle, notes) => {
     if (!dateToToggle) return;
-    if (blackoutDates.includes(dateToToggle)) setBlackoutDates(blackoutDates.filter((d) => d !== dateToToggle));
-    else setBlackoutDates([...blackoutDates, dateToToggle]);
+    if (blackoutDates.some(b => b.date_iso === dateToToggle)) {
+      await supabase.from('blackout_dates').delete().eq('date_iso', dateToToggle);
+    } else {
+      await supabase.from('blackout_dates').insert({ date_iso: dateToToggle, notes: notes || null });
+    }
   };
 
-  const handleTableSelection = (table) => {
-    if (table.status !== "occ") alert(`Table ${table.id} | Capacity: ${table.cap}`);
+  const handleTableSelection = async (table) => {
+    const key = `${activeFloor}-${table.id}`;
+    const current = tableStatuses[key] ?? 'av';
+    const next = current === 'av' ? 'occ' : 'av';
+    setTableStatuses(prev => ({ ...prev, [key]: next }));
+    await supabase.from('table_status').upsert({ id: key, status: next });
   };
 
   // Helper para generar tokens de cancelación únicos (seguro)
@@ -1052,6 +1163,7 @@ export default function App() {
         isBlackout={isBlackout}
         dateISO={dateISO}
         setDateISO={setDateISO}
+        onDateChange={handleDateChange}
         dateLabel={dateLabel}
         stepDate={stepDate}
         guests={guests}
@@ -1072,6 +1184,7 @@ export default function App() {
         seatedList={seatedList}
         canceledList={canceledList}
         blackoutDates={blackoutDates}
+        tableStatuses={tableStatuses}
       />
     );
   }
@@ -1081,6 +1194,7 @@ export default function App() {
       <ClientSearchView
         dateISO={dateISO}
         setDateISO={setDateISO}
+        onDateChange={handleDateChange}
         dateLabel={dateLabel}
         stepDate={stepDate}
         guests={guests}
