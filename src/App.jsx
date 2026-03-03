@@ -13,6 +13,20 @@ const MAX_GUESTS = 12;
 const SLOT_MINUTES = 15;
 const HOSTESS_PASSWORD = "1234";
 
+// Horarios por día (0=Dom, 1=Lun, ..., 6=Sáb)
+const RESTAURANT_HOURS = {
+  0: { open: "09:00", close: "23:00" }, // Domingo
+  1: { open: "10:00", close: "23:00" }, // Lunes
+  2: { open: "10:00", close: "23:00" }, // Martes
+  3: { open: "10:00", close: "23:00" }, // Miércoles
+  4: { open: "10:00", close: "23:00" }, // Jueves
+  5: { open: "10:00", close: "23:59" }, // Viernes
+  6: { open: "09:00", close: "23:59" }, // Sábado
+};
+
+// Tiempo mínimo antes del cierre para aceptar reservaciones (en minutos)
+const LAST_RESERVATION_BUFFER = 60; // 1 hora antes del cierre
+
 const responsiveStyles = `
   * { box-sizing: border-box; }
   @media (max-width: 900px) {
@@ -109,6 +123,35 @@ function addMinutesToLocalDateTimeISO(dateISO, timeHHMM, addMins) {
   return toLocalDateTimeISO(endDateISO, endTimeHHMM);
 }
 
+// --- NUEVOS HELPERS DE HORARIO ---
+function getDayHours(dateISO) {
+  const [y, m, d] = dateISO.split("-").map(Number);
+  const dow = new Date(y, m - 1, d).getDay(); // 0=Dom
+  return RESTAURANT_HOURS[dow] || null;
+}
+
+function isRestaurantOpen(dateISO) {
+  return !!getDayHours(dateISO);
+}
+
+function isTimeAllowed(dateISO, timeHHMM) {
+  const hours = getDayHours(dateISO);
+  if (!hours) return false;
+  const requested = minutesFromHHMM(timeHHMM);
+  const open = minutesFromHHMM(hours.open);
+  const lastSlot = minutesFromHHMM(hours.close) - LAST_RESERVATION_BUFFER;
+  return requested >= open && requested <= lastSlot;
+}
+
+function getAvailableTimeRange(dateISO) {
+  const hours = getDayHours(dateISO);
+  if (!hours) return null;
+  return {
+    open: hours.open,
+    lastSlot: hhmmFromMinutes(minutesFromHHMM(hours.close) - LAST_RESERVATION_BUFFER),
+  };
+}
+
 /*******************************************************
  * BLOQUE 3 — DATA LAYER (SUPABASE)
  *******************************************************/
@@ -137,6 +180,13 @@ async function updatePartyToSeated(id) {
   return supabase
     .from("reservations")
     .update({ status: "seated", seated_at: new Date().toISOString() })
+    .eq("id", id);
+}
+
+async function revertPartyFromSeated(id, originalStatus) {
+  return supabase
+    .from("reservations")
+    .update({ status: originalStatus, seated_at: null })
     .eq("id", id);
 }
 
@@ -199,20 +249,21 @@ async function createCalendarEventService(reservation) {
     body: JSON.stringify({ reservation }),
   });
 }
+
 /*******************************************************
  * BLOQUE 6 — UI COMPONENTES INTERNOS
  *******************************************************/
 
 function HostessView({
   // Acciones
-  onAddWaitlist, onAddPhoneRes, onSeatParty, onNotifyReady, toggleBlackoutDate,
+  onAddWaitlist, onAddPhoneRes, onSeatParty, onUnseatParty, onNotifyReady, toggleBlackoutDate,
   handleTableSelection, setViewMode,
 
   // Estado y UI
   activeTab, setActiveTab, activeFloor, setActiveFloor, isBlackout,
   dateISO, setDateISO, dateLabel, stepDate,
   guests, setGuests, stepGuests,
-  timeLabel, stepTime,
+  timeHHMM, setTimeHHMM, timeLabel, stepTime,
 
   // Datos
   walkInForm, setWalkInForm, phoneResForm, setPhoneResForm,
@@ -220,6 +271,8 @@ function HostessView({
 }) {
   const dateInputRef = useRef(null);
   const blackoutInputRef = useRef(null);
+  const phoneResDateRef = useRef(null);
+  const phoneResTimeRef = useRef(null);
 
   const seatButtonStyle = {
     background: 'linear-gradient(135deg, #f2c300 0%, #d4ab00 100%)',
@@ -227,6 +280,8 @@ function HostessView({
     fontSize: '0.85rem', letterSpacing: '0.5px', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
     transition: 'all 0.2s ease', textTransform: 'uppercase'
   };
+
+  const range = getAvailableTimeRange(dateISO);
 
   return (
     <div className="sr-page hostess-view">
@@ -259,7 +314,7 @@ function HostessView({
           <div className="sr-main-content">
             {activeTab === 'walkin' && (
               <div className="sr-walkin-form">
-                 {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed.</div>}
+                {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed.</div>}
                 <div className="sr-center"><label className="sr-fieldLabel">PARTY SIZE</label>
                   <div className="sr-row-simple">
                     <button className="sr-btn-mini" onClick={() => stepGuests(-1)} disabled={isBlackout}>−</button>
@@ -281,7 +336,20 @@ function HostessView({
             {activeTab === 'phoneres' && (
               <div className="sr-walkin-form">
                 {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed.</div>}
-                <div style={{display: 'flex', gap: '30px', justifyContent: 'center', marginBottom: '25px'}}>
+                {!isBlackout && range && (
+                  <div style={{padding: '10px 15px', background: '#f0fdf4', color: '#166534', borderRadius: '8px', marginBottom: '16px', fontSize: '0.85rem', textAlign: 'center'}}>
+                    Reservations accepted: {formatTimeLabel(range.open)} – {formatTimeLabel(range.lastSlot)}
+                  </div>
+                )}
+                <div style={{display: 'flex', gap: '30px', justifyContent: 'center', marginBottom: '25px', flexWrap: 'wrap'}}>
+                  <div className="sr-center"><label className="sr-fieldLabel">DATE</label>
+                    <div className="sr-row-simple">
+                      <button className="sr-btn-mini" onClick={() => stepDate(-1)} disabled={isBlackout}>−</button>
+                      <input ref={phoneResDateRef} type="date" className="sr-hidden" value={dateISO} onChange={(e) => setDateISO(e.target.value)} />
+                      <span style={{fontSize: '1.2rem', fontWeight: 'bold', minWidth: '120px', textAlign: 'center', cursor: 'pointer'}} onClick={() => phoneResDateRef.current?.showPicker()}>{dateLabel}</span>
+                      <button className="sr-btn-mini" onClick={() => stepDate(1)} disabled={isBlackout}>+</button>
+                    </div>
+                  </div>
                   <div className="sr-center"><label className="sr-fieldLabel">GUESTS</label>
                     <div className="sr-row-simple">
                       <button className="sr-btn-mini" onClick={() => stepGuests(-1)} disabled={isBlackout}>−</button>
@@ -292,7 +360,8 @@ function HostessView({
                   <div className="sr-center"><label className="sr-fieldLabel">TIME</label>
                     <div className="sr-row-simple">
                       <button className="sr-btn-mini" onClick={() => stepTime(-1)} disabled={isBlackout}>−</button>
-                      <span style={{fontSize: '1.8rem', fontWeight: 'bold', minWidth: '120px', textAlign: 'center'}}>{timeLabel}</span>
+                      <input ref={phoneResTimeRef} type="time" className="sr-hidden" value={timeHHMM} onChange={(e) => setTimeHHMM(e.target.value)} />
+                      <span style={{fontSize: '1.8rem', fontWeight: 'bold', minWidth: '120px', textAlign: 'center', cursor: 'pointer'}} onClick={() => phoneResTimeRef.current?.showPicker()}>{timeLabel}</span>
                       <button className="sr-btn-mini" onClick={() => stepTime(1)} disabled={isBlackout}>+</button>
                     </div>
                   </div>
@@ -365,9 +434,24 @@ function HostessView({
             {activeTab === 'seated' && (
               <div className="sr-res-list">
                 {seatedList.length === 0 ? <p>No seated guests today.</p> : seatedList.map(item => (
-                  <div key={item.id} style={{padding: '15px', borderBottom: '1px solid #eee'}}>
-                    <strong>{item.firstName} {item.lastName}</strong> - Seated at:{" "}
-                    {item.seated_at ? new Date(item.seated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                  <div key={item.id} className="sr-list-item" style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
+                        <div><strong style={{ fontSize: '1.1rem' }}>{item.firstName} {item.lastName}</strong><span style={{ color: '#666', marginLeft: '8px' }}>({item.guests} pax)</span></div>
+                        <span style={{ fontWeight: '700', color: '#22c55e' }}>Seated {item.seated_at ? new Date(item.seated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}</span>
+                      </div>
+                      {item.timeHHMM && <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '2px' }}>Res. time: {formatTimeLabel(item.timeHHMM)}</div>}
+                      {item.celebration && item.celebration !== "None" && <div style={{ fontSize: '0.85rem', color: '#d4ab00', marginTop: '4px' }}>🎉 {item.celebration}</div>}
+                      {item.dietary && item.dietary !== "None" && <div style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '2px' }}>🥗 {item.dietary}</div>}
+                      {item.notes && <div style={{ color: '#555', fontSize: '0.85rem', background: '#f8f8f8', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{item.notes}"</div>}
+                      {item.phone && <div style={{ fontSize: '0.85rem', color: '#4b5563', marginTop: '2px', fontWeight: '500' }}>📞 {item.phone}</div>}
+                    </div>
+                    <button
+                      onClick={() => onUnseatParty(item)}
+                      style={{ background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', padding: '8px 16px', borderRadius: '10px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
+                      Undo
+                    </button>
                   </div>
                 ))}
               </div>
@@ -418,6 +502,8 @@ function ClientSearchView({
   const dateInputRef = useRef(null);
   const timeInputRef = useRef(null);
 
+  const range = getAvailableTimeRange(dateISO);
+
   return (
     <div className="sr-page">
       <main className="sr-card">
@@ -449,7 +535,11 @@ function ClientSearchView({
         ) : (
           <button className="sr-search" onClick={() => setStep("details")}>Search</button>
         )}
-        <div className="sr-foot">Max party size: {MAX_GUESTS} · 15 min slots</div>
+        <div className="sr-foot">
+          {range
+            ? `Available: ${formatTimeLabel(range.open)} – ${formatTimeLabel(range.lastSlot)} · Max ${MAX_GUESTS} guests`
+            : `Max party size: ${MAX_GUESTS} · 15 min slots`}
+        </div>
       </main>
       <button className="sr-view-toggle" onClick={handleSwitchToHostess}>Switch to Hostess View</button>
     </div>
@@ -533,7 +623,12 @@ export default function App() {
 
   const dateLabel = useMemo(() => formatDateLabel(dateISO), [dateISO]);
   const timeLabel = useMemo(() => formatTimeLabel(timeHHMM), [timeHHMM]);
-  const isBlackout = useMemo(() => blackoutDates.includes(dateISO), [dateISO, blackoutDates]);
+
+  // isBlackout ahora también cubre días fuera del horario del restaurante
+  const isBlackout = useMemo(
+    () => blackoutDates.includes(dateISO) || !isRestaurantOpen(dateISO),
+    [dateISO, blackoutDates]
+  );
 
   const history = useMemo(() => rows.filter((r) => r.status === "reserved"), [rows]);
   const waitList = useMemo(() => rows.filter((r) => r.status === "waitlist"), [rows]);
@@ -543,10 +638,17 @@ export default function App() {
 
   const stepDate = (dir) => setDateISO((prev) => addDaysISO(prev, dir));
   const stepGuests = (dir) => setGuests((prev) => clampGuests((prev ?? 0) + dir));
+
+  // stepTime ahora respeta el horario del restaurante: no puede salir del rango permitido
   const stepTime = (dir) => {
+    const hours = getDayHours(dateISO);
+    if (!hours) return;
+    const open = minutesFromHHMM(hours.open);
+    const lastSlot = minutesFromHHMM(hours.close) - LAST_RESERVATION_BUFFER;
     let mins = minutesFromHHMM(timeHHMM) + SLOT_MINUTES * dir;
-    mins = ((mins % 1440) + 1440) % 1440;
-    setTimeHHMM(hhmmFromMinutes(Math.round(mins / SLOT_MINUTES) * SLOT_MINUTES));
+    mins = Math.max(open, Math.min(lastSlot, mins));
+    mins = Math.round(mins / SLOT_MINUTES) * SLOT_MINUTES;
+    setTimeHHMM(hhmmFromMinutes(mins));
   };
 
   const handleSwitchToHostess = () => {
@@ -592,7 +694,7 @@ export default function App() {
       notes: walkInForm.notes || null,
       status: "waitlist",
       source: "walkin",
-      cancel_token: cancelToken, // opcional, útil si quieres link también en waitlist
+      cancel_token: cancelToken,
     };
 
     const { error } = await insertWaitlistRecord(newEntry);
@@ -627,6 +729,16 @@ export default function App() {
     if (isBlackout) return alert("Cannot make reservations on a closed day.");
     if (!phoneResForm.firstName || !phoneResForm.lastName || !phoneResForm.phone) {
       return alert("Name, Last Name and Phone are required.");
+    }
+
+    // Validación de horario
+    if (!isTimeAllowed(dateISO, timeHHMM)) {
+      const range = getAvailableTimeRange(dateISO);
+      return alert(
+        range
+          ? `Reservations only accepted between ${formatTimeLabel(range.open)} and ${formatTimeLabel(range.lastSlot)}.`
+          : "The restaurant is closed this day."
+      );
     }
 
     const cancelToken = generateToken();
@@ -697,6 +809,12 @@ export default function App() {
     if (error) alert("Error seating party.");
   };
 
+  const handleUnseatParty = async (party) => {
+    const originalStatus = party.source === "walkin" ? "waitlist" : "reserved";
+    const { error } = await revertPartyFromSeated(party.id, originalStatus);
+    if (error) alert("Error reverting party.");
+  };
+
   const handleNotifyReady = async (party) => {
     if (!party?.phone) return alert("No phone number available for this guest.");
 
@@ -721,6 +839,16 @@ export default function App() {
   const handleClientSubmit = async () => {
     if (!clientForm.firstName || !clientForm.lastName || !clientForm.phone) {
       return alert("Por favor completa Nombre, Apellido y Teléfono.");
+    }
+
+    // Validación de horario
+    if (!isTimeAllowed(dateISO, timeHHMM)) {
+      const range = getAvailableTimeRange(dateISO);
+      return alert(
+        range
+          ? `Reservations only accepted between ${formatTimeLabel(range.open)} and ${formatTimeLabel(range.lastSlot)}.`
+          : "The restaurant is closed this day."
+      );
     }
 
     const cancelToken = generateToken();
@@ -797,6 +925,7 @@ export default function App() {
         onAddWaitlist={handleAddToWaitlist}
         onAddPhoneRes={handleAddPhoneReservation}
         onSeatParty={handleSeatParty}
+        onUnseatParty={handleUnseatParty}
         onNotifyReady={handleNotifyReady}
         toggleBlackoutDate={toggleBlackoutDate}
         handleTableSelection={handleTableSelection}
@@ -815,6 +944,8 @@ export default function App() {
         guests={guests}
         setGuests={setGuests}
         stepGuests={stepGuests}
+        timeHHMM={timeHHMM}
+        setTimeHHMM={setTimeHHMM}
         timeLabel={timeLabel}
         stepTime={stepTime}
 
