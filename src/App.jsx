@@ -20,12 +20,14 @@ const RESTAURANT_HOURS = {
   2: { open: "10:00", close: "23:00" }, // Martes
   3: { open: "10:00", close: "23:00" }, // Miércoles
   4: { open: "10:00", close: "23:00" }, // Jueves
-  5: { open: "10:00", close: "23:59" }, // Viernes
-  6: { open: "09:00", close: "23:59" }, // Sábado
+  5: { open: "10:00", close: "24:00" }, // Viernes
+  6: { open: "09:00", close: "24:00" }, // Sábado
 };
 
 // Tiempo mínimo antes del cierre para aceptar reservaciones (en minutos)
-const LAST_RESERVATION_BUFFER = 60; // 1 hora antes del cierre
+const LAST_RESERVATION_BUFFER = 0;
+// Tiempo mínimo de anticipación para reservaciones same-day en client view (en minutos)
+const SAME_DAY_BUFFER = 120;
 
 const responsiveStyles = `
   * { box-sizing: border-box; }
@@ -141,6 +143,22 @@ function isTimeAllowed(dateISO, timeHHMM) {
   const open = minutesFromHHMM(hours.open);
   const lastSlot = minutesFromHHMM(hours.close) - LAST_RESERVATION_BUFFER;
   return requested >= open && requested <= lastSlot;
+}
+
+function getTimeSlots(dateISO, applySameDayBuffer = false) {
+  const hours = getDayHours(dateISO);
+  if (!hours) return [];
+  const open = minutesFromHHMM(hours.open);
+  const lastSlot = minutesFromHHMM(hours.close) - LAST_RESERVATION_BUFFER;
+  let earliest = open;
+  if (applySameDayBuffer && dateISO === dateISOFromDate(new Date())) {
+    const now = new Date();
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    earliest = Math.max(open, Math.ceil((nowMins + SAME_DAY_BUFFER) / SLOT_MINUTES) * SLOT_MINUTES);
+  }
+  const slots = [];
+  for (let m = earliest; m <= lastSlot; m += SLOT_MINUTES) slots.push(hhmmFromMinutes(m));
+  return slots;
 }
 
 function getAvailableTimeRange(dateISO) {
@@ -282,9 +300,13 @@ function HostessView({
 }) {
   const dateInputRef = useRef(null);
   const blackoutInputRef = useRef(null);
-  const phoneResDateRef = useRef(null);
-  const phoneResTimeRef = useRef(null);
+  const bookingDateRef = useRef(null);
   const [editingRes, setEditingRes] = useState(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(id);
+  }, []);
 
   const seatButtonStyle = {
     background: 'linear-gradient(135deg, #f2c300 0%, #d4ab00 100%)',
@@ -354,29 +376,24 @@ function HostessView({
                     Reservations accepted: {formatTimeLabel(range.open)} – {formatTimeLabel(range.lastSlot)}
                   </div>
                 )}
-                <div style={{display: 'flex', gap: '30px', justifyContent: 'center', marginBottom: '25px', flexWrap: 'wrap'}}>
-                  <div className="sr-center"><label className="sr-fieldLabel">DATE</label>
-                    <div className="sr-row-simple">
-                      <button className="sr-btn-mini" onClick={() => stepDate(-1)} disabled={isBlackout}>−</button>
-                      <input ref={phoneResDateRef} type="date" className="sr-hidden" value={dateISO} onChange={(e) => setDateISO(e.target.value)} />
-                      <span style={{fontSize: '1.2rem', fontWeight: 'bold', minWidth: '120px', textAlign: 'center', cursor: 'pointer'}} onClick={() => phoneResDateRef.current?.showPicker()}>{dateLabel}</span>
-                      <button className="sr-btn-mini" onClick={() => stepDate(1)} disabled={isBlackout}>+</button>
-                    </div>
+                <div className="sr-booking-bar" style={{marginBottom: '25px'}}>
+                  <div className="sr-booking-field" style={{cursor: 'pointer'}} onClick={() => bookingDateRef.current?.showPicker()}>
+                    <label className="sr-fieldLabel" style={{cursor: 'pointer'}}>Date</label>
+                    <input ref={bookingDateRef} type="date" className="sr-booking-input" value={dateISO} onChange={e => setDateISO(e.target.value)} disabled={isBlackout} />
                   </div>
-                  <div className="sr-center"><label className="sr-fieldLabel">GUESTS</label>
-                    <div className="sr-row-simple">
-                      <button className="sr-btn-mini" onClick={() => stepGuests(-1)} disabled={isBlackout}>−</button>
-                      <input type="number" className="sr-guests-count" value={guests === null ? "" : guests} onChange={(e) => setGuests(e.target.value === "" ? null : parseInt(e.target.value))} onFocus={() => setGuests(null)} style={{width: '60px', textAlign: 'center', border: 'none', background: 'transparent', fontSize: '2rem', fontWeight: 'bold', color: '#000'}} disabled={isBlackout} />
-                      <button className="sr-btn-mini" onClick={() => stepGuests(1)} disabled={isBlackout}>+</button>
-                    </div>
+                  <div className="sr-booking-divider" />
+                  <div className="sr-booking-field">
+                    <label className="sr-fieldLabel">Time</label>
+                    <select className="sr-booking-input" value={timeHHMM} onChange={e => setTimeHHMM(e.target.value)} disabled={isBlackout}>
+                      {getTimeSlots(dateISO).map(slot => (
+                        <option key={slot} value={slot}>{formatTimeLabel(slot)}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="sr-center"><label className="sr-fieldLabel">TIME</label>
-                    <div className="sr-row-simple">
-                      <button className="sr-btn-mini" onClick={() => stepTime(-1)} disabled={isBlackout}>−</button>
-                      <input ref={phoneResTimeRef} type="time" className="sr-hidden" value={timeHHMM} onChange={(e) => setTimeHHMM(e.target.value)} />
-                      <span style={{fontSize: '1.8rem', fontWeight: 'bold', minWidth: '120px', textAlign: 'center', cursor: 'pointer'}} onClick={() => phoneResTimeRef.current?.showPicker()}>{timeLabel}</span>
-                      <button className="sr-btn-mini" onClick={() => stepTime(1)} disabled={isBlackout}>+</button>
-                    </div>
+                  <div className="sr-booking-divider" />
+                  <div className="sr-booking-field">
+                    <label className="sr-fieldLabel">Guests</label>
+                    <input type="number" className="sr-booking-input" min="1" max={MAX_GUESTS} placeholder="—" value={guests === null ? '' : guests} onChange={e => setGuests(e.target.value === '' ? null : parseInt(e.target.value))} onFocus={() => setGuests(null)} disabled={isBlackout} />
                   </div>
                 </div>
                 <div className="sr-formGrid">
@@ -396,8 +413,20 @@ function HostessView({
                 {waitList.length === 0 ? <p>No guests in wait list.</p> : waitList.map(item => (
                   <div key={item.id} className="sr-list-item" style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <div style={{ flex: 1 }}>
-                      <strong>{item.firstName} {item.lastName}</strong> ({item.guests} pax)<br/>
-                      <small style={{ color: '#999' }}>Added at: {item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}</small>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <strong>{item.firstName} {item.lastName}</strong>
+                        <span style={{ color: '#666' }}>({item.guests} pax)</span>
+                        {item.created_at && (() => {
+                          const mins = Math.floor((now - new Date(item.created_at).getTime()) / 60000);
+                          const color = mins >= 30 ? '#ef4444' : mins >= 15 ? '#f59e0b' : '#22c55e';
+                          return (
+                            <span style={{ background: color, color: '#fff', borderRadius: '20px', padding: '2px 10px', fontSize: '0.78rem', fontWeight: '700' }}>
+                              {mins < 1 ? '< 1 min' : `${mins} min`}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                      <small style={{ color: '#999' }}>In at {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
                       {item.celebration && item.celebration !== "None" && <div style={{ fontSize: '0.85rem', color: '#d4ab00', marginTop: '2px' }}>🎉 {item.celebration}</div>}
                       {item.dietary && item.dietary !== "None" && <div style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '2px' }}>🥗 {item.dietary}</div>}
                       {item.notes && <div style={{ fontSize: '0.85rem', fontStyle: 'italic', color: '#666', marginTop: '2px' }}>📝 "{item.notes}"</div>}
@@ -549,41 +578,55 @@ function HostessView({
 }
 
 // --- COMPONENTE CLIENT SEARCH (Paso 1) ---
-function ClientSearchView({ 
-  dateISO, setDateISO, dateLabel, stepDate, 
-  guests, setGuests, stepGuests, 
-  timeHHMM, setTimeHHMM, timeLabel, stepTime, 
-  isBlackout, setStep, handleSwitchToHostess 
+function ClientSearchView({
+  dateISO, setDateISO, dateLabel, stepDate,
+  guests, setGuests,
+  timeHHMM, setTimeHHMM,
+  isBlackout, setStep, handleSwitchToHostess
 }) {
   const dateInputRef = useRef(null);
-  const timeInputRef = useRef(null);
 
   const range = getAvailableTimeRange(dateISO);
+  const availableSlots = getTimeSlots(dateISO, true);
+
+  // Auto-reset time if selected slot is no longer available (e.g. same-day cutoff)
+  useEffect(() => {
+    const slots = getTimeSlots(dateISO, true);
+    if (slots.length > 0 && !slots.includes(timeHHMM)) {
+      setTimeHHMM(slots[0]);
+    }
+  }, [dateISO]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="sr-page">
       <main className="sr-card">
         <header className="sr-header"><img className="sr-logo" src="/logo.png" alt="Logo" /></header>
         <input ref={dateInputRef} type="date" className="sr-hidden" value={dateISO} onChange={(e) => setDateISO(e.target.value)} />
-        <input ref={timeInputRef} type="time" className="sr-hidden" value={timeHHMM} onChange={(e) => setTimeHHMM(e.target.value)} />
         <div className="sr-rows">
           <div className="sr-row" onClick={() => dateInputRef.current?.showPicker()}>
             <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepDate(-1); }}>‹</button>
             <div className="sr-center"><div className="sr-value">{dateLabel}</div><div className="sr-label">Date</div></div>
             <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepDate(1); }}>›</button>
           </div>
-          <div className="sr-row">
-            <button className="sr-arrow" onClick={() => stepGuests(-1)}>‹</button>
-            <div className="sr-center">
-              <input type="number" value={guests === null ? "" : guests} onChange={(e) => setGuests(e.target.value === "" ? null : parseInt(e.target.value))} onFocus={() => setGuests(null)} style={{width: '60px', textAlign: 'center', border: 'none', background: 'transparent', fontSize: '1.5rem', fontWeight: 'bold', color: '#000'}} />
-              <div className="sr-label">Guests</div>
+          <div className="sr-row" style={{cursor: 'default'}}>
+            <div className="sr-center" style={{gridColumn: '1 / -1'}}>
+              <select className="sr-time-select" value={guests ?? 2} onChange={e => setGuests(parseInt(e.target.value))}>
+                {Array.from({length: MAX_GUESTS}, (_, i) => i + 1).map(n => (
+                  <option key={n} value={n}>{n} {n === 1 ? 'Guest' : 'Guests'}</option>
+                ))}
+              </select>
+              <div className="sr-label" style={{marginTop: '4px'}}>Guests</div>
             </div>
-            <button className="sr-arrow" onClick={() => stepGuests(1)}>›</button>
           </div>
-          <div className="sr-row" onClick={() => timeInputRef.current?.showPicker()}>
-            <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepTime(-1); }}>‹</button>
-            <div className="sr-center"><div className="sr-value">{timeLabel}</div><div className="sr-label">Time</div></div>
-            <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepTime(1); }}>›</button>
+          <div className="sr-row" style={{cursor: 'default'}}>
+            <div className="sr-center" style={{gridColumn: '1 / -1'}}>
+              <select className="sr-time-select" value={timeHHMM} onChange={e => setTimeHHMM(e.target.value)}>
+                {availableSlots.map(slot => (
+                  <option key={slot} value={slot}>{formatTimeLabel(slot)}</option>
+                ))}
+              </select>
+              <div className="sr-label" style={{marginTop: '6px'}}>Time</div>
+            </div>
           </div>
         </div>
         {isBlackout ? (

@@ -225,16 +225,18 @@ body {
 /* Rows container (date / guests / time) */
 .sr-rows { display: flex; flex-direction: column; }
 
-.sr-row { display: grid; grid-template-columns: 60px 1fr 60px; align-items: center; padding: 24px 20px; border-bottom: 1px solid #eee; cursor: pointer; position: relative; }
+.sr-row { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 20px 24px; border-bottom: 1px solid rgba(0,0,0,0.07); cursor: pointer; position: relative; transition: background 0.15s; }
+.sr-row:hover { background: #fafafa; }
 
 /* FIX: la fila del tiempo usa TimePicker custom — sin cursor pointer */
 .sr-row.sr-row-time { cursor: default; }
 
-.sr-arrow { display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #eee; border-radius: 10px; font-size: 28px; font-weight: 900; color: #000 !important; height: 48px; width: 48px; cursor: pointer; }
+.sr-arrow { display: flex; align-items: center; justify-content: center; background: transparent; border: 1.5px solid #e0e0e0; border-radius: 50%; font-size: 22px; font-weight: 700; color: #555 !important; height: 40px; width: 40px; cursor: pointer; transition: all 0.15s; }
+.sr-arrow:hover { border-color: #f2c300; color: #000 !important; background: #fffbea; }
 
 .sr-center { text-align: center; }
-.sr-value { font-size: 34px; font-weight: 800; }
-.sr-label { font-size: 12px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 1.2px; }
+.sr-value { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; }
+.sr-label { font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
 
 .sr-form { padding: 24px; }
 .sr-formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
@@ -254,34 +256,62 @@ body {
 
 /* BOTÓN SEARCH PREMIUM */
 .sr-search {
-  width: calc(100% - 40px);
-  margin: 20px;
-  padding: 18px;
+  display: block;
+  width: 220px;
+  margin: 24px auto;
+  padding: 16px 32px;
   background: linear-gradient(135deg, #f2c300 0%, #d4ab00 100%);
   color: #000;
   border: none;
-  border-radius: 14px;
-  font-size: 1.1rem;
+  border-radius: 100px;
+  font-size: 0.95rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 2px;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(242, 195, 0, 0.3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6px 20px rgba(242, 195, 0, 0.35);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sr-search:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(242, 195, 0, 0.4);
-  filter: brightness(1.05);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 10px 30px rgba(242, 195, 0, 0.45);
 }
 
 .sr-search:active {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.98);
 }
 
 .sr-view-toggle { margin-top: 25px; background: transparent; border: none; color: #555; cursor: pointer; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
 .sr-view-toggle:hover { color: #f2c300; }
+
+/* Booking bar (Phone Res inline row) */
+.sr-booking-bar {
+  display: flex; align-items: stretch;
+  background: #f8f8f8; border: 1px solid #e8e8e8;
+  border-radius: 14px; overflow: hidden;
+}
+.sr-booking-field {
+  flex: 1; display: flex; flex-direction: column;
+  gap: 4px; padding: 12px 16px;
+}
+.sr-booking-field label { font-size: 10px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1.2px; }
+.sr-booking-input {
+  border: none; background: transparent; font-size: 0.95rem;
+  font-weight: 600; color: #111; outline: none; cursor: pointer;
+  width: 100%; padding: 0;
+}
+.sr-booking-input:disabled { color: #bbb; cursor: not-allowed; }
+.sr-booking-divider { width: 1px; background: #e0e0e0; margin: 10px 0; }
+
+/* Time slot select */
+.sr-time-select {
+  border: none; background: transparent; font-size: 1.8rem;
+  font-weight: 800; color: #111; text-align: center;
+  cursor: pointer; outline: none; appearance: none;
+  -webkit-appearance: none; padding: 4px 8px;
+}
+.sr-time-select option { font-size: 1rem; font-weight: 600; }
 
 /* Edit modal */
 .sr-modal-overlay {
