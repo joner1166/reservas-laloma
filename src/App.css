@@ -35,7 +35,7 @@ body {
 }
 
 /* --- DISEÑO DE DOS COLUMNAS (HOSTESS) --- */
-.hostess-layout { display: flex; min-height: 650px; }
+.hostess-layout { display: flex; min-height: 650px; font-size: 90%; }
 
 .sr-hostess-sidebar {
   width: 260px;
@@ -282,6 +282,19 @@ body {
 
 .sr-view-toggle { margin-top: 25px; background: transparent; border: none; color: #555; cursor: pointer; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
 .sr-view-toggle:hover { color: #f2c300; }
+
+/* Edit modal */
+.sr-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 20px;
+}
+.sr-modal {
+  background: #fff; border-radius: 20px; padding: 30px;
+  width: 100%; max-width: 600px; max-height: 90vh;
+  overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
 
 /* Solo oculta inputs nativos auxiliares (type="date") */
 .sr-hidden {

@@ -164,7 +164,7 @@ async function fetchRowsForDay(supabaseClient, dateISO) {
     .from("reservations")
     .select("*")
     .eq("dateISO", dateISO)
-    .in("status", ["reserved", "waitlist", "seated"])
+    .in("status", ["reserved", "waitlist", "seated", "cancelled"])
     .order("id", { ascending: false });
 }
 
@@ -180,6 +180,17 @@ async function updatePartyToSeated(id) {
   return supabase
     .from("reservations")
     .update({ status: "seated", seated_at: new Date().toISOString() })
+    .eq("id", id);
+}
+
+async function updateReservationRecord(id, data) {
+  return supabase.from("reservations").update(data).eq("id", id);
+}
+
+async function cancelReservation(id) {
+  return supabase
+    .from("reservations")
+    .update({ status: "cancelled" })
     .eq("id", id);
 }
 
@@ -256,7 +267,7 @@ async function createCalendarEventService(reservation) {
 
 function HostessView({
   // Acciones
-  onAddWaitlist, onAddPhoneRes, onSeatParty, onUnseatParty, onNotifyReady, toggleBlackoutDate,
+  onAddWaitlist, onAddPhoneRes, onSeatParty, onUnseatParty, onCancelRes, onSaveEdit, onNotifyReady, toggleBlackoutDate,
   handleTableSelection, setViewMode,
 
   // Estado y UI
@@ -267,12 +278,13 @@ function HostessView({
 
   // Datos
   walkInForm, setWalkInForm, phoneResForm, setPhoneResForm,
-  waitList, history, seatedList, blackoutDates
+  waitList, history, seatedList, canceledList, blackoutDates
 }) {
   const dateInputRef = useRef(null);
   const blackoutInputRef = useRef(null);
   const phoneResDateRef = useRef(null);
   const phoneResTimeRef = useRef(null);
+  const [editingRes, setEditingRes] = useState(null);
 
   const seatButtonStyle = {
     background: 'linear-gradient(135deg, #f2c300 0%, #d4ab00 100%)',
@@ -294,6 +306,7 @@ function HostessView({
             <button className={activeTab === 'waitlist' ? 'active' : ''} onClick={() => setActiveTab('waitlist')}>Wait List ({waitList.length})</button>
             <button className={activeTab === 'reservations' ? 'active' : ''} onClick={() => setActiveTab('reservations')}>Reservations ({history.length})</button>
             <button className={activeTab === 'seated' ? 'active' : ''} onClick={() => setActiveTab('seated')}>Seated ({seatedList.length})</button>
+            <button className={activeTab === 'canceled' ? 'active' : ''} onClick={() => setActiveTab('canceled')} style={{color: activeTab === 'canceled' ? '#000' : '#ef4444'}}>Canceled ({canceledList.length})</button>
             <button className={activeTab === 'floorplan' ? 'active' : ''} onClick={() => setActiveTab('floorplan')}>Floor Plan</button>
             <button className={activeTab === 'blackout' ? 'active' : ''} onClick={() => setActiveTab('blackout')} style={{marginTop: 'auto', borderTop: '1px solid #eee', color: '#666'}}>Blackout</button>
           </nav>
@@ -301,7 +314,7 @@ function HostessView({
         <section className="sr-hostess-main">
           <header className="sr-main-header">
             <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
-              <h2>{activeTab === 'walkin' ? 'New Walk-in' : activeTab === 'phoneres' ? 'New Phone Reservation' : activeTab === 'waitlist' ? 'Wait List' : activeTab === 'reservations' ? 'Reservations' : activeTab === 'seated' ? 'Seated History' : activeTab === 'blackout' ? 'Manage Blackout' : 'Floor Plan'}</h2>
+              <h2>{activeTab === 'walkin' ? 'New Walk-in' : activeTab === 'phoneres' ? 'New Phone Reservation' : activeTab === 'waitlist' ? 'Wait List' : activeTab === 'reservations' ? 'Reservations' : activeTab === 'seated' ? 'Seated History' : activeTab === 'canceled' ? 'Canceled' : activeTab === 'blackout' ? 'Manage Blackout' : 'Floor Plan'}</h2>
               {isBlackout && <span style={{background: '#ef4444', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold'}}>CLOSED TODAY</span>}
             </div>
             <div className="sr-hostess-date-picker" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -426,7 +439,12 @@ function HostessView({
                       {res.notes && <div style={{ color: '#555', fontSize: '0.85rem', background: '#f8f8f8', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{res.notes}"</div>}
                       {res.phone && <div style={{ fontSize: '0.85rem', color: '#4b5563', marginTop: '2px', fontWeight: '500' }}>📞 {res.phone}</div>}
                     </div>
-                    <button style={seatButtonStyle} onClick={() => onSeatParty(res)}>Seat</button>
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                      <button style={seatButtonStyle} onClick={() => onSeatParty(res)}>Seat</button>
+                      <button style={{ ...seatButtonStyle, background: '#000', color: '#fff', fontSize: '0.75rem', padding: '8px 12px' }} onClick={() => onNotifyReady(res)}>Notify 📱</button>
+                      <button style={{ ...seatButtonStyle, background: '#f3f4f6', color: '#374151', boxShadow: 'none', border: '1px solid #d1d5db', fontSize: '0.75rem', padding: '8px 12px' }} onClick={() => setEditingRes({...res})}>Edit</button>
+                      <button style={{ ...seatButtonStyle, background: '#fee2e2', color: '#b91c1c', fontSize: '0.75rem', padding: '8px 12px' }} onClick={() => onCancelRes(res)}>Cancel</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -452,6 +470,22 @@ function HostessView({
                     >
                       Undo
                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {activeTab === 'canceled' && (
+              <div className="sr-res-list">
+                {canceledList.length === 0 ? <p>No canceled reservations today.</p> : canceledList.map(item => (
+                  <div key={item.id} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
+                        <div><strong style={{ fontSize: '1.1rem', textDecoration: 'line-through', color: '#9ca3af' }}>{item.firstName} {item.lastName}</strong><span style={{ color: '#9ca3af', marginLeft: '8px' }}>({item.guests} pax)</span></div>
+                        <span style={{ fontWeight: '700', color: '#9ca3af' }}>{item.timeHHMM ? formatTimeLabel(item.timeHHMM) : ""}</span>
+                      </div>
+                      {item.phone && <div style={{ fontSize: '0.85rem', color: '#9ca3af', marginTop: '2px' }}>📞 {item.phone}</div>}
+                      {item.notes && <div style={{ color: '#9ca3af', fontSize: '0.85rem', marginTop: '4px', fontStyle: 'italic' }}>"{item.notes}"</div>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -488,6 +522,28 @@ function HostessView({
         </section>
       </main>
       <button className="sr-view-toggle" onClick={() => setViewMode("client")}>Return to Client View</button>
+      {editingRes && (
+        <div className="sr-modal-overlay" onClick={() => setEditingRes(null)}>
+          <div className="sr-modal" onClick={e => e.stopPropagation()}>
+            <h3 style={{margin: '0 0 20px', fontSize: '1.2rem', fontWeight: '800'}}>Edit Reservation</h3>
+            <div className="sr-formGrid">
+              <div className="sr-field"><label className="sr-fieldLabel">First Name</label><input className="sr-input" value={editingRes.firstName} onChange={e => setEditingRes({...editingRes, firstName: e.target.value})} /></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Last Name</label><input className="sr-input" value={editingRes.lastName} onChange={e => setEditingRes({...editingRes, lastName: e.target.value})} /></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Phone</label><input className="sr-input" value={editingRes.phone || ''} onChange={e => setEditingRes({...editingRes, phone: e.target.value})} /></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Email</label><input className="sr-input" value={editingRes.email || ''} onChange={e => setEditingRes({...editingRes, email: e.target.value})} /></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Guests</label><input className="sr-input" type="number" min="1" max={MAX_GUESTS} value={editingRes.guests} onChange={e => setEditingRes({...editingRes, guests: parseInt(e.target.value) || 1})} /></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Time</label><input className="sr-input" type="time" value={editingRes.timeHHMM || ''} onChange={e => setEditingRes({...editingRes, timeHHMM: e.target.value})} /></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={editingRes.celebration || 'None'} onChange={e => setEditingRes({...editingRes, celebration: e.target.value})}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Wedding</option><option>Graduation</option><option>Other</option></select></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Dietary</label><select className="sr-input" value={editingRes.dietary || 'None'} onChange={e => setEditingRes({...editingRes, dietary: e.target.value})}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
+              <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={editingRes.notes || ''} onChange={e => setEditingRes({...editingRes, notes: e.target.value})} /></div>
+            </div>
+            <div className="sr-actions" style={{marginTop: '20px'}}>
+              <button className="sr-btn" onClick={() => setEditingRes(null)}>Cancel</button>
+              <button className="sr-btn sr-btnPrimary" onClick={async () => { await onSaveEdit(editingRes.id, { firstName: editingRes.firstName, lastName: editingRes.lastName, phone: editingRes.phone, email: editingRes.email, guests: editingRes.guests, timeHHMM: editingRes.timeHHMM, celebration: editingRes.celebration, dietary: editingRes.dietary, notes: editingRes.notes }); setEditingRes(null); }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -633,6 +689,7 @@ export default function App() {
   const history = useMemo(() => rows.filter((r) => r.status === "reserved"), [rows]);
   const waitList = useMemo(() => rows.filter((r) => r.status === "waitlist"), [rows]);
   const seatedList = useMemo(() => rows.filter((r) => r.status === "seated"), [rows]);
+  const canceledList = useMemo(() => rows.filter((r) => r.status === "cancelled"), [rows]);
 
   useReservationsRealtime({ supabase, dateISO, setRows });
 
@@ -809,6 +866,17 @@ export default function App() {
     if (error) alert("Error seating party.");
   };
 
+  const handleSaveEdit = async (id, data) => {
+    const { error } = await updateReservationRecord(id, data);
+    if (error) alert("Error updating reservation: " + error.message);
+  };
+
+  const handleCancelReservation = async (res) => {
+    if (!window.confirm(`Cancel reservation for ${res.firstName} ${res.lastName}?`)) return;
+    const { error } = await cancelReservation(res.id);
+    if (error) alert("Error canceling reservation.");
+  };
+
   const handleUnseatParty = async (party) => {
     const originalStatus = party.source === "walkin" ? "waitlist" : "reserved";
     const { error } = await revertPartyFromSeated(party.id, originalStatus);
@@ -926,6 +994,8 @@ export default function App() {
         onAddPhoneRes={handleAddPhoneReservation}
         onSeatParty={handleSeatParty}
         onUnseatParty={handleUnseatParty}
+        onCancelRes={handleCancelReservation}
+        onSaveEdit={handleSaveEdit}
         onNotifyReady={handleNotifyReady}
         toggleBlackoutDate={toggleBlackoutDate}
         handleTableSelection={handleTableSelection}
@@ -957,6 +1027,7 @@ export default function App() {
         waitList={waitList}
         history={history}
         seatedList={seatedList}
+        canceledList={canceledList}
         blackoutDates={blackoutDates}
       />
     );
