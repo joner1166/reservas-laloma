@@ -351,10 +351,10 @@ function HostessView({
             </div>
             <div className="sr-hostess-date-picker" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button className="sr-btn-mini" onClick={() => stepDate(-1)}>‹</button>
-              <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => headerDateRef.current?.showPicker()}>
+              <div style={{ position: 'relative', cursor: 'pointer' }}>
                 <div className="sr-current-date" style={{ fontWeight: '500' }}>{dateLabel}</div>
                 <input ref={headerDateRef} type="date" value={dateISO} onChange={e => setDateISO(e.target.value)}
-                  style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }} />
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 2 }} />
               </div>
               <button className="sr-btn-mini" onClick={() => stepDate(1)}>›</button>
             </div>
@@ -692,8 +692,6 @@ function ClientSearchView({
 }) {
   const range = getAvailableTimeRange(dateISO);
   const availableSlots = getTimeSlots(dateISO, true).filter(slot => (bookedSlotCounts[slot] || 0) < 5);
-  const dateInputRef = useRef(null);
-
   // Auto-reset time if selected slot is no longer available (e.g. same-day cutoff)
   useEffect(() => {
     const slots = getTimeSlots(dateISO, true);
@@ -707,15 +705,15 @@ function ClientSearchView({
       <main className="sr-card">
         <header className="sr-header"><img className="sr-logo" src="/logo.png" alt="Logo" /></header>
         <div className="sr-rows">
-          <div className="sr-row" onClick={() => dateInputRef.current?.showPicker()}>
-            <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepDate(-1); }}>‹</button>
-            <div className="sr-center">
+          <div className="sr-row">
+            <button className="sr-arrow" style={{ position: 'relative', zIndex: 3 }} onClick={(e) => { e.stopPropagation(); stepDate(-1); }}>‹</button>
+            <div className="sr-center" style={{ position: 'relative' }}>
               <div className="sr-value">{dateLabel}</div>
               <div className="sr-label">Date</div>
-              <input ref={dateInputRef} type="date" value={dateISO} onChange={(e) => onDateChange(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }} />
+              <input type="date" value={dateISO} onChange={(e) => onDateChange(e.target.value)}
+                style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 2 }} />
             </div>
-            <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepDate(1); }}>›</button>
+            <button className="sr-arrow" style={{ position: 'relative', zIndex: 3 }} onClick={(e) => { e.stopPropagation(); stepDate(1); }}>›</button>
           </div>
           <div className="sr-row" style={{cursor: 'default'}}>
             <div className="sr-center" style={{gridColumn: '1 / -1'}}>
