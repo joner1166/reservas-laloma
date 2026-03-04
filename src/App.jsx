@@ -72,9 +72,9 @@ const FLOOR_CONFIG = {
     { id: '30', cap: 4, top: '18%', left: '10%', status: 'av', shape: 'square' }, { id: '29', cap: 4, top: '18%', left: '26%', status: 'occ', shape: 'square' }, { id: '28', cap: 4, top: '18%', left: '42%', status: 'av', shape: 'square' }, { id: '27', cap: 4, top: '18%', left: '58%', status: 'occ', shape: 'square' }, { id: '26', cap: 4, top: '18%', left: '74%', status: 'av', shape: 'square' }, { id: '25', cap: 4, top: '18%', left: '90%', status: 'av', shape: 'square' }
   ],
   ROOM3: [
-    ...Array.from({ length: 8 }, (_, i) => ({ id: `${43 + i}`, cap: 4, top: '18%', left: `${9 + (i * 11.5)}%`, status: i % 3 === 0 ? 'occ' : 'av', shape: 'square' })),
+    ...Array.from({ length: 7 }, (_, i) => ({ id: `${56 - i}`, cap: 4, top: '18%', left: `${9 + (i * 13.5)}%`, status: i % 3 === 0 ? 'occ' : 'av', shape: 'square' })),
     { id: '57', cap: 8, top: '48%', left: '18%', status: 'occ', shape: 'rect' }, { id: '58', cap: 8, top: '48%', left: '34%', status: 'av', shape: 'rect' }, { id: '59', cap: 8, top: '48%', left: '50%', status: 'occ', shape: 'rect' }, { id: '60', cap: 8, top: '48%', left: '66%', status: 'av', shape: 'rect' }, { id: '61', cap: 8, top: '48%', left: '82%', status: 'occ', shape: 'rect' },
-    ...Array.from({ length: 6 }, (_, i) => ({ id: `${51 + i}`, cap: 4, top: '78%', left: `${17 + (i * 13)}%`, status: i % 2 === 0 ? 'av' : 'occ', shape: 'square' }))
+    ...Array.from({ length: 7 }, (_, i) => ({ id: `${43 + i}`, cap: 4, top: '78%', left: `${9 + (i * 13.5)}%`, status: i % 2 === 0 ? 'av' : 'occ', shape: 'square' }))
   ]
 };
 
@@ -300,8 +300,18 @@ function HostessView({
 }) {
   const blackoutInputRef = useRef(null);
   const bookingDateRef = useRef(null);
+  const headerDateRef = useRef(null);
   const [editingRes, setEditingRes] = useState(null);
   const [blackoutForm, setBlackoutForm] = useState({ date: '', notes: '' });
+  const [exitingIds, setExitingIds] = useState(new Set());
+
+  const animateThenAct = (id, action) => {
+    setExitingIds(prev => new Set([...prev, id]));
+    setTimeout(() => {
+      action();
+      setExitingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    }, 400);
+  };
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60000);
@@ -341,10 +351,10 @@ function HostessView({
             </div>
             <div className="sr-hostess-date-picker" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button className="sr-btn-mini" onClick={() => stepDate(-1)}>‹</button>
-              <div style={{ position: 'relative', cursor: 'pointer' }}>
+              <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => headerDateRef.current?.showPicker()}>
                 <div className="sr-current-date" style={{ fontWeight: '500' }}>{dateLabel}</div>
-                <input type="date" value={dateISO} onChange={e => setDateISO(e.target.value)}
-                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
+                <input ref={headerDateRef} type="date" value={dateISO} onChange={e => setDateISO(e.target.value)}
+                  style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }} />
               </div>
               <button className="sr-btn-mini" onClick={() => stepDate(1)}>›</button>
             </div>
@@ -414,11 +424,11 @@ function HostessView({
             {activeTab === 'waitlist' && (
               <div className="sr-res-list">
                 {waitList.length === 0 ? <p>No guests in wait list.</p> : waitList.map(item => (
-                  <div key={item.id} className="sr-list-item" style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                  <div key={item.id} className={`sr-list-item${exitingIds.has(item.id) ? ' sr-item-exit' : ''}`} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                         <strong>{item.firstName} {item.lastName}</strong>
-                        <span style={{ color: '#666' }}>({item.guests} pax)</span>
+                        <span style={{ background: '#111', color: '#fff', borderRadius: '8px', padding: '2px 10px', fontSize: '0.85rem', fontWeight: '800', letterSpacing: '0.3px' }}>👥 {item.guests} guests</span>
                         {item.created_at && (() => {
                           const mins = Math.floor((now - new Date(item.created_at).getTime()) / 60000);
                           const color = mins >= 30 ? '#ef4444' : mins >= 15 ? '#f59e0b' : '#22c55e';
@@ -449,7 +459,7 @@ function HostessView({
                       >
                         Notify Ready 📱
                       </button>
-                      <button style={seatButtonStyle} onClick={() => onSeatParty(item)}>
+                      <button style={seatButtonStyle} onClick={() => animateThenAct(item.id, () => onSeatParty(item))}>
                         Seat
                       </button>
                     </div>
@@ -460,10 +470,10 @@ function HostessView({
             {activeTab === 'reservations' && (
               <div className="sr-res-list">
                 {history.length === 0 ? <p>No active reservations.</p> : history.map(res => (
-                  <div key={res.id} className="sr-list-item" style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                  <div key={res.id} className={`sr-list-item${exitingIds.has(res.id) ? ' sr-item-exit' : ''}`} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
-                        <div><strong style={{ fontSize: '1.1rem' }}>{res.firstName} {res.lastName}</strong><span style={{ color: '#666', marginLeft: '8px' }}>({res.guests} pax)</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><strong style={{ fontSize: '1.1rem' }}>{res.firstName} {res.lastName}</strong><span style={{ background: '#111', color: '#fff', borderRadius: '8px', padding: '2px 10px', fontSize: '0.85rem', fontWeight: '800', letterSpacing: '0.3px' }}>👥 {res.guests} guests</span></div>
                         <span style={{ fontWeight: '700' }}>{res.timeHHMM ? formatTimeLabel(res.timeHHMM) : ""}</span>
                       </div>
                       {res.celebration && res.celebration !== "None" && <div style={{ fontSize: '0.85rem', color: '#d4ab00', marginTop: '4px' }}>🎉 {res.celebration}</div>}
@@ -472,10 +482,10 @@ function HostessView({
                       {res.phone && <div style={{ fontSize: '0.85rem', color: '#4b5563', marginTop: '2px', fontWeight: '500' }}>📞 {res.phone}</div>}
                     </div>
                     <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                      <button style={seatButtonStyle} onClick={() => onSeatParty(res)}>Seat</button>
+                      <button style={seatButtonStyle} onClick={() => animateThenAct(res.id, () => onSeatParty(res))}>Seat</button>
                       <button style={{ ...seatButtonStyle, background: '#000', color: '#fff', fontSize: '0.75rem', padding: '8px 12px' }} onClick={() => onNotifyReady(res)}>Notify 📱</button>
                       <button style={{ ...seatButtonStyle, background: '#f3f4f6', color: '#374151', boxShadow: 'none', border: '1px solid #d1d5db', fontSize: '0.75rem', padding: '8px 12px' }} onClick={() => setEditingRes({...res})}>Edit</button>
-                      <button style={{ ...seatButtonStyle, background: '#fee2e2', color: '#b91c1c', fontSize: '0.75rem', padding: '8px 12px' }} onClick={() => onCancelRes(res)}>Cancel</button>
+                      <button style={{ ...seatButtonStyle, background: '#fee2e2', color: '#b91c1c', fontSize: '0.75rem', padding: '8px 12px' }} onClick={() => animateThenAct(res.id, () => onCancelRes(res))}>Cancel</button>
                     </div>
                   </div>
                 ))}
@@ -617,19 +627,57 @@ function HostessView({
               <div className="sr-field"><label className="sr-fieldLabel">Last Name</label><input className="sr-input" value={editingRes.lastName} onChange={e => setEditingRes({...editingRes, lastName: e.target.value})} /></div>
               <div className="sr-field"><label className="sr-fieldLabel">Phone</label><input className="sr-input" value={editingRes.phone || ''} onChange={e => setEditingRes({...editingRes, phone: e.target.value})} /></div>
               <div className="sr-field"><label className="sr-fieldLabel">Email</label><input className="sr-input" value={editingRes.email || ''} onChange={e => setEditingRes({...editingRes, email: e.target.value})} /></div>
-              <div className="sr-field"><label className="sr-fieldLabel">Guests</label><input className="sr-input" type="number" min="1" max={MAX_GUESTS} value={editingRes.guests} onChange={e => setEditingRes({...editingRes, guests: parseInt(e.target.value) || 1})} /></div>
-              <div className="sr-field"><label className="sr-fieldLabel">Time</label><input className="sr-input" type="time" value={editingRes.timeHHMM || ''} onChange={e => setEditingRes({...editingRes, timeHHMM: e.target.value})} /></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Date</label><input className="sr-input" type="date" style={{cursor:'pointer'}} value={editingRes.dateISO || ''} onChange={e => setEditingRes({...editingRes, dateISO: e.target.value, timeHHMM: getTimeSlots(e.target.value)[0] || editingRes.timeHHMM})} onClick={e => e.target.showPicker()} /></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Time</label><select className="sr-input" value={editingRes.timeHHMM || ''} onChange={e => setEditingRes({...editingRes, timeHHMM: e.target.value})}>{getTimeSlots(editingRes.dateISO).map(slot => (<option key={slot} value={slot}>{formatTimeLabel(slot)}</option>))}</select></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Guests</label><input className="sr-input" type="number" min="1" max={MAX_GUESTS} placeholder="—" value={editingRes.guests ?? ''} onFocus={e => e.target.select()} onChange={e => setEditingRes({...editingRes, guests: e.target.value === '' ? '' : parseInt(e.target.value) || 1})} /></div>
               <div className="sr-field"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={editingRes.celebration || 'None'} onChange={e => setEditingRes({...editingRes, celebration: e.target.value})}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Wedding</option><option>Graduation</option><option>Other</option></select></div>
               <div className="sr-field"><label className="sr-fieldLabel">Dietary</label><select className="sr-input" value={editingRes.dietary || 'None'} onChange={e => setEditingRes({...editingRes, dietary: e.target.value})}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
               <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={editingRes.notes || ''} onChange={e => setEditingRes({...editingRes, notes: e.target.value})} /></div>
             </div>
             <div className="sr-actions" style={{marginTop: '20px'}}>
               <button className="sr-btn" onClick={() => setEditingRes(null)}>Cancel</button>
-              <button className="sr-btn sr-btnPrimary" onClick={async () => { await onSaveEdit(editingRes.id, { firstName: editingRes.firstName, lastName: editingRes.lastName, phone: editingRes.phone, email: editingRes.email, guests: editingRes.guests, timeHHMM: editingRes.timeHHMM, celebration: editingRes.celebration, dietary: editingRes.dietary, notes: editingRes.notes }); setEditingRes(null); }}>Save</button>
+              <button className="sr-btn sr-btnPrimary" onClick={async () => { await onSaveEdit(editingRes.id, { firstName: editingRes.firstName, lastName: editingRes.lastName, phone: editingRes.phone, email: editingRes.email, guests: editingRes.guests, dateISO: editingRes.dateISO, timeHHMM: editingRes.timeHHMM, celebration: editingRes.celebration, dietary: editingRes.dietary, notes: editingRes.notes }); setEditingRes(null); }}>Save</button>
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// --- COMPONENTE CLIENT CONFIRMATION (Paso 3) ---
+function ClientConfirmationView({ firstName, setStep, setClientForm }) {
+  return (
+    <div className="sr-page">
+      <main style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        minHeight: '100vh', textAlign: 'center', padding: '40px 20px', gap: '32px'
+      }}>
+        <img src="/logo.png" alt="Logo" style={{ width: '220px', filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.9))' }} />
+        <div style={{ color: '#f2c300', fontSize: '1.1rem', fontWeight: '700', letterSpacing: '4px', textTransform: 'uppercase' }}>
+          Reservation Confirmed
+        </div>
+        <div style={{ color: '#fff', fontSize: '2.6rem', fontWeight: '900', lineHeight: '1.2', maxWidth: '600px' }}>
+          Thank you for your reservation,<br />
+          <span style={{ color: '#f2c300' }}>{firstName}</span>!
+        </div>
+        <div style={{ color: '#ccc', fontSize: '1.4rem', fontWeight: '400', letterSpacing: '1px' }}>
+          We look forward to seeing you soon.
+        </div>
+        <button
+          onClick={() => {
+            setClientForm({ firstName: '', lastName: '', phone: '', email: '', celebration: 'None', dietary: 'None', notes: '' });
+            setStep('search');
+          }}
+          style={{
+            marginTop: '20px', background: '#f2c300', color: '#000', border: 'none',
+            padding: '14px 40px', borderRadius: '14px', fontSize: '1rem', fontWeight: '800',
+            cursor: 'pointer', letterSpacing: '1px', textTransform: 'uppercase'
+          }}
+        >
+          Make Another Reservation
+        </button>
+      </main>
     </div>
   );
 }
@@ -639,10 +687,12 @@ function ClientSearchView({
   dateISO, onDateChange, dateLabel, stepDate,
   guests, setGuests,
   timeHHMM, setTimeHHMM,
-  isBlackout, setStep, handleSwitchToHostess
+  isBlackout, setStep, handleSwitchToHostess,
+  bookedSlotCounts
 }) {
   const range = getAvailableTimeRange(dateISO);
-  const availableSlots = getTimeSlots(dateISO, true);
+  const availableSlots = getTimeSlots(dateISO, true).filter(slot => (bookedSlotCounts[slot] || 0) < 5);
+  const dateInputRef = useRef(null);
 
   // Auto-reset time if selected slot is no longer available (e.g. same-day cutoff)
   useEffect(() => {
@@ -657,15 +707,15 @@ function ClientSearchView({
       <main className="sr-card">
         <header className="sr-header"><img className="sr-logo" src="/logo.png" alt="Logo" /></header>
         <div className="sr-rows">
-          <div className="sr-row">
-            <button className="sr-arrow" style={{ position: 'relative', zIndex: 2 }} onClick={(e) => { e.stopPropagation(); stepDate(-1); }}>‹</button>
-            <div className="sr-center" style={{ position: 'relative' }}>
+          <div className="sr-row" onClick={() => dateInputRef.current?.showPicker()}>
+            <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepDate(-1); }}>‹</button>
+            <div className="sr-center">
               <div className="sr-value">{dateLabel}</div>
               <div className="sr-label">Date</div>
-              <input type="date" value={dateISO} onChange={(e) => onDateChange(e.target.value)}
-                style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 1 }} />
+              <input ref={dateInputRef} type="date" value={dateISO} onChange={(e) => onDateChange(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }} />
             </div>
-            <button className="sr-arrow" style={{ position: 'relative', zIndex: 2 }} onClick={(e) => { e.stopPropagation(); stepDate(1); }}>›</button>
+            <button className="sr-arrow" onClick={(e) => { e.stopPropagation(); stepDate(1); }}>›</button>
           </div>
           <div className="sr-row" style={{cursor: 'default'}}>
             <div className="sr-center" style={{gridColumn: '1 / -1'}}>
@@ -793,6 +843,15 @@ export default function App() {
   const waitList = useMemo(() => rows.filter((r) => r.status === "waitlist"), [rows]);
   const seatedList = useMemo(() => rows.filter((r) => r.status === "seated"), [rows]);
   const canceledList = useMemo(() => rows.filter((r) => r.status === "cancelled"), [rows]);
+
+  // Cuenta reservaciones confirmadas por slot (para limitar a 5 en client view)
+  const bookedSlotCounts = useMemo(() => {
+    const counts = {};
+    rows.filter(r => r.status === "reserved").forEach(r => {
+      if (r.timeHHMM) counts[r.timeHHMM] = (counts[r.timeHHMM] || 0) + 1;
+    });
+    return counts;
+  }, [rows]);
 
   useReservationsRealtime({ supabase, dateISO, setRows });
 
@@ -1123,21 +1182,11 @@ export default function App() {
         const startISO = toLocalDateTimeISO(dateISO, timeHHMM);
         const endISO = addMinutesToLocalDateTimeISO(dateISO, timeHHMM, 90);
         await createCalendarEventService({ ...newRes, startISO, endISO });
-        alert("✅ ¡Reserva confirmada!");
       } catch (e) {
-        alert("✅ Reserva guardada.");
+        console.error("Calendar fail:", e);
       }
 
-      setClientForm({
-        firstName: "",
-        lastName: "",
-        phone: "",
-        email: "",
-        celebration: "None",
-        dietary: "None",
-        notes: "",
-      });
-      setStep("search");
+      setStep("confirmation");
     } catch (e) {
       alert("Error saving reservation: " + e.message);
     }
@@ -1211,6 +1260,17 @@ export default function App() {
         isBlackout={isBlackout}
         setStep={setStep}
         handleSwitchToHostess={handleSwitchToHostess}
+        bookedSlotCounts={bookedSlotCounts}
+      />
+    );
+  }
+
+  if (step === "confirmation") {
+    return (
+      <ClientConfirmationView
+        firstName={clientForm.firstName || "Guest"}
+        setStep={setStep}
+        setClientForm={setClientForm}
       />
     );
   }
