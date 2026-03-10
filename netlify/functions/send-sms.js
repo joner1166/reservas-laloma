@@ -40,7 +40,10 @@ exports.handler = async (event) => {
     case "table_ready":
       messageBody =
         `Lindo Michoacan 🥂\n\n` +
-        `hola ${name}, tu mesa esta lista`;
+        `Your table is ready, ${name}!\n\n` +
+        `Please check in with the hostess within the next 10 minutes to hold your table.\n\n` +
+        `We look forward to seeing you!\n\n` +
+        `Reply STOP to opt-out.`;
       break;
 
     case "confirm":

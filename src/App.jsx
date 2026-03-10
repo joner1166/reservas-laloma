@@ -10,6 +10,7 @@ import logo from "/logo.png"; // Logo principal para la interfaz
  * BLOQUE 1 — CONFIG / CONSTANTES
  *******************************************************/
 const MAX_GUESTS = 12;
+const SERVERS = ['JAIME','NOE','APACHE','PANCHO','CALERO','HUGO','PATO','EDGAR','CHINO','VALENTIN','WALTER','DEYNI','SONIA','ORANGE'];
 const SLOT_MINUTES = 15;
 const HOSTESS_PASSWORD = "1234";
 
@@ -219,6 +220,27 @@ async function revertPartyFromSeated(id, originalStatus) {
     .eq("id", id);
 }
 
+async function markPartyNotified(id) {
+  return supabase
+    .from("reservations")
+    .update({ notified_at: new Date().toISOString() })
+    .eq("id", id);
+}
+
+async function assignServersToTable(tableId, serverNames) {
+  return supabase.from("table_status").update({ server_names: serverNames }).eq("id", tableId);
+}
+
+async function logTableOcc(tableId, serverNames, dateISO) {
+  if (!serverNames?.length) return;
+  const rows = serverNames.map(name => ({ table_id: tableId, server_name: name, date_iso: dateISO }));
+  return supabase.from("table_events").insert(rows);
+}
+
+async function fetchTableEvents(dateISO) {
+  return supabase.from("table_events").select("*").eq("date_iso", dateISO);
+}
+
 /*******************************************************
  * BLOQUE 4 — REALTIME (HOOK INTERNO)
  *******************************************************/
@@ -296,25 +318,39 @@ function HostessView({
 
   // Datos
   walkInForm, setWalkInForm, phoneResForm, setPhoneResForm,
-  waitList, history, seatedList, canceledList, blackoutDates, tableStatuses
+  waitList, history, seatedList, canceledList, blackoutDates, tableStatuses, tableServerNames
 }) {
   const blackoutInputRef = useRef(null);
   const bookingDateRef = useRef(null);
   const headerDateRef = useRef(null);
+  const pressTimerRef = useRef(null);
+  const longPressTriggeredRef = useRef(false);
   const [editingRes, setEditingRes] = useState(null);
   const [blackoutForm, setBlackoutForm] = useState({ date: '', notes: '' });
   const [exitingIds, setExitingIds] = useState(new Set());
+  const [selectedTables, setSelectedTables] = useState(new Set());
+  const [pickedServers, setPickedServers] = useState(new Set());
+  const [showServerPicker, setShowServerPicker] = useState(false);
+  const [tableEvents, setTableEvents] = useState([]);
+  useEffect(() => {
+    fetchTableEvents(dateISO).then(({ data }) => setTableEvents(data || [])).catch(() => setTableEvents([]));
+  }, [dateISO]);
 
   const animateThenAct = (id, action) => {
     setExitingIds(prev => new Set([...prev, id]));
+    action(); // acción inmediata, no espera la animación
     setTimeout(() => {
-      action();
       setExitingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
-    }, 400);
+    }, 200);
   };
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(id);
+  }, []);
+  const [nowSec, setNowSec] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowSec(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -340,14 +376,15 @@ function HostessView({
             <button className={activeTab === 'seated' ? 'active' : ''} onClick={() => setActiveTab('seated')}>Seated ({seatedList.length})</button>
             <button className={activeTab === 'canceled' ? 'active' : ''} onClick={() => setActiveTab('canceled')} style={{color: activeTab === 'canceled' ? '#000' : '#ef4444'}}>Canceled ({canceledList.length})</button>
             <button className={activeTab === 'floorplan' ? 'active' : ''} onClick={() => setActiveTab('floorplan')}>Floor Plan</button>
+            <button className={activeTab === 'servers' ? 'active' : ''} onClick={() => setActiveTab('servers')}>Servers</button>
             <button className={activeTab === 'blackout' ? 'active' : ''} onClick={() => setActiveTab('blackout')} style={{marginTop: 'auto', borderTop: '1px solid #eee', color: '#666'}}>Blackout</button>
           </nav>
         </aside>
         <section className="sr-hostess-main">
           <header className="sr-main-header">
             <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
-              <h2>{activeTab === 'walkin' ? 'New Walk-in' : activeTab === 'phoneres' ? 'New Phone Reservation' : activeTab === 'waitlist' ? 'Wait List' : activeTab === 'reservations' ? 'Reservations' : activeTab === 'seated' ? 'Seated History' : activeTab === 'canceled' ? 'Canceled' : activeTab === 'blackout' ? 'Manage Blackout' : 'Floor Plan'}</h2>
-              {isBlackout && <span style={{background: '#ef4444', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold'}}>CLOSED TODAY</span>}
+              <h2>{activeTab === 'walkin' ? 'New Walk-in' : activeTab === 'phoneres' ? 'New Phone Reservation' : activeTab === 'waitlist' ? 'Wait List' : activeTab === 'reservations' ? 'Reservations' : activeTab === 'seated' ? 'Seated History' : activeTab === 'canceled' ? 'Canceled' : activeTab === 'blackout' ? 'Manage Blackout' : activeTab === 'servers' ? 'Servers' : 'Floor Plan'}</h2>
+              {isBlackout && <span style={{background: '#ef4444', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.64rem', fontWeight: 'bold'}}>CLOSED TODAY</span>}
             </div>
             <div className="sr-hostess-date-picker" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button className="sr-btn-mini" onClick={() => stepDate(-1)}>‹</button>
@@ -357,6 +394,12 @@ function HostessView({
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 2 }} />
               </div>
               <button className="sr-btn-mini" onClick={() => stepDate(1)}>›</button>
+              <button
+                className="sr-btn-mini"
+                onClick={() => window.location.reload()}
+                title="Refresh"
+                style={{ fontSize: '16px' }}
+              >↺</button>
             </div>
           </header>
           <div className="sr-main-content">
@@ -385,7 +428,7 @@ function HostessView({
               <div className="sr-walkin-form">
                 {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed.</div>}
                 {!isBlackout && range && (
-                  <div style={{padding: '10px 15px', background: '#f0fdf4', color: '#166534', borderRadius: '8px', marginBottom: '16px', fontSize: '0.85rem', textAlign: 'center'}}>
+                  <div style={{padding: '10px 15px', background: '#f0fdf4', color: '#166534', borderRadius: '8px', marginBottom: '16px', fontSize: '0.68rem', textAlign: 'center'}}>
                     Reservations accepted: {formatTimeLabel(range.open)} – {formatTimeLabel(range.lastSlot)}
                   </div>
                 )}
@@ -428,22 +471,37 @@ function HostessView({
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                         <strong>{item.firstName} {item.lastName}</strong>
-                        <span style={{ background: '#111', color: '#fff', borderRadius: '8px', padding: '2px 10px', fontSize: '0.85rem', fontWeight: '800', letterSpacing: '0.3px' }}>👥 {item.guests} guests</span>
+                        <span style={{ background: '#111', color: '#fff', borderRadius: '8px', padding: '2px 10px', fontSize: '0.68rem', fontWeight: '800', letterSpacing: '0.3px' }}>👥 {item.guests} guests</span>
                         {item.created_at && (() => {
                           const mins = Math.floor((now - new Date(item.created_at).getTime()) / 60000);
                           const color = mins >= 30 ? '#ef4444' : mins >= 15 ? '#f59e0b' : '#22c55e';
                           return (
-                            <span style={{ background: color, color: '#fff', borderRadius: '20px', padding: '2px 10px', fontSize: '0.78rem', fontWeight: '700' }}>
+                            <span style={{ background: color, color: '#fff', borderRadius: '20px', padding: '2px 10px', fontSize: '0.62rem', fontWeight: '700' }}>
                               {mins < 1 ? '< 1 min' : `${mins} min`}
                             </span>
                           );
                         })()}
                       </div>
                       <small style={{ color: '#999' }}>In at {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
-                      {item.celebration && item.celebration !== "None" && <div style={{ fontSize: '0.85rem', color: '#d4ab00', marginTop: '2px' }}>🎉 {item.celebration}</div>}
-                      {item.dietary && item.dietary !== "None" && <div style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '2px' }}>🥗 {item.dietary}</div>}
-                      {item.notes && <div style={{ fontSize: '0.85rem', fontStyle: 'italic', color: '#666', marginTop: '2px' }}>📝 "{item.notes}"</div>}
-                      {item.phone && <div style={{ fontSize: '0.85rem', color: '#4b5563', marginTop: '2px', fontWeight: '500' }}>📞 {item.phone}</div>}
+                      {item.celebration && item.celebration !== "None" && <div style={{ fontSize: '0.68rem', color: '#d4ab00', marginTop: '2px' }}>🎉 {item.celebration}</div>}
+                      {item.dietary && item.dietary !== "None" && <div style={{ fontSize: '0.68rem', color: '#ef4444', marginTop: '2px' }}>🥗 {item.dietary}</div>}
+                      {item.notes && <div style={{ fontSize: '0.68rem', fontStyle: 'italic', color: '#666', marginTop: '2px' }}>📝 "{item.notes}"</div>}
+                      {item.phone && <div style={{ fontSize: '0.68rem', color: '#4b5563', marginTop: '2px', fontWeight: '500' }}>📞 {item.phone}</div>}
+                      {item.notified_at && (() => {
+                        const remaining = Math.max(0, 10 * 60 * 1000 - (nowSec - new Date(item.notified_at).getTime()));
+                        const mins = Math.floor(remaining / 60000);
+                        const secs = Math.floor((remaining % 60000) / 1000);
+                        const isExpired = remaining === 0;
+                        const color = isExpired ? '#ef4444' : remaining < 2 * 60 * 1000 ? '#f59e0b' : '#22c55e';
+                        return (
+                          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #e5e7eb', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '0.68rem', color: '#6b7280' }}>⏱ Hold time:</span>
+                            <span style={{ fontSize: '0.76rem', fontWeight: '800', color, fontVariantNumeric: 'tabular-nums' }}>
+                              {isExpired ? '⚠️ Expired' : `${mins}:${String(secs).padStart(2, '0')}`}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button
@@ -473,13 +531,28 @@ function HostessView({
                   <div key={res.id} className={`sr-list-item${exitingIds.has(res.id) ? ' sr-item-exit' : ''}`} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><strong style={{ fontSize: '1.1rem' }}>{res.firstName} {res.lastName}</strong><span style={{ background: '#111', color: '#fff', borderRadius: '8px', padding: '2px 10px', fontSize: '0.85rem', fontWeight: '800', letterSpacing: '0.3px' }}>👥 {res.guests} guests</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><strong style={{ fontSize: '0.88rem' }}>{res.firstName} {res.lastName}</strong><span style={{ background: '#111', color: '#fff', borderRadius: '8px', padding: '2px 10px', fontSize: '0.68rem', fontWeight: '800', letterSpacing: '0.3px' }}>👥 {res.guests} guests</span></div>
                         <span style={{ fontWeight: '700' }}>{res.timeHHMM ? formatTimeLabel(res.timeHHMM) : ""}</span>
                       </div>
-                      {res.celebration && res.celebration !== "None" && <div style={{ fontSize: '0.85rem', color: '#d4ab00', marginTop: '4px' }}>🎉 {res.celebration}</div>}
-                      {res.dietary && res.dietary !== "None" && <div style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '2px' }}>🥗 {res.dietary}</div>}
-                      {res.notes && <div style={{ color: '#555', fontSize: '0.85rem', background: '#f8f8f8', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{res.notes}"</div>}
-                      {res.phone && <div style={{ fontSize: '0.85rem', color: '#4b5563', marginTop: '2px', fontWeight: '500' }}>📞 {res.phone}</div>}
+                      {res.celebration && res.celebration !== "None" && <div style={{ fontSize: '0.68rem', color: '#d4ab00', marginTop: '4px' }}>🎉 {res.celebration}</div>}
+                      {res.dietary && res.dietary !== "None" && <div style={{ fontSize: '0.68rem', color: '#ef4444', marginTop: '2px' }}>🥗 {res.dietary}</div>}
+                      {res.notes && <div style={{ color: '#555', fontSize: '0.68rem', background: '#f8f8f8', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{res.notes}"</div>}
+                      {res.phone && <div style={{ fontSize: '0.68rem', color: '#4b5563', marginTop: '2px', fontWeight: '500' }}>📞 {res.phone}</div>}
+                      {res.notified_at && (() => {
+                        const remaining = Math.max(0, 10 * 60 * 1000 - (nowSec - new Date(res.notified_at).getTime()));
+                        const mins = Math.floor(remaining / 60000);
+                        const secs = Math.floor((remaining % 60000) / 1000);
+                        const isExpired = remaining === 0;
+                        const color = isExpired ? '#ef4444' : remaining < 2 * 60 * 1000 ? '#f59e0b' : '#22c55e';
+                        return (
+                          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #e5e7eb', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '0.68rem', color: '#6b7280' }}>⏱ Hold time:</span>
+                            <span style={{ fontSize: '0.76rem', fontWeight: '800', color, fontVariantNumeric: 'tabular-nums' }}>
+                              {isExpired ? '⚠️ Expired' : `${mins}:${String(secs).padStart(2, '0')}`}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                       <button style={seatButtonStyle} onClick={() => animateThenAct(res.id, () => onSeatParty(res))}>Seat</button>
@@ -497,14 +570,14 @@ function HostessView({
                   <div key={item.id} className="sr-list-item" style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
-                        <div><strong style={{ fontSize: '1.1rem' }}>{item.firstName} {item.lastName}</strong><span style={{ color: '#666', marginLeft: '8px' }}>({item.guests} pax)</span></div>
+                        <div><strong style={{ fontSize: '0.88rem' }}>{item.firstName} {item.lastName}</strong><span style={{ color: '#666', marginLeft: '8px' }}>({item.guests} pax)</span></div>
                         <span style={{ fontWeight: '700', color: '#22c55e' }}>Seated {item.seated_at ? new Date(item.seated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}</span>
                       </div>
-                      {item.timeHHMM && <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '2px' }}>Res. time: {formatTimeLabel(item.timeHHMM)}</div>}
-                      {item.celebration && item.celebration !== "None" && <div style={{ fontSize: '0.85rem', color: '#d4ab00', marginTop: '4px' }}>🎉 {item.celebration}</div>}
-                      {item.dietary && item.dietary !== "None" && <div style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '2px' }}>🥗 {item.dietary}</div>}
-                      {item.notes && <div style={{ color: '#555', fontSize: '0.85rem', background: '#f8f8f8', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{item.notes}"</div>}
-                      {item.phone && <div style={{ fontSize: '0.85rem', color: '#4b5563', marginTop: '2px', fontWeight: '500' }}>📞 {item.phone}</div>}
+                      {item.timeHHMM && <div style={{ fontSize: '0.68rem', color: '#888', marginTop: '2px' }}>Res. time: {formatTimeLabel(item.timeHHMM)}</div>}
+                      {item.celebration && item.celebration !== "None" && <div style={{ fontSize: '0.68rem', color: '#d4ab00', marginTop: '4px' }}>🎉 {item.celebration}</div>}
+                      {item.dietary && item.dietary !== "None" && <div style={{ fontSize: '0.68rem', color: '#ef4444', marginTop: '2px' }}>🥗 {item.dietary}</div>}
+                      {item.notes && <div style={{ color: '#555', fontSize: '0.68rem', background: '#f8f8f8', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{item.notes}"</div>}
+                      {item.phone && <div style={{ fontSize: '0.68rem', color: '#4b5563', marginTop: '2px', fontWeight: '500' }}>📞 {item.phone}</div>}
                     </div>
                     <button
                       onClick={() => onUnseatParty(item)}
@@ -525,14 +598,15 @@ function HostessView({
                         <div><strong style={{ fontSize: '1.1rem', textDecoration: 'line-through', color: '#9ca3af' }}>{item.firstName} {item.lastName}</strong><span style={{ color: '#9ca3af', marginLeft: '8px' }}>({item.guests} pax)</span></div>
                         <span style={{ fontWeight: '700', color: '#9ca3af' }}>{item.timeHHMM ? formatTimeLabel(item.timeHHMM) : ""}</span>
                       </div>
-                      {item.phone && <div style={{ fontSize: '0.85rem', color: '#9ca3af', marginTop: '2px' }}>📞 {item.phone}</div>}
-                      {item.notes && <div style={{ color: '#9ca3af', fontSize: '0.85rem', marginTop: '4px', fontStyle: 'italic' }}>"{item.notes}"</div>}
+                      {item.phone && <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: '2px' }}>📞 {item.phone}</div>}
+                      {item.notes && <div style={{ color: '#9ca3af', fontSize: '0.68rem', marginTop: '4px', fontStyle: 'italic' }}>"{item.notes}"</div>}
                     </div>
                   </div>
                 ))}
               </div>
             )}
             {activeTab === 'floorplan' && (
+              <>
               <div className="sr-floor-manager">
                 <div className="sr-floor-header">
                   <div className="sr-zone-selector">
@@ -544,22 +618,91 @@ function HostessView({
                     <span className="sr-legend-dot available" /><span>Available</span>
                     <span className="sr-legend-dot occupied" /><span>Occupied</span>
                   </div>
+                  <button onClick={async () => {
+                    if (!window.confirm('Clear ALL server assignments for all floors?')) return;
+                    const allKeys = Object.keys(FLOOR_CONFIG).flatMap(floor =>
+                      FLOOR_CONFIG[floor].map(t => `${floor}-${t.id}`)
+                    );
+                    await Promise.all(allKeys.map(id => assignServersToTable(id, [])));
+                  }} style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.68rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    Clear All
+                  </button>
                 </div>
                 <div className="sr-map-canvas">
                   <div className="sr-image-wrapper">
-                    <img src={activeFloor === 'BAR' ? '/BAR.png' : activeFloor === 'ROOM1' ? '/FLOOR 1.jpg' : activeFloor === 'ROOM2' ? '/ROOM 2.jpg' : '/ROOM 3.jpg'} alt={activeFloor} className="sr-floor-img" />
+                    <img src={activeFloor === 'BAR' ? '/BAR.png' : activeFloor === 'ROOM1' ? '/FLOOR 1.jpg' : activeFloor === 'ROOM2' ? '/ROOM 2.jpg' : '/ROOM 3.jpg'} alt={activeFloor} className="sr-floor-img" onError={e => { e.target.style.display = 'none'; }} />
                     {FLOOR_CONFIG[activeFloor].map(table => {
-                      const status = tableStatuses[`${activeFloor}-${table.id}`] ?? 'av';
+                      const key = `${activeFloor}-${table.id}`;
+                      const status = tableStatuses[key] ?? 'av';
+                      const isSelected = selectedTables.has(key);
+                      const servers = tableServerNames?.[key] ?? [];
                       return (
-                        <button key={table.id} className={`sr-table-marker shape-${table.shape || 'square'} ${status === 'occ' ? 'is-occupied' : 'is-available'}`} style={{ top: table.top, left: table.left }} onClick={() => handleTableSelection(table)}>
+                        <button
+                          key={table.id}
+                          className={`sr-table-marker shape-${table.shape || 'square'} ${status === 'occ' ? 'is-occupied' : 'is-available'}`}
+                          style={{ top: table.top, left: table.left, outline: isSelected ? '3px solid #f2c300' : undefined, outlineOffset: '2px' }}
+                          onPointerDown={() => {
+                            longPressTriggeredRef.current = false;
+                            pressTimerRef.current = setTimeout(() => {
+                              longPressTriggeredRef.current = true;
+                              setSelectedTables(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
+                              setShowServerPicker(false);
+                            }, 500);
+                          }}
+                          onPointerUp={() => clearTimeout(pressTimerRef.current)}
+                          onPointerLeave={() => clearTimeout(pressTimerRef.current)}
+                          onClick={() => { if (!longPressTriggeredRef.current) handleTableSelection(table); }}
+                        >
                           <span className="table-id">{table.id}</span>
                           <span className="table-cap">{table.cap}p</span>
+                          {servers.length > 0 && (
+                            <span style={{ position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)', background: '#1d4ed8', color: '#fff', fontSize: '7px', fontWeight: '800', borderRadius: '4px', padding: '1px 3px', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+                              {servers.map(n => n[0]).join(' ')}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
                   </div>
                 </div>
               </div>
+              {selectedTables.size > 0 && (
+                <div style={{ position: 'sticky', bottom: 0, background: '#1e293b', color: '#fff', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', zIndex: 50 }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: '700' }}>{selectedTables.size} table{selectedTables.size > 1 ? 's' : ''} selected</span>
+                  <div style={{ position: 'relative' }}>
+                    <button onClick={() => setShowServerPicker(p => !p)} style={{ background: '#f2c300', color: '#000', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}>
+                      Assign Server ▾
+                    </button>
+                    {showServerPicker && (
+                      <div style={{ position: 'absolute', bottom: '110%', left: 0, background: '#fff', color: '#000', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', minWidth: '160px', zIndex: 100 }}>
+                        {SERVERS.map(name => (
+                          <label key={name} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 6px', cursor: 'pointer', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '600' }}>
+                            <input type="checkbox" checked={pickedServers.has(name)} onChange={() => setPickedServers(prev => { const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s; })} />
+                            {name}
+                          </label>
+                        ))}
+                        <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '6px', paddingTop: '6px', display: 'flex', gap: '6px' }}>
+                          <button onClick={async () => {
+                            const names = [...pickedServers];
+                            await Promise.all([...selectedTables].map(id => assignServersToTable(id, names)));
+                            setSelectedTables(new Set()); setPickedServers(new Set()); setShowServerPicker(false);
+                          }} style={{ flex: 1, background: '#000', color: '#fff', border: 'none', borderRadius: '6px', padding: '5px', fontWeight: '700', fontSize: '0.72rem', cursor: 'pointer' }}>Confirm</button>
+                          <button onClick={async () => {
+                            await Promise.all([...selectedTables].map(id => assignServersToTable(id, [])));
+                            setSelectedTables(new Set()); setPickedServers(new Set()); setShowServerPicker(false);
+                          }} style={{ background: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '6px', padding: '5px 8px', fontWeight: '700', fontSize: '0.72rem', cursor: 'pointer' }}>Clear</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={async () => {
+                    await Promise.all([...selectedTables].map(id => assignServersToTable(id, [])));
+                    setSelectedTables(new Set()); setPickedServers(new Set()); setShowServerPicker(false);
+                  }} style={{ background: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '8px', padding: '6px 12px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}>Unassign</button>
+                  <button onClick={() => { setSelectedTables(new Set()); setPickedServers(new Set()); setShowServerPicker(false); }} style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569', borderRadius: '8px', padding: '6px 12px', fontSize: '0.72rem', cursor: 'pointer' }}>✕ Cancel</button>
+                </div>
+              )}
+              </>
             )}
             {activeTab === 'blackout' && (
               <div className="sr-walkin-form">
@@ -598,12 +741,12 @@ function HostessView({
                 </button>
 
                 <div style={{marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                  {blackoutDates.length === 0 && <p style={{color: '#999', fontSize: '0.9rem'}}>No blocked dates.</p>}
+                  {blackoutDates.length === 0 && <p style={{color: '#999', fontSize: '0.72rem'}}>No blocked dates.</p>}
                   {blackoutDates.map(b => (
                     <div key={b.date_iso} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff5f5', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 16px'}}>
                       <div>
-                        <div style={{fontWeight: '700', fontSize: '0.95rem'}}>{b.date_iso}</div>
-                        {b.notes && <div style={{fontSize: '0.82rem', color: '#b91c1c', marginTop: '2px'}}>{b.notes}</div>}
+                        <div style={{fontWeight: '700', fontSize: '0.76rem'}}>{b.date_iso}</div>
+                        {b.notes && <div style={{fontSize: '0.66rem', color: '#b91c1c', marginTop: '2px'}}>{b.notes}</div>}
                       </div>
                       <button
                         style={{background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '1.1rem', fontWeight: '700', padding: '4px 8px'}}
@@ -614,14 +757,36 @@ function HostessView({
                 </div>
               </div>
             )}
+            {activeTab === 'servers' && (
+              <div className="sr-walkin-form">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {SERVERS.map(name => {
+                    const myTables = Object.entries(tableServerNames || {}).filter(([, v]) => Array.isArray(v) && v.includes(name)).map(([id]) => id);
+                    const myCount = tableEvents.filter(e => e.server_name === name).length;
+                    return (
+                      <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 16px' }}>
+                        <div>
+                          <div style={{ fontWeight: '800', fontSize: '0.88rem' }}>{name}</div>
+                          <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: '2px' }}>{myTables.length > 0 ? myTables.join(', ') : 'No tables assigned'}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '1.4rem', fontWeight: '900', color: myCount > 0 ? '#ef4444' : '#d1d5db' }}>{myCount}</div>
+                          <div style={{ fontSize: '0.62rem', color: '#9ca3af', fontWeight: '600' }}>tables today</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </main>
-      <button className="sr-view-toggle" onClick={() => setViewMode("client")}>Return to Client View</button>
+      <button className="sr-view-toggle" onClick={() => { setViewMode("client"); localStorage.removeItem("viewMode"); }}>Return to Client View</button>
       {editingRes && (
         <div className="sr-modal-overlay" onClick={() => setEditingRes(null)}>
           <div className="sr-modal" onClick={e => e.stopPropagation()}>
-            <h3 style={{margin: '0 0 20px', fontSize: '1.2rem', fontWeight: '800'}}>Edit Reservation</h3>
+            <h3 style={{margin: '0 0 20px', fontSize: '0.96rem', fontWeight: '800'}}>Edit Reservation</h3>
             <div className="sr-formGrid">
               <div className="sr-field"><label className="sr-fieldLabel">First Name</label><input className="sr-input" value={editingRes.firstName} onChange={e => setEditingRes({...editingRes, firstName: e.target.value})} /></div>
               <div className="sr-field"><label className="sr-fieldLabel">Last Name</label><input className="sr-input" value={editingRes.lastName} onChange={e => setEditingRes({...editingRes, lastName: e.target.value})} /></div>
@@ -791,7 +956,8 @@ function ClientDetailsView({
  * BLOQUE 7 — APP (CONTROLLER PRINCIPAL)
  *******************************************************/
 export default function App() {
-  const [viewMode, setViewMode] = useState("client");
+  const isSubmitting = useRef(false);
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem("viewMode") || "client");
   const [step, setStep] = useState("search");
   const [dateISO, setDateISO] = useState(() => dateISOFromDate(new Date()));
   const [guests, setGuests] = useState(2);
@@ -801,6 +967,7 @@ export default function App() {
   const [activeFloor, setActiveFloor] = useState("BAR");
   const [rows, setRows] = useState([]);
   const [tableStatuses, setTableStatuses] = useState({});
+  const [tableServerNames, setTableServerNames] = useState({});
   const [walkInForm, setWalkInForm] = useState({
     firstName: "",
     lastName: "",
@@ -855,17 +1022,22 @@ export default function App() {
 
   // Cargar y sincronizar table_status en tiempo real
   useEffect(() => {
-    supabase.from('table_status').select('id, status').then(({ data }) => {
+    supabase.from('table_status').select('id, status, server_names').then(({ data }) => {
       if (data) {
-        const map = {};
-        data.forEach(r => { map[r.id] = r.status; });
-        setTableStatuses(map);
+        const statusMap = {};
+        const serverMap = {};
+        data.forEach(r => { statusMap[r.id] = r.status; serverMap[r.id] = r.server_names || []; });
+        setTableStatuses(statusMap);
+        setTableServerNames(serverMap);
       }
     });
     const channel = supabase
       .channel('table_status_rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'table_status' }, ({ new: row }) => {
-        if (row?.id) setTableStatuses(prev => ({ ...prev, [row.id]: row.status }));
+        if (row?.id) {
+          setTableStatuses(prev => ({ ...prev, [row.id]: row.status }));
+          setTableServerNames(prev => ({ ...prev, [row.id]: row.server_names || [] }));
+        }
       })
       .subscribe();
     return () => supabase.removeChannel(channel);
@@ -918,8 +1090,10 @@ export default function App() {
 
   const handleSwitchToHostess = () => {
     const pass = prompt("Enter Hostess Password:");
-    if (pass === HOSTESS_PASSWORD) setViewMode("hostess");
-    else if (pass !== null) alert("Incorrect password");
+    if (pass === HOSTESS_PASSWORD) {
+      setViewMode("hostess");
+      localStorage.setItem("viewMode", "hostess");
+    } else if (pass !== null) alert("Incorrect password");
   };
 
   const toggleBlackoutDate = async (dateToToggle, notes) => {
@@ -937,6 +1111,10 @@ export default function App() {
     const next = current === 'av' ? 'occ' : 'av';
     setTableStatuses(prev => ({ ...prev, [key]: next }));
     await supabase.from('table_status').upsert({ id: key, status: next });
+    if (next === 'occ') {
+      const servers = tableServerNames[key] ?? [];
+      await logTableOcc(key, servers, dateISO);
+    }
   };
 
   // Helper para generar tokens de cancelación únicos (seguro)
@@ -1077,8 +1255,14 @@ export default function App() {
   };
 
   const handleSeatParty = async (party) => {
+    // Optimistic: quitar de la lista inmediatamente
+    setRows(prev => prev.filter(r => r.id !== party.id));
     const { error } = await updatePartyToSeated(party.id);
-    if (error) alert("Error seating party.");
+    // Si falla, revertir
+    if (error) {
+      setRows(prev => [party, ...prev]);
+      alert("Error seating party.");
+    }
   };
 
   const handleSaveEdit = async (id, data) => {
@@ -1088,8 +1272,13 @@ export default function App() {
 
   const handleCancelReservation = async (res) => {
     if (!window.confirm(`Cancel reservation for ${res.firstName} ${res.lastName}?`)) return;
+    // Optimistic: marcar como cancelled inmediatamente
+    setRows(prev => prev.map(r => r.id === res.id ? { ...r, status: 'cancelled' } : r));
     const { error } = await cancelReservation(res.id);
-    if (error) alert("Error canceling reservation.");
+    if (error) {
+      setRows(prev => prev.map(r => r.id === res.id ? { ...r, status: 'reserved' } : r));
+      alert("Error canceling reservation.");
+    }
   };
 
   const handleUnseatParty = async (party) => {
@@ -1099,7 +1288,7 @@ export default function App() {
   };
 
   const handleNotifyReady = async (party) => {
-    if (!party?.phone) return alert("No phone number available for this guest.");
+    if (!party?.phone) { alert("No phone number available for this guest."); return false; }
 
     try {
       await fetch("/.netlify/functions/send-sms", {
@@ -1111,18 +1300,21 @@ export default function App() {
           firstName: party.firstName,
         }),
       });
-
-      alert(`SMS sent! ${party.firstName} has been notified.`);
+      await markPartyNotified(party.id);
+      return true;
     } catch (e) {
       console.error("Notify fail:", e);
       alert("Error sending notification.");
+      return false;
     }
   };
 
   const handleClientSubmit = async () => {
+    if (isSubmitting.current) return;
     if (!clientForm.firstName || !clientForm.lastName || !clientForm.phone) {
       return alert("Por favor completa Nombre, Apellido y Teléfono.");
     }
+    isSubmitting.current = true;
 
     // Validación de horario
     if (!isTimeAllowed(dateISO, timeHHMM)) {
@@ -1187,6 +1379,8 @@ export default function App() {
       setStep("confirmation");
     } catch (e) {
       alert("Error saving reservation: " + e.message);
+    } finally {
+      isSubmitting.current = false;
     }
   };
 
@@ -1236,6 +1430,7 @@ export default function App() {
         canceledList={canceledList}
         blackoutDates={blackoutDates}
         tableStatuses={tableStatuses}
+        tableServerNames={tableServerNames}
       />
     );
   }

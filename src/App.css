@@ -108,7 +108,7 @@ body {
 /* Contenido Principal Hostess */
 .sr-hostess-main { flex: 1; display: flex; flex-direction: column; background: #fff; }
 .sr-main-header { padding: 25px 35px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-.sr-main-header h2 { margin: 0; font-size: 26px; font-weight: 800; color: #111; }
+.sr-main-header h2 { margin: 0; font-size: 21px; font-weight: 800; color: #111; }
 .sr-current-date { font-weight: 600; color: #888; }
 
 /* Date picker area in hostess header */
@@ -161,7 +161,7 @@ body {
   display: flex;
   align-items: center;
   gap: 14px;
-  font-size: 12px;
+  font-size: 10px;
   color: #555;
   font-weight: 500;
 }
@@ -244,8 +244,8 @@ body {
   box-shadow: 0 0 0 3px rgba(239,68,68,0.5), 0 6px 16px rgba(0,0,0,0.4);
 }
 
-.table-id  { font-size: 12px; line-height: 1; }
-.table-cap { font-size: 9px; opacity: 0.75; line-height: 1; font-weight: 600; }
+.table-id  { font-size: 10px; line-height: 1; }
+.table-cap { font-size: 7px; opacity: 0.75; line-height: 1; font-weight: 600; }
 
 /* --- ESTILOS WALK-IN --- */
 .sr-walkin-form {
@@ -266,7 +266,7 @@ body {
 }
 
 .sr-guests-count {
-  font-size: 38px;
+  font-size: 30px;
   font-weight: 800;
   color: #111;
   min-width: 140px;
@@ -293,7 +293,7 @@ body {
 .sr-list-item {
   padding: 20px; border-bottom: 1px solid #eee;
   display: flex; justify-content: space-between; align-items: center;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.2s ease;
 }
 .sr-item-exit { opacity: 0; pointer-events: none; }
 
