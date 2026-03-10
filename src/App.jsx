@@ -921,7 +921,7 @@ function ClientSearchView({
 function ClientDetailsView({
   dateLabel, timeLabel, guests,
   formState, setFormState,
-  setStep, onSubmitClientRes, handleSwitchToHostess
+  setStep, onSubmitClientRes, submitting, handleSwitchToHostess
 }) {
   const { firstName, lastName, phone, email, celebration, dietary, notes } = formState;
   const updateForm = (key, val) => setFormState(prev => ({ ...prev, [key]: val }));
@@ -943,7 +943,7 @@ function ClientDetailsView({
           </div>
           <div className="sr-actions">
             <button className="sr-btn" onClick={() => setStep("search")}>Back</button>
-            <button className="sr-btn sr-btnPrimary" onClick={onSubmitClientRes}>Submit</button>
+            <button className="sr-btn sr-btnPrimary" onClick={onSubmitClientRes} disabled={submitting}>{submitting ? 'Enviando...' : 'Submit'}</button>
           </div>
         </section>
       </main>
@@ -957,6 +957,7 @@ function ClientDetailsView({
  *******************************************************/
 export default function App() {
   const isSubmitting = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState(() => localStorage.getItem("viewMode") || "client");
   const [step, setStep] = useState("search");
   const [dateISO, setDateISO] = useState(() => dateISOFromDate(new Date()));
@@ -1255,12 +1256,10 @@ export default function App() {
   };
 
   const handleSeatParty = async (party) => {
-    // Optimistic: quitar de la lista inmediatamente
-    setRows(prev => prev.filter(r => r.id !== party.id));
+    setRows(prev => prev.map(r => r.id === party.id ? { ...r, status: 'seated', seated_at: new Date().toISOString() } : r));
     const { error } = await updatePartyToSeated(party.id);
-    // Si falla, revertir
     if (error) {
-      setRows(prev => [party, ...prev]);
+      setRows(prev => prev.map(r => r.id === party.id ? party : r));
       alert("Error seating party.");
     }
   };
@@ -1283,8 +1282,12 @@ export default function App() {
 
   const handleUnseatParty = async (party) => {
     const originalStatus = party.source === "walkin" ? "waitlist" : "reserved";
+    setRows(prev => prev.map(r => r.id === party.id ? { ...r, status: originalStatus, seated_at: null } : r));
     const { error } = await revertPartyFromSeated(party.id, originalStatus);
-    if (error) alert("Error reverting party.");
+    if (error) {
+      setRows(prev => prev.map(r => r.id === party.id ? party : r));
+      alert("Error reverting party.");
+    }
   };
 
   const handleNotifyReady = async (party) => {
@@ -1315,6 +1318,7 @@ export default function App() {
       return alert("Por favor completa Nombre, Apellido y Teléfono.");
     }
     isSubmitting.current = true;
+    setSubmitting(true);
 
     // Validación de horario
     if (!isTimeAllowed(dateISO, timeHHMM)) {
@@ -1381,6 +1385,7 @@ export default function App() {
       alert("Error saving reservation: " + e.message);
     } finally {
       isSubmitting.current = false;
+      setSubmitting(false);
     }
   };
 
@@ -1477,6 +1482,7 @@ export default function App() {
       setFormState={setClientForm}
       setStep={setStep}
       onSubmitClientRes={handleClientSubmit}
+      submitting={submitting}
       handleSwitchToHostess={handleSwitchToHostess}
     />
   );
