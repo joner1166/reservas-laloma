@@ -336,6 +336,13 @@ function HostessView({
     fetchTableEvents(dateISO).then(({ data }) => setTableEvents(data || [])).catch(() => setTableEvents([]));
   }, [dateISO]);
 
+  const mainRef = useRef(null);
+  const notifiedCount = waitList.filter(i => i.notified_at).length + history.filter(i => i.notified_at).length;
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [notifiedCount]);
+
   const animateThenAct = (id, action) => {
     setExitingIds(prev => new Set([...prev, id]));
     action(); // acción inmediata, no espera la animación
@@ -380,7 +387,7 @@ function HostessView({
             <button className={activeTab === 'blackout' ? 'active' : ''} onClick={() => setActiveTab('blackout')} style={{marginTop: 'auto', borderTop: '1px solid #eee', color: '#666'}}>Blackout</button>
           </nav>
         </aside>
-        <section className="sr-hostess-main">
+        <section className="sr-hostess-main" ref={mainRef}>
           <header className="sr-main-header">
             <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
               <h2>{activeTab === 'walkin' ? 'New Walk-in' : activeTab === 'phoneres' ? 'New Phone Reservation' : activeTab === 'waitlist' ? 'Wait List' : activeTab === 'reservations' ? 'Reservations' : activeTab === 'seated' ? 'Seated History' : activeTab === 'canceled' ? 'Canceled' : activeTab === 'blackout' ? 'Manage Blackout' : activeTab === 'servers' ? 'Servers' : 'Floor Plan'}</h2>
@@ -467,7 +474,7 @@ function HostessView({
             {activeTab === 'waitlist' && (
               <div className="sr-res-list">
                 {waitList.length === 0 ? <p>No guests in wait list.</p> : waitList.map(item => (
-                  <div key={item.id} className={`sr-list-item${exitingIds.has(item.id) ? ' sr-item-exit' : ''}`} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                  <div key={item.id} className={`sr-list-item${exitingIds.has(item.id) ? ' sr-item-exit' : ''}`} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', ...(item.notified_at ? {borderLeft: '4px solid rgba(15, 40, 80, 0.85)', borderBottom: 'none', background: 'rgba(15, 40, 80, 0.15)', boxShadow: '0 2px 14px rgba(15, 40, 80, 0.28)', borderRadius: '10px', margin: '4px 8px'} : {})}}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                         <strong>{item.firstName} {item.lastName}</strong>
@@ -528,7 +535,7 @@ function HostessView({
             {activeTab === 'reservations' && (
               <div className="sr-res-list">
                 {history.length === 0 ? <p>No active reservations.</p> : history.map(res => (
-                  <div key={res.id} className={`sr-list-item${exitingIds.has(res.id) ? ' sr-item-exit' : ''}`} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                  <div key={res.id} className={`sr-list-item${exitingIds.has(res.id) ? ' sr-item-exit' : ''}`} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', ...(res.notified_at ? {borderLeft: '4px solid rgba(15, 40, 80, 0.85)', borderBottom: 'none', background: 'rgba(15, 40, 80, 0.15)', boxShadow: '0 2px 14px rgba(15, 40, 80, 0.28)', borderRadius: '10px', margin: '4px 8px'} : {})}}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><strong style={{ fontSize: '0.88rem' }}>{res.firstName} {res.lastName}</strong><span style={{ background: '#111', color: '#fff', borderRadius: '8px', padding: '2px 10px', fontSize: '0.68rem', fontWeight: '800', letterSpacing: '0.3px' }}>👥 {res.guests} guests</span></div>
@@ -1005,8 +1012,12 @@ export default function App() {
     [dateISO, blackoutDates]
   );
 
-  const history = useMemo(() => rows.filter((r) => r.status === "reserved"), [rows]);
-  const waitList = useMemo(() => rows.filter((r) => r.status === "waitlist"), [rows]);
+  const history = useMemo(() => rows.filter((r) => r.status === "reserved").sort((a, b) => {
+    const notifDiff = (b.notified_at ? 1 : 0) - (a.notified_at ? 1 : 0);
+    if (notifDiff !== 0) return notifDiff;
+    return (a.timeHHMM || "").localeCompare(b.timeHHMM || "");
+  }), [rows]);
+  const waitList = useMemo(() => rows.filter((r) => r.status === "waitlist").sort((a, b) => (b.notified_at ? 1 : 0) - (a.notified_at ? 1 : 0)), [rows]);
   const seatedList = useMemo(() => rows.filter((r) => r.status === "seated"), [rows]);
   const canceledList = useMemo(() => rows.filter((r) => r.status === "cancelled"), [rows]);
 

@@ -40,7 +40,8 @@ body {
 }
 
 /* Hostess ocupa todo el viewport sin centrado */
-.sr-page.hostess-view { padding: 20px; justify-content: flex-start; align-items: center; }
+.sr-page.hostess-view { padding: 6px; justify-content: flex-start; align-items: center; }
+.sr-page.hostess-view .sr-card { width: min(1210px, 100%); }
 
 /* Client details step - top-aligned */
 .sr-page.sr-form-step { justify-content: flex-start; }
