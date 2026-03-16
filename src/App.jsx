@@ -955,6 +955,12 @@ function ClientDetailsView({
         </section>
       </main>
       <button className="sr-view-toggle" onClick={handleSwitchToHostess}>Switch to Hostess View</button>
+      <p style={{textAlign:'center',fontSize:'0.72rem',color:'#9ca3af',margin:'8px 0 4px'}}>
+        By submitting you consent to receive SMS updates about your reservation. Msg &amp; data rates may apply. Reply STOP to opt out.&nbsp;
+        <a href="/privacy.html" target="_blank" rel="noopener" style={{color:'#9ca3af'}}>Privacy Policy</a>
+        &nbsp;|&nbsp;
+        <a href="/terms.html" target="_blank" rel="noopener" style={{color:'#9ca3af'}}>Terms &amp; Conditions</a>
+      </p>
     </div>
   );
 }
