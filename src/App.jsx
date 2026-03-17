@@ -307,13 +307,14 @@ async function createCalendarEventService(reservation) {
 
 function HostessView({
   // Acciones
-  onAddWaitlist, onAddPhoneRes, onSeatParty, onUnseatParty, onCancelRes, onSaveEdit, onNotifyReady, toggleBlackoutDate,
+  onAddWaitlist, onAddPhoneRes, onSeatParty, onUnseatParty, onCancelRes, onSaveEdit, onNotifyReady, onRemoveFromWaitlist, onUndoCancel, toggleBlackoutDate,
   handleTableSelection, setViewMode,
 
   // Estado y UI
   activeTab, setActiveTab, activeFloor, setActiveFloor, isBlackout,
   dateISO, setDateISO, onDateChange, dateLabel, stepDate,
-  guests, setGuests, stepGuests,
+  guests, setGuests,
+  estimatedWait, setEstimatedWait,
   timeHHMM, setTimeHHMM, timeLabel, stepTime,
 
   // Datos
@@ -327,6 +328,7 @@ function HostessView({
   const longPressTriggeredRef = useRef(false);
   const [editingRes, setEditingRes] = useState(null);
   const [blackoutForm, setBlackoutForm] = useState({ date: '', notes: '' });
+  const [showWaitPicker, setShowWaitPicker] = useState(false);
   const [exitingIds, setExitingIds] = useState(new Set());
   const [selectedTables, setSelectedTables] = useState(new Set());
   const [pickedServers, setPickedServers] = useState(new Set());
@@ -413,11 +415,25 @@ function HostessView({
             {activeTab === 'walkin' && (
               <div className="sr-walkin-form">
                 {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed.</div>}
-                <div className="sr-center"><label className="sr-fieldLabel">PARTY SIZE</label>
-                  <div className="sr-row-simple">
-                    <button className="sr-btn-mini" onClick={() => stepGuests(-1)} disabled={isBlackout}>−</button>
-                    <input type="number" className="sr-guests-count" value={guests === null ? "" : guests} onChange={(e) => setGuests(e.target.value === "" ? null : parseInt(e.target.value))} onFocus={() => setGuests(null)} style={{width: '60px', textAlign: 'center', border: 'none', background: 'transparent', fontSize: '2rem', fontWeight: 'bold', color: '#000'}} disabled={isBlackout} />
-                    <button className="sr-btn-mini" onClick={() => stepGuests(1)} disabled={isBlackout}>+</button>
+                <div style={{display:'flex', gap:'24px', justifyContent:'center', alignItems:'center', flexWrap:'wrap', marginBottom:'20px'}}>
+                  <div style={{textAlign:'center', background:'#fff', border:'1.5px solid #e5e7eb', borderRadius:'14px', padding:'12px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', minWidth:'110px'}}>
+                    <label style={{fontSize:'0.62rem', fontWeight:'800', letterSpacing:'0.08em', color:'#6b7280', display:'block', marginBottom:'6px'}}>PARTY SIZE</label>
+                    <input type="number" min="1" max="20" value={guests === null ? "" : guests} onChange={e => setGuests(e.target.value === "" ? null : parseInt(e.target.value))} disabled={isBlackout} style={{width:'60px', textAlign:'center', fontSize:'2rem', fontWeight:'800', border:'none', outline:'none', background:'transparent', color:'#111', display:'block', margin:'0 auto'}} />
+                  </div>
+                  <div style={{textAlign:'center', background:'#fff', border:'1.5px solid #e5e7eb', borderRadius:'14px', padding:'12px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', minWidth:'130px', position:'relative'}}>
+                    <label style={{fontSize:'0.62rem', fontWeight:'800', letterSpacing:'0.08em', color:'#6b7280', display:'block', marginBottom:'6px'}}>ESTIMATED WAIT</label>
+                    <button onClick={() => !isBlackout && setShowWaitPicker(v => !v)} disabled={isBlackout} style={{fontSize:'2rem', fontWeight:'800', border:'none', background:'transparent', color:'#111', cursor:'pointer', padding:0, display:'block', margin:'0 auto', width:'100%'}}>
+                      {estimatedWait}<span style={{fontSize:'1rem', fontWeight:'500', color:'#6b7280'}}> min</span>
+                    </button>
+                    {showWaitPicker && (
+                      <div style={{position:'absolute', zIndex:50, top:'100%', left:'50%', transform:'translateX(-50%)', marginTop:'4px', background:'#fff', border:'1px solid #e5e7eb', borderRadius:'10px', boxShadow:'0 4px 16px rgba(0,0,0,0.12)', padding:'10px', display:'flex', flexWrap:'wrap', gap:'6px', width:'220px', justifyContent:'center'}}>
+                        {Array.from({length: 24}, (_, i) => (i + 1) * 5).map(m => (
+                          <button key={m} onClick={() => { setEstimatedWait(m); setShowWaitPicker(false); }} style={{padding:'4px 10px', borderRadius:'20px', border:'1px solid #e5e7eb', background: estimatedWait === m ? '#111' : '#f9fafb', color: estimatedWait === m ? '#fff' : '#111', fontSize:'0.78rem', fontWeight:'600', cursor:'pointer'}}>
+                            {m} min
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="sr-formGrid" style={{marginTop: '20px'}}>
@@ -488,6 +504,19 @@ function HostessView({
                             </span>
                           );
                         })()}
+                        {item.estimated_wait && item.created_at && (() => {
+                          const endTime = new Date(item.created_at).getTime() + item.estimated_wait * 60000;
+                          const remaining = Math.max(0, endTime - nowSec);
+                          const mins = Math.floor(remaining / 60000);
+                          const secs = Math.floor((remaining % 60000) / 1000);
+                          const isExpired = remaining === 0;
+                          const color = isExpired ? '#ef4444' : remaining < 2 * 60 * 1000 ? '#f59e0b' : '#3b82f6';
+                          return (
+                            <span style={{ background: color, color: '#fff', borderRadius: '20px', padding: '2px 10px', fontSize: '0.62rem', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>
+                              {isExpired ? '⚠️ Wait exp.' : `⏳ ${mins}:${String(secs).padStart(2, '0')}`}
+                            </span>
+                          );
+                        })()}
                       </div>
                       <small style={{ color: '#999' }}>In at {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
                       {item.celebration && item.celebration !== "None" && <div style={{ fontSize: '0.68rem', color: '#d4ab00', marginTop: '2px' }}>🎉 {item.celebration}</div>}
@@ -512,20 +541,16 @@ function HostessView({
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button
-                        style={{
-                          ...seatButtonStyle,
-                          background: "#000",
-                          color: "#fff",
-                          border: "none",
-                          fontSize: "0.75rem",
-                          padding: "8px 12px",
-                        }}
-                        onClick={() => onNotifyReady(item)}
+                        style={{ ...seatButtonStyle, fontSize: '0.75rem', padding: '8px 12px', border: 'none', background: item.notified_at ? '#16a34a' : '#000', color: '#fff', cursor: item.notified_at ? 'default' : 'pointer' }}
+                        onClick={() => !item.notified_at && onNotifyReady(item)}
                       >
-                        Notify Ready 📱
+                        {item.notified_at ? '✓ Notified' : '💬 Notify'}
                       </button>
                       <button style={seatButtonStyle} onClick={() => animateThenAct(item.id, () => onSeatParty(item))}>
                         Seat
+                      </button>
+                      <button style={{ ...seatButtonStyle, fontSize: '0.75rem', padding: '8px 12px', background: '#fee2e2', color: '#b91c1c' }} onClick={() => animateThenAct(item.id, () => onRemoveFromWaitlist(item))}>
+                        Remove
                       </button>
                     </div>
                   </div>
@@ -563,7 +588,7 @@ function HostessView({
                     </div>
                     <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                       <button style={seatButtonStyle} onClick={() => animateThenAct(res.id, () => onSeatParty(res))}>Seat</button>
-                      <button style={{ ...seatButtonStyle, background: '#000', color: '#fff', fontSize: '0.75rem', padding: '8px 12px' }} onClick={() => onNotifyReady(res)}>Notify 📱</button>
+                      <button style={{ ...seatButtonStyle, fontSize: '0.75rem', padding: '8px 12px', background: res.notified_at ? '#16a34a' : '#000', color: '#fff', cursor: res.notified_at ? 'default' : 'pointer' }} onClick={() => !res.notified_at && onNotifyReady(res)}>{res.notified_at ? '✓ Notified' : '💬 Notify'}</button>
                       <button style={{ ...seatButtonStyle, background: '#f3f4f6', color: '#374151', boxShadow: 'none', border: '1px solid #d1d5db', fontSize: '0.75rem', padding: '8px 12px' }} onClick={() => setEditingRes({...res})}>Edit</button>
                       <button style={{ ...seatButtonStyle, background: '#fee2e2', color: '#b91c1c', fontSize: '0.75rem', padding: '8px 12px' }} onClick={() => animateThenAct(res.id, () => onCancelRes(res))}>Cancel</button>
                     </div>
@@ -607,6 +632,11 @@ function HostessView({
                       </div>
                       {item.phone && <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: '2px' }}>📞 {item.phone}</div>}
                       {item.notes && <div style={{ color: '#9ca3af', fontSize: '0.68rem', marginTop: '4px', fontStyle: 'italic' }}>"{item.notes}"</div>}
+                    </div>
+                    <div style={{ flexShrink: 0 }}>
+                      <button style={{ ...seatButtonStyle, fontSize: '0.75rem', padding: '8px 12px', background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db' }} onClick={() => onUndoCancel(item)}>
+                        Undo
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -974,7 +1004,8 @@ export default function App() {
   const [viewMode, setViewMode] = useState(() => localStorage.getItem("viewMode") || "client");
   const [step, setStep] = useState("search");
   const [dateISO, setDateISO] = useState(() => dateISOFromDate(new Date()));
-  const [guests, setGuests] = useState(2);
+  const [guests, setGuests] = useState(null);
+  const [estimatedWait, setEstimatedWait] = useState(15);
   const [timeHHMM, setTimeHHMM] = useState("19:00");
   const [blackoutDates, setBlackoutDates] = useState([]);
   const [activeTab, setActiveTab] = useState("reservations");
@@ -1093,6 +1124,7 @@ export default function App() {
     setDateISO(date);
   };
   const stepGuests = (dir) => setGuests((prev) => clampGuests((prev ?? 0) + dir));
+  const stepWait = (dir) => setEstimatedWait((prev) => Math.min(120, Math.max(5, (prev ?? 15) + dir * 5)));
 
   // stepTime ahora respeta el horario del restaurante: no puede salir del rango permitido
   const stepTime = (dir) => {
@@ -1163,6 +1195,7 @@ export default function App() {
       status: "waitlist",
       source: "walkin",
       cancel_token: cancelToken,
+      estimated_wait: estimatedWait,
     };
 
     const { error } = await insertWaitlistRecord(newEntry);
@@ -1190,6 +1223,7 @@ export default function App() {
     }
 
     setWalkInForm({ firstName: "", lastName: "", phone: "", celebration: "None", dietary: "None", notes: "" });
+    setEstimatedWait(15);
     setActiveTab("waitlist");
   };
 
@@ -1284,6 +1318,25 @@ export default function App() {
   const handleSaveEdit = async (id, data) => {
     const { error } = await updateReservationRecord(id, data);
     if (error) alert("Error updating reservation: " + error.message);
+  };
+
+  const handleRemoveFromWaitlist = async (item) => {
+    setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: 'cancelled' } : r));
+    const { error } = await updateReservationRecord(item.id, { status: 'cancelled' });
+    if (error) {
+      setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: 'waitlist' } : r));
+      alert("Error removing from waitlist.");
+    }
+  };
+
+  const handleUndoCancel = async (item) => {
+    const originalStatus = item.source === 'walkin' ? 'waitlist' : 'reserved';
+    setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: originalStatus } : r));
+    const { error } = await updateReservationRecord(item.id, { status: originalStatus });
+    if (error) {
+      setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: 'cancelled' } : r));
+      alert("Error reverting cancellation.");
+    }
   };
 
   const handleCancelReservation = async (res) => {
@@ -1416,6 +1469,8 @@ export default function App() {
         onSeatParty={handleSeatParty}
         onUnseatParty={handleUnseatParty}
         onCancelRes={handleCancelReservation}
+        onRemoveFromWaitlist={handleRemoveFromWaitlist}
+        onUndoCancel={handleUndoCancel}
         onSaveEdit={handleSaveEdit}
         onNotifyReady={handleNotifyReady}
         toggleBlackoutDate={toggleBlackoutDate}
@@ -1436,6 +1491,9 @@ export default function App() {
         guests={guests}
         setGuests={setGuests}
         stepGuests={stepGuests}
+        estimatedWait={estimatedWait}
+        setEstimatedWait={setEstimatedWait}
+        stepWait={stepWait}
         timeHHMM={timeHHMM}
         setTimeHHMM={setTimeHHMM}
         timeLabel={timeLabel}
