@@ -868,7 +868,7 @@ function ClientConfirmationView({ firstName, setStep, setClientForm }) {
         </div>
         <button
           onClick={() => {
-            setClientForm({ firstName: '', lastName: '', phone: '', email: '', celebration: 'None', dietary: 'None', notes: '' });
+            setClientForm({ firstName: '', lastName: '', phone: '', email: '', celebration: 'None', dietary: 'None', notes: '', smsOptIn: false });
             setStep('search');
           }}
           style={{
@@ -960,7 +960,7 @@ function ClientDetailsView({
   formState, setFormState,
   setStep, onSubmitClientRes, submitting, handleSwitchToHostess
 }) {
-  const { firstName, lastName, phone, email, celebration, dietary, notes } = formState;
+  const { firstName, lastName, phone, email, celebration, dietary, notes, smsOptIn } = formState;
   const updateForm = (key, val) => setFormState(prev => ({ ...prev, [key]: val }));
 
   return (
@@ -978,6 +978,15 @@ function ClientDetailsView({
             <div className="sr-field"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={dietary} onChange={e => updateForm('dietary', e.target.value)}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
             <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={notes} onChange={e => updateForm('notes', e.target.value)} /></div>
           </div>
+          <label style={{display:'flex',alignItems:'flex-start',gap:'10px',margin:'12px 0 4px',cursor:'pointer',fontSize:'0.78rem',color:'#374151',lineHeight:'1.5'}}>
+            <input type="checkbox" checked={smsOptIn} onChange={e => updateForm('smsOptIn', e.target.checked)} style={{marginTop:'3px',flexShrink:0,width:'16px',height:'16px',accentColor:'#1d4ed8'}} />
+            <span>
+              I agree to receive SMS notifications about my reservation from Lindo Michoacan (up to 2 messages per reservation). Msg &amp; data rates may apply. Reply <strong>STOP</strong> to cancel, <strong>HELP</strong> for help.{' '}
+              <a href="/privacy.html" target="_blank" rel="noopener" style={{color:'#1d4ed8'}}>Privacy Policy</a>
+              {' | '}
+              <a href="/terms.html" target="_blank" rel="noopener" style={{color:'#1d4ed8'}}>Terms &amp; Conditions</a>
+            </span>
+          </label>
           <div className="sr-actions">
             <button className="sr-btn" onClick={() => setStep("search")}>Back</button>
             <button className="sr-btn sr-btnPrimary" onClick={onSubmitClientRes} disabled={submitting}>{submitting ? 'Enviando...' : 'Submit'}</button>
@@ -985,12 +994,6 @@ function ClientDetailsView({
         </section>
       </main>
       <button className="sr-view-toggle" onClick={handleSwitchToHostess}>Switch to Hostess View</button>
-      <p style={{textAlign:'center',fontSize:'0.72rem',color:'#9ca3af',margin:'8px 0 4px'}}>
-        By submitting you consent to receive SMS updates about your reservation. Msg &amp; data rates may apply. Reply STOP to opt out.&nbsp;
-        <a href="/privacy.html" target="_blank" rel="noopener" style={{color:'#9ca3af'}}>Privacy Policy</a>
-        &nbsp;|&nbsp;
-        <a href="/terms.html" target="_blank" rel="noopener" style={{color:'#9ca3af'}}>Terms &amp; Conditions</a>
-      </p>
     </div>
   );
 }
@@ -1038,6 +1041,7 @@ export default function App() {
     celebration: "None",
     dietary: "None",
     notes: "",
+    smsOptIn: false,
   });
 
   const dateLabel = useMemo(() => formatDateLabel(dateISO), [dateISO]);
@@ -1416,29 +1420,32 @@ export default function App() {
       status: "reserved",
       source: "reservation",
       cancel_token: cancelToken,
+      sms_opt_in: clientForm.smsOptIn,
     };
 
     try {
       const { error } = await insertReservationRecord(newRes);
       if (error) throw error;
 
-      // SMS confirmación (cliente)
-      try {
-        await fetch("/.netlify/functions/send-sms", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "confirm",
-            phone: clientForm.phone,
-            firstName: clientForm.firstName,
-            dateLabel,
-            timeLabel,
-            guests,
-            cancel_token: cancelToken,
-          }),
-        });
-      } catch (smsErr) {
-        console.error("SMS fail:", smsErr);
+      // SMS confirmación (cliente) — solo si optó por recibir SMS
+      if (clientForm.smsOptIn) {
+        try {
+          await fetch("/.netlify/functions/send-sms", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "confirm",
+              phone: clientForm.phone,
+              firstName: clientForm.firstName,
+              dateLabel,
+              timeLabel,
+              guests,
+              cancel_token: cancelToken,
+            }),
+          });
+        } catch (smsErr) {
+          console.error("SMS fail:", smsErr);
+        }
       }
 
       // Calendar
