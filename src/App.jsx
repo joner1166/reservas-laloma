@@ -12,6 +12,15 @@ import logo from "/logo.png"; // Logo principal para la interfaz
  *******************************************************/
 const MAX_GUESTS = 12;
 const SERVERS = ['JAIME 👴🏻🍋','NOE 🐪','APACHE 👴🏻','PANCHO 👨🏻‍🦲','CALERO 🎅🏻','HUGO 🧞','PATO 👰‍♂️🐍','EDGAR 🤓','CHINO 🥡🥢','VALENTIN 🧛‍♂️','WALTER 👳🏻‍♂️','DEYNI 🥦','SONIA 🦋','ORANGE 🍊'];
+const COUNTRY_CODES = [
+  { code: '+1',  label: '🇺🇸 +1'  },
+  { code: '+52', label: '🇲🇽 +52' },
+  { code: '+44', label: '🇬🇧 +44' },
+  { code: '+61', label: '🇦🇺 +61' },
+  { code: '+33', label: '🇫🇷 +33' },
+  { code: '+34', label: '🇪🇸 +34' },
+  { code: '+49', label: '🇩🇪 +49' },
+];
 const SLOT_MINUTES = 15;
 const HOSTESS_PASSWORD = "1234";
 
@@ -378,7 +387,7 @@ const HostessView = React.memo(function HostessView({
     <div className="sr-page hostess-view">
       <main className="sr-card hostess-layout">
         <aside className="sr-hostess-sidebar">
-          <div className="sr-sidebar-header"><img src="/logo.png" alt="Lindo Michoacán" className="sr-logo-small" /></div>
+          <div className="sr-sidebar-header"><img src="/logohostessview.jpg" alt="Lindo Michoacán" className="sr-logo-small" /></div>
           <nav className="sr-sidebar-nav">
             <button className={activeTab === 'walkin' ? 'active' : ''} onClick={() => setActiveTab('walkin')}>Walk-in</button>
             <button className={activeTab === 'phoneres' ? 'active' : ''} onClick={() => setActiveTab('phoneres')}>Phone Reservation</button>
@@ -441,7 +450,7 @@ const HostessView = React.memo(function HostessView({
                 <div className="sr-formGrid" style={{marginTop: '20px'}}>
                   <div className="sr-field"><label className="sr-fieldLabel">First Name</label><input className="sr-input" value={walkInForm.firstName} onChange={e => setWalkInForm({...walkInForm, firstName: e.target.value})} disabled={isBlackout}/></div>
                   <div className="sr-field"><label className="sr-fieldLabel">Last Name</label><input className="sr-input" value={walkInForm.lastName} onChange={e => setWalkInForm({...walkInForm, lastName: e.target.value})} disabled={isBlackout}/></div>
-                  <div className="sr-field"><label className="sr-fieldLabel">Phone</label><input className="sr-input" value={walkInForm.phone} onChange={e => setWalkInForm({...walkInForm, phone: e.target.value})} disabled={isBlackout}/></div>
+                  <div className="sr-field"><label className="sr-fieldLabel">Phone</label><div style={{display:'flex',gap:'6px'}}><select className="sr-input" style={{width:'95px',flexShrink:0}} value={walkInForm.phoneCode} onChange={e => setWalkInForm({...walkInForm, phoneCode: e.target.value})} disabled={isBlackout}>{COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select><input className="sr-input" style={{flex:1}} value={walkInForm.phone} onChange={e => setWalkInForm({...walkInForm, phone: e.target.value})} placeholder="000-000-0000" disabled={isBlackout}/></div></div>
                   <div className="sr-field"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={walkInForm.celebration} onChange={e => setWalkInForm({...walkInForm, celebration: e.target.value})} disabled={isBlackout}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Wedding</option><option>Graduation</option><option>Other</option></select></div>
                   <div className="sr-field"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={walkInForm.dietary} onChange={e => setWalkInForm({...walkInForm, dietary: e.target.value})} disabled={isBlackout}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
                   <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={walkInForm.notes} onChange={e => setWalkInForm({...walkInForm, notes: e.target.value})} disabled={isBlackout}/></div>
@@ -480,7 +489,7 @@ const HostessView = React.memo(function HostessView({
                 <div className="sr-formGrid">
                   <div className="sr-field"><label className="sr-fieldLabel">First Name</label><input className="sr-input" value={phoneResForm.firstName} onChange={e => setPhoneResForm({...phoneResForm, firstName: e.target.value})} disabled={isBlackout}/></div>
                   <div className="sr-field"><label className="sr-fieldLabel">Last Name</label><input className="sr-input" value={phoneResForm.lastName} onChange={e => setPhoneResForm({...phoneResForm, lastName: e.target.value})} disabled={isBlackout}/></div>
-                  <div className="sr-field"><label className="sr-fieldLabel">Phone</label><input className="sr-input" value={phoneResForm.phone} onChange={e => setPhoneResForm({...phoneResForm, phone: e.target.value})} disabled={isBlackout}/></div>
+                  <div className="sr-field"><label className="sr-fieldLabel">Phone</label><div style={{display:'flex',gap:'6px'}}><select className="sr-input" style={{width:'95px',flexShrink:0}} value={phoneResForm.phoneCode} onChange={e => setPhoneResForm({...phoneResForm, phoneCode: e.target.value})} disabled={isBlackout}>{COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select><input className="sr-input" style={{flex:1}} value={phoneResForm.phone} onChange={e => setPhoneResForm({...phoneResForm, phone: e.target.value})} placeholder="000-000-0000" disabled={isBlackout}/></div></div>
                   <div className="sr-field"><label className="sr-fieldLabel">Email</label><input className="sr-input" value={phoneResForm.email} onChange={e => setPhoneResForm({...phoneResForm, email: e.target.value})} disabled={isBlackout}/></div>
                   <div className="sr-field"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={phoneResForm.celebration} onChange={e => setPhoneResForm({...phoneResForm, celebration: e.target.value})} disabled={isBlackout}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Wedding</option><option>Graduation</option><option>Other</option></select></div>
                   <div className="sr-field"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={phoneResForm.dietary} onChange={e => setPhoneResForm({...phoneResForm, dietary: e.target.value})} disabled={isBlackout}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
@@ -870,7 +879,7 @@ const ClientConfirmationView = React.memo(function ClientConfirmationView({ firs
         </div>
         <button
           onClick={() => {
-            setClientForm({ firstName: '', lastName: '', phone: '', email: '', celebration: 'None', dietary: 'None', notes: '', smsOptIn: false });
+            setClientForm({ firstName: '', lastName: '', phone: '', phoneCode: '+1', email: '', celebration: 'None', dietary: 'None', notes: '', smsOptIn: false });
             setStep('search');
           }}
           style={{
@@ -962,7 +971,7 @@ const ClientDetailsView = React.memo(function ClientDetailsView({
   formState, setFormState,
   setStep, onSubmitClientRes, submitting, handleSwitchToHostess
 }) {
-  const { firstName, lastName, phone, email, celebration, dietary, notes, smsOptIn } = formState;
+  const { firstName, lastName, phone, phoneCode, email, celebration, dietary, notes, smsOptIn } = formState;
   const updateForm = (key, val) => setFormState(prev => ({ ...prev, [key]: val }));
 
   return (
@@ -974,7 +983,7 @@ const ClientDetailsView = React.memo(function ClientDetailsView({
           <div className="sr-formGrid">
             <div className="sr-field"><label className="sr-fieldLabel">First name</label><input className="sr-input" value={firstName} onChange={e => updateForm('firstName', e.target.value)} /></div>
             <div className="sr-field"><label className="sr-fieldLabel">Last name</label><input className="sr-input" value={lastName} onChange={e => updateForm('lastName', e.target.value)} /></div>
-            <div className="sr-field"><label className="sr-fieldLabel">Telephone</label><input className="sr-input" value={phone} onChange={e => updateForm('phone', e.target.value)} /></div>
+            <div className="sr-field"><label className="sr-fieldLabel">Telephone</label><div style={{display:'flex',gap:'6px'}}><select className="sr-input" style={{width:'95px',flexShrink:0}} value={phoneCode} onChange={e => updateForm('phoneCode', e.target.value)}>{COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select><input className="sr-input" style={{flex:1}} value={phone} onChange={e => updateForm('phone', e.target.value)} placeholder="000-000-0000"/></div></div>
             <div className="sr-field"><label className="sr-fieldLabel">Email</label><input className="sr-input" value={email} onChange={e => updateForm('email', e.target.value)} /></div>
             <div className="sr-field sr-span2"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={celebration} onChange={e => updateForm('celebration', e.target.value)}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Wedding</option><option>Graduation</option><option>Other</option></select></div>
             <div className="sr-field"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={dietary} onChange={e => updateForm('dietary', e.target.value)}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
@@ -1021,6 +1030,7 @@ export default function App() {
     firstName: "",
     lastName: "",
     phone: "",
+    phoneCode: "+1",
     celebration: "None",
     dietary: "None",
     notes: "",
@@ -1029,6 +1039,7 @@ export default function App() {
     firstName: "",
     lastName: "",
     phone: "",
+    phoneCode: "+1",
     email: "",
     celebration: "None",
     dietary: "None",
@@ -1038,6 +1049,7 @@ export default function App() {
     firstName: "",
     lastName: "",
     phone: "",
+    phoneCode: "+1",
     email: "",
     celebration: "None",
     dietary: "None",
@@ -1192,7 +1204,7 @@ export default function App() {
       guests: guests || 1,
       dateISO,
       timeHHMM,
-      phone: walkInForm.phone || "",
+      phone: (walkInForm.phoneCode || '+1') + (walkInForm.phone || '').replace(/\D/g, ''),
       email: null,
       celebration: walkInForm.celebration || "None",
       dietary: walkInForm.dietary || "None",
@@ -1256,7 +1268,7 @@ export default function App() {
       guests: guests || 1,
       dateISO,
       timeHHMM,
-      phone: phoneResForm.phone,
+      phone: (phoneResForm.phoneCode || '+1') + phoneResForm.phone.replace(/\D/g, ''),
       email: phoneResForm.email || null,
       celebration: phoneResForm.celebration || "None",
       dietary: phoneResForm.dietary || "None",
@@ -1277,7 +1289,7 @@ export default function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "confirm",
-            phone: phoneResForm.phone,
+            phone: (phoneResForm.phoneCode || '+1') + phoneResForm.phone.replace(/\D/g, ''),
             firstName: phoneResForm.firstName,
             dateLabel,
             timeLabel,
@@ -1413,7 +1425,7 @@ export default function App() {
       guests,
       dateISO,
       timeHHMM,
-      phone: clientForm.phone,
+      phone: (clientForm.phoneCode || '+1') + clientForm.phone.replace(/\D/g, ''),
       email: clientForm.email,
       celebration: clientForm.celebration,
       dietary: clientForm.dietary,
@@ -1436,7 +1448,7 @@ export default function App() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               type: "confirm",
-              phone: clientForm.phone,
+              phone: (clientForm.phoneCode || '+1') + clientForm.phone.replace(/\D/g, ''),
               firstName: clientForm.firstName,
               dateLabel,
               timeLabel,
@@ -1469,8 +1481,8 @@ export default function App() {
 
   // --- RENDER ---
   if (viewMode === "hostess") {
-    return (
-      <HostessView
+    return (   
+       <HostessView
         onAddWaitlist={handleAddToWaitlist}
         onAddPhoneRes={handleAddPhoneReservation}
         onSeatParty={handleSeatParty}
