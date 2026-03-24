@@ -1,7 +1,8 @@
+// @ts-nocheck
 /*******************************************************
  * BLOQUE 0 — IMPORTS
  *******************************************************/
-import { useMemo, useRef, useState, useEffect } from "react";
+import React, { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
 import logo from "/logo.png"; // Logo principal para la interfaz
@@ -10,7 +11,7 @@ import logo from "/logo.png"; // Logo principal para la interfaz
  * BLOQUE 1 — CONFIG / CONSTANTES
  *******************************************************/
 const MAX_GUESTS = 12;
-const SERVERS = ['JAIME','NOE','APACHE','PANCHO','CALERO','HUGO','PATO','EDGAR','CHINO','VALENTIN','WALTER','DEYNI','SONIA','ORANGE'];
+const SERVERS = ['JAIME 👴🏻🍋','NOE 🐪','APACHE 👴🏻','PANCHO 👨🏻‍🦲','CALERO 🎅🏻','HUGO 🧞','PATO 👰‍♂️🐍','EDGAR 🤓','CHINO 🥡🥢','VALENTIN 🧛‍♂️','WALTER 👳🏻‍♂️','DEYNI 🥦','SONIA 🦋','ORANGE 🍊'];
 const SLOT_MINUTES = 15;
 const HOSTESS_PASSWORD = "1234";
 
@@ -305,13 +306,13 @@ async function createCalendarEventService(reservation) {
  * BLOQUE 6 — UI COMPONENTES INTERNOS
  *******************************************************/
 
-function HostessView({
+const HostessView = React.memo(function HostessView({
   // Acciones
   onAddWaitlist, onAddPhoneRes, onSeatParty, onUnseatParty, onCancelRes, onSaveEdit, onNotifyReady, onRemoveFromWaitlist, onUndoCancel, toggleBlackoutDate,
   handleTableSelection, setViewMode,
 
   // Estado y UI
-  activeTab, setActiveTab, activeFloor, setActiveFloor, isBlackout,
+  activeFloor, setActiveFloor, isBlackout,
   dateISO, setDateISO, onDateChange, dateLabel, stepDate,
   guests, setGuests,
   estimatedWait, setEstimatedWait,
@@ -326,6 +327,7 @@ function HostessView({
   const headerDateRef = useRef(null);
   const pressTimerRef = useRef(null);
   const longPressTriggeredRef = useRef(false);
+  const [activeTab, setActiveTab] = useState("reservations");
   const [editingRes, setEditingRes] = useState(null);
   const [blackoutForm, setBlackoutForm] = useState({ date: '', notes: '' });
   const [showWaitPicker, setShowWaitPicker] = useState(false);
@@ -713,7 +715,7 @@ function HostessView({
                     {showServerPicker && (
                       <div style={{ position: 'absolute', bottom: '110%', left: 0, background: '#fff', color: '#000', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', minWidth: '160px', zIndex: 100 }}>
                         {SERVERS.map(name => (
-                          <label key={name} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 6px', cursor: 'pointer', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '600' }}>
+                          <label key={name} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', cursor: 'pointer', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '600', background: '#1e293b', color: '#f1f5f9' }}>
                             <input type="checkbox" checked={pickedServers.has(name)} onChange={() => setPickedServers(prev => { const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s; })} />
                             {name}
                           </label>
@@ -801,14 +803,14 @@ function HostessView({
                     const myTables = Object.entries(tableServerNames || {}).filter(([, v]) => Array.isArray(v) && v.includes(name)).map(([id]) => id);
                     const myCount = tableEvents.filter(e => e.server_name === name).length;
                     return (
-                      <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 16px' }}>
+                      <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '12px 16px' }}>
                         <div>
-                          <div style={{ fontWeight: '800', fontSize: '0.88rem' }}>{name}</div>
-                          <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: '2px' }}>{myTables.length > 0 ? myTables.join(', ') : 'No tables assigned'}</div>
+                          <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#f1f5f9' }}>{name}</div>
+                          <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '2px' }}>{myTables.length > 0 ? myTables.join(', ') : 'No tables assigned'}</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '1.4rem', fontWeight: '900', color: myCount > 0 ? '#ef4444' : '#d1d5db' }}>{myCount}</div>
-                          <div style={{ fontSize: '0.62rem', color: '#9ca3af', fontWeight: '600' }}>tables today</div>
+                          <div style={{ fontSize: '1.4rem', fontWeight: '900', color: myCount > 0 ? '#f87171' : '#475569' }}>{myCount}</div>
+                          <div style={{ fontSize: '0.62rem', color: '#64748b', fontWeight: '600' }}>tables today</div>
                         </div>
                       </div>
                     );
@@ -845,10 +847,10 @@ function HostessView({
       )}
     </div>
   );
-}
+});
 
 // --- COMPONENTE CLIENT CONFIRMATION (Paso 3) ---
-function ClientConfirmationView({ firstName, setStep, setClientForm }) {
+const ClientConfirmationView = React.memo(function ClientConfirmationView({ firstName, setStep, setClientForm }) {
   return (
     <div className="sr-page">
       <main style={{
@@ -882,10 +884,10 @@ function ClientConfirmationView({ firstName, setStep, setClientForm }) {
       </main>
     </div>
   );
-}
+});
 
 // --- COMPONENTE CLIENT SEARCH (Paso 1) ---
-function ClientSearchView({
+const ClientSearchView = React.memo(function ClientSearchView({
   dateISO, onDateChange, dateLabel, stepDate,
   guests, setGuests,
   timeHHMM, setTimeHHMM,
@@ -952,10 +954,10 @@ function ClientSearchView({
       <button className="sr-view-toggle" onClick={handleSwitchToHostess}>Switch to Hostess View</button>
     </div>
   );
-}
+});
 
 // --- COMPONENTE CLIENT DETAILS (Paso 2) ---
-function ClientDetailsView({
+const ClientDetailsView = React.memo(function ClientDetailsView({
   dateLabel, timeLabel, guests,
   formState, setFormState,
   setStep, onSubmitClientRes, submitting, handleSwitchToHostess
@@ -996,7 +998,7 @@ function ClientDetailsView({
       <button className="sr-view-toggle" onClick={handleSwitchToHostess}>Switch to Hostess View</button>
     </div>
   );
-}
+});
 
 /*******************************************************
  * BLOQUE 7 — APP (CONTROLLER PRINCIPAL)
@@ -1011,7 +1013,6 @@ export default function App() {
   const [estimatedWait, setEstimatedWait] = useState(15);
   const [timeHHMM, setTimeHHMM] = useState("19:00");
   const [blackoutDates, setBlackoutDates] = useState([]);
-  const [activeTab, setActiveTab] = useState("reservations");
   const [activeFloor, setActiveFloor] = useState("BAR");
   const [rows, setRows] = useState([]);
   const [tableStatuses, setTableStatuses] = useState({});
@@ -1309,31 +1310,30 @@ export default function App() {
       alert("Error saving reservation.");
     }
   };
-
-  const handleSeatParty = async (party) => {
+  const handleSeatParty = useCallback(async (party) => {
     setRows(prev => prev.map(r => r.id === party.id ? { ...r, status: 'seated', seated_at: new Date().toISOString() } : r));
     const { error } = await updatePartyToSeated(party.id);
     if (error) {
       setRows(prev => prev.map(r => r.id === party.id ? party : r));
       alert("Error seating party.");
     }
-  };
+  }, []);
 
-  const handleSaveEdit = async (id, data) => {
+  const handleSaveEdit = useCallback(async (id, data) => {
     const { error } = await updateReservationRecord(id, data);
     if (error) alert("Error updating reservation: " + error.message);
-  };
+  }, []);
 
-  const handleRemoveFromWaitlist = async (item) => {
+  const handleRemoveFromWaitlist = useCallback(async (item) => {
     setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: 'cancelled' } : r));
     const { error } = await updateReservationRecord(item.id, { status: 'cancelled' });
     if (error) {
       setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: 'waitlist' } : r));
       alert("Error removing from waitlist.");
     }
-  };
+  }, []);
 
-  const handleUndoCancel = async (item) => {
+  const handleUndoCancel = useCallback(async (item) => {
     const originalStatus = item.source === 'walkin' ? 'waitlist' : 'reserved';
     setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: originalStatus } : r));
     const { error } = await updateReservationRecord(item.id, { status: originalStatus });
@@ -1341,20 +1341,19 @@ export default function App() {
       setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: 'cancelled' } : r));
       alert("Error reverting cancellation.");
     }
-  };
+  }, []);
 
-  const handleCancelReservation = async (res) => {
+  const handleCancelReservation = useCallback(async (res) => {
     if (!window.confirm(`Cancel reservation for ${res.firstName} ${res.lastName}?`)) return;
-    // Optimistic: marcar como cancelled inmediatamente
     setRows(prev => prev.map(r => r.id === res.id ? { ...r, status: 'cancelled' } : r));
     const { error } = await cancelReservation(res.id);
     if (error) {
       setRows(prev => prev.map(r => r.id === res.id ? { ...r, status: 'reserved' } : r));
       alert("Error canceling reservation.");
     }
-  };
+  }, []);
 
-  const handleUnseatParty = async (party) => {
+  const handleUnseatParty = useCallback(async (party) => {
     const originalStatus = party.source === "walkin" ? "waitlist" : "reserved";
     setRows(prev => prev.map(r => r.id === party.id ? { ...r, status: originalStatus, seated_at: null } : r));
     const { error } = await revertPartyFromSeated(party.id, originalStatus);
@@ -1362,11 +1361,10 @@ export default function App() {
       setRows(prev => prev.map(r => r.id === party.id ? party : r));
       alert("Error reverting party.");
     }
-  };
+  }, []);
 
-  const handleNotifyReady = async (party) => {
+  const handleNotifyReady = useCallback(async (party) => {
     if (!party?.phone) { alert("No phone number available for this guest."); return false; }
-
     try {
       await fetch("/.netlify/functions/send-sms", {
         method: "POST",
@@ -1384,12 +1382,15 @@ export default function App() {
       alert("Error sending notification.");
       return false;
     }
-  };
+  }, []);
 
   const handleClientSubmit = async () => {
     if (isSubmitting.current) return;
     if (!clientForm.firstName || !clientForm.lastName || !clientForm.phone) {
       return alert("Por favor completa Nombre, Apellido y Teléfono.");
+    }
+    if (!clientForm.smsOptIn) {
+      return alert("Please check the SMS consent box to continue.");
     }
     isSubmitting.current = true;
     setSubmitting(true);
@@ -1470,7 +1471,6 @@ export default function App() {
   if (viewMode === "hostess") {
     return (
       <HostessView
-        // Acciones
         onAddWaitlist={handleAddToWaitlist}
         onAddPhoneRes={handleAddPhoneReservation}
         onSeatParty={handleSeatParty}
@@ -1483,10 +1483,6 @@ export default function App() {
         toggleBlackoutDate={toggleBlackoutDate}
         handleTableSelection={handleTableSelection}
         setViewMode={setViewMode}
-
-        // Estado y UI
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         activeFloor={activeFloor}
         setActiveFloor={setActiveFloor}
         isBlackout={isBlackout}
@@ -1505,8 +1501,6 @@ export default function App() {
         setTimeHHMM={setTimeHHMM}
         timeLabel={timeLabel}
         stepTime={stepTime}
-
-        // Datos
         walkInForm={walkInForm}
         setWalkInForm={setWalkInForm}
         phoneResForm={phoneResForm}
