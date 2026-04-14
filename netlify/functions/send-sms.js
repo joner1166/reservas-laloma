@@ -33,8 +33,8 @@ exports.handler = async (event) => {
         `Lindo Michoacan 🕒\n\n` +
         `Hi ${name}, you've been added to our waitlist.\n\n` +
         `👥 Party: ${guests ?? ""}\n\n` +
-        `We will text you as soon as your table is ready. Thank you for your patience!\n\n` +
-        `Reply STOP to opt-out.`;
+        `We will send you 1 more message when your table is ready. Thank you for your patience!\n\n` +
+        `Msg & data rates may apply. Reply STOP to opt-out.`;
       break;
 
     case "table_ready":
