@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SMS Opt-In – Lindo Michoacan</title>
+  <style>
+    body { font-family: Georgia, serif; max-width: 720px; margin: 40px auto; padding: 0 24px; color: #1a1a1a; line-height: 1.7; }
+    h1 { font-size: 1.6rem; border-bottom: 2px solid #b91c1c; padding-bottom: 8px; }
+    h2 { font-size: 1.1rem; margin-top: 28px; }
+    a { color: #b91c1c; }
+    footer { margin-top: 48px; font-size: 0.82rem; color: #666; border-top: 1px solid #ddd; padding-top: 12px; }
+
+    .opt-in-box {
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin: 28px 0;
+      background: #f9fafb;
+    }
+    .opt-in-box label {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 0.95rem;
+      color: #374151;
+      cursor: default;
+    }
+    .opt-in-box input[type="checkbox"] {
+      margin-top: 4px;
+      flex-shrink: 0;
+      width: 17px;
+      height: 17px;
+      accent-color: #1d4ed8;
+    }
+    .opt-in-box .hint {
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-top: 10px;
+      padding-left: 29px;
+    }
+  </style>
+</head>
+<body>
+  <h1>SMS Opt-In – Lindo Michoacan</h1>
+  <p><strong>Lindo Michoacan Restaurant</strong> | SMS Reservation Notifications</p>
+
+  <h2>How Customers Opt In</h2>
+  <p>
+    When a customer completes a reservation at
+    <a href="https://reservas-demo.netlify.app/" target="_blank" rel="noopener">reservas-demo.netlify.app</a>,
+    they are presented with the following opt-in checkbox before submitting their information.
+    The checkbox is <strong>unchecked by default</strong> and must be actively selected by the customer.
+  </p>
+
+  <div class="opt-in-box">
+    <label>
+      <input type="checkbox" disabled />
+      <span>
+        I agree to receive SMS notifications about my reservation from Lindo Michoacan
+        (up to 2 messages per reservation). Msg &amp; data rates may apply.
+        Reply <strong>STOP</strong> to cancel, <strong>HELP</strong> for help.
+        <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
+        |
+        <a href="/terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a>
+      </span>
+    </label>
+    <p class="hint">* This checkbox is unchecked by default. Submission is not possible without completing the reservation form fields.</p>
+  </div>
+
+  <h2>SMS Program Details</h2>
+  <ul>
+    <li><strong>Sender:</strong> Lindo Michoacan Restaurant</li>
+    <li><strong>Message types:</strong> Reservation confirmation, table-ready notification (waitlist)</li>
+    <li><strong>Message frequency:</strong> Up to 2 messages per reservation</li>
+    <li><strong>Opt-out:</strong> Reply <strong>STOP</strong> at any time</li>
+    <li><strong>Help:</strong> Reply <strong>HELP</strong> or email <a href="mailto:desertinn@lindomichoacan.com">desertinn@lindomichoacan.com</a></li>
+    <li><strong>Rates:</strong> Msg &amp; data rates may apply</li>
+  </ul>
+
+  <h2>Walk-In / Waitlist Opt-In</h2>
+  <p>
+    For walk-in guests who join the waitlist in person, the hostess verbally informs them that
+    by providing their phone number they will receive up to 2 SMS notifications
+    (waitlist confirmation + table-ready alert), and that they can reply <strong>STOP</strong>
+    to opt out at any time.
+  </p>
+
+  <footer>
+    &copy; 2025 Lindo Michoacan Restaurant. All rights reserved. |
+    <a href="/privacy.html">Privacy Policy</a> |
+    <a href="/terms.html">Terms &amp; Conditions</a>
+  </footer>
+</body>
+</html>
