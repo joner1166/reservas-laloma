@@ -11,7 +11,7 @@ import logo from "/logo.png"; // Logo principal para la interfaz
  * BLOQUE 1 — CONFIG / CONSTANTES
  *******************************************************/
 const MAX_GUESTS = 12;
-const SERVERS = ['JAIME 👴🏻🍋','NOE 🐪','APACHE 👴🏻','PANCHO 👨🏻‍🦲','CALERO 🎅🏻','HUGO 🧞','PATO 👰‍♂️🐍','EDGAR 🤓','CHINO 🥡🥢','VALENTIN 🧛‍♂️','WALTER 👳🏻‍♂️','DEYNI 🥦','SONIA 🦋','ORANGE 🍊'];
+const SERVERS = ['JAIME 👴🏻🍋','NOE 🐪','APACHE 👴🏻','PANCHO 👨🏻‍🦲','CALERO 🎅🏻','HUGO 🧞','PATO 👰‍♂️🐍','EDGAR 🤓','VALENTIN 🧛‍♂️','WALTER 👳🏻‍♂️','DEYNI 🥦','SONIA 🦋'];
 const COUNTRY_CODES = [
   { code: '+1',  label: '🇺🇸 +1'  },
   { code: '+52', label: '🇲🇽 +52' },
