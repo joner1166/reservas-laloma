@@ -992,7 +992,7 @@ const ClientDetailsView = React.memo(function ClientDetailsView({
           <label style={{display:'flex',alignItems:'flex-start',gap:'10px',margin:'12px 0 4px',cursor:'pointer',fontSize:'0.78rem',color:'#374151',lineHeight:'1.5'}}>
             <input type="checkbox" checked={smsOptIn} onChange={e => updateForm('smsOptIn', e.target.checked)} style={{marginTop:'3px',flexShrink:0,width:'16px',height:'16px',accentColor:'#1d4ed8'}} />
             <span>
-              I agree to receive SMS notifications about my reservation from Lindo Michoacan (up to 2 messages per reservation). Msg &amp; data rates may apply. Reply <strong>STOP</strong> to cancel, <strong>HELP</strong> for help.{' '}
+              I agree to receive SMS notifications about my reservation from Lindo Michoacan (up to 2 messages per reservation). Msg &amp; data rates may apply. Reply <strong>STOP</strong> to cancel, <strong>HELP</strong> for help. Consent is not required to complete your reservation.{' '}
               <a href="/privacy.html" target="_blank" rel="noopener" style={{color:'#1d4ed8'}}>Privacy Policy</a>
               {' | '}
               <a href="/terms.html" target="_blank" rel="noopener" style={{color:'#1d4ed8'}}>Terms &amp; Conditions</a>
@@ -1400,9 +1400,6 @@ export default function App() {
     if (isSubmitting.current) return;
     if (!clientForm.firstName || !clientForm.lastName || !clientForm.phone) {
       return alert("Por favor completa Nombre, Apellido y Teléfono.");
-    }
-    if (!clientForm.smsOptIn) {
-      return alert("Please check the SMS consent box to continue.");
     }
     isSubmitting.current = true;
     setSubmitting(true);
