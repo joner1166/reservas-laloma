@@ -63,7 +63,7 @@ exports.handler = async (event) => {
   try {
     await client.messages.create({
       body: messageBody,
-      from: process.env.TWILIO_FROM_NUMBER,
+      messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
       to: phone,
     });
     return { statusCode: 200, body: JSON.stringify({ success: true }) };
