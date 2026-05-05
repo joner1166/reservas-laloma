@@ -28,7 +28,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 302,
       headers: {
-        Location: `https://reservas-demo.netlify.app/cancelled-success?name=${encodeURIComponent(name)}`,
+        Location: `https://reservas-demo.netlify.app/cancelled-success.html?name=${encodeURIComponent(name)}`,
       },
       body: "",
     };
