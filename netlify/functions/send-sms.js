@@ -20,7 +20,7 @@ exports.handler = async (event) => {
 
   // ✅ Link robusto a function real (recomendado)
   const manageLink = cancel_token
-    ? `https://reservas-demo.netlify.app/.netlify/functions/cancel?token=${encodeURIComponent(cancel_token)}`
+    ? `https://reservas-demo.netlify.app/api/cancel?token=${encodeURIComponent(cancel_token)}`
     : null;
 
   const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
