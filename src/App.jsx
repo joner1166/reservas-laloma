@@ -285,6 +285,7 @@ function useReservationsRealtime({ supabase, dateISO, setRows }) {
               return [newRow, ...prev];
             }
             if (payload.eventType === "UPDATE") {
+              if (newRow.dateISO !== dateISO) return prev.filter((r) => r.id !== newRow.id);
               return prev.map((r) => (r.id === newRow.id ? newRow : r));
             }
             return prev;
@@ -1348,10 +1349,10 @@ export default function App() {
 
   const handleUndoCancel = useCallback(async (item) => {
     const originalStatus = item.source === 'walkin' ? 'waitlist' : 'reserved';
-    setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: originalStatus } : r));
-    const { error } = await updateReservationRecord(item.id, { status: originalStatus });
+    setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: originalStatus, notified_at: null } : r));
+    const { error } = await updateReservationRecord(item.id, { status: originalStatus, notified_at: null });
     if (error) {
-      setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: 'cancelled' } : r));
+      setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: 'cancelled', notified_at: item.notified_at } : r));
       alert("Error reverting cancellation.");
     }
   }, []);
