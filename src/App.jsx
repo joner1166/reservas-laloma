@@ -24,7 +24,7 @@ const COUNTRY_CODES = [
 const SLOT_MINUTES = 15;
 const MAX_RESERVATIONS_PER_HOUR = 5;
 const RESTAURANT_CAPACITY = 200;
-const HOSTESS_PASSWORD = "1234";
+const HOSTESS_PASSWORD = "2655";
 
 // Horarios por día (0=Dom, 1=Lun, ..., 6=Sáb)
 const RESTAURANT_HOURS = {
