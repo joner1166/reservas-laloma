@@ -578,7 +578,7 @@ const HostessView = React.memo(function HostessView({
                   <div key={res.id} className={`sr-list-item${exitingIds.has(res.id) ? ' sr-item-exit' : ''}`} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', ...(res.notified_at ? {borderLeft: '4px solid rgba(15, 40, 80, 0.85)', borderBottom: 'none', background: 'rgba(15, 40, 80, 0.15)', boxShadow: '0 2px 14px rgba(15, 40, 80, 0.28)', borderRadius: '10px', margin: '4px 8px'} : {})}}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><strong style={{ fontSize: '0.88rem' }}>{res.firstName} {res.lastName}</strong><span style={{ background: '#111', color: '#fff', borderRadius: '8px', padding: '2px 10px', fontSize: '0.68rem', fontWeight: '800', letterSpacing: '0.3px' }}>👥 {res.guests} guests</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><strong style={{ fontSize: '0.88rem' }}>{res.firstName} {res.lastName}</strong><span style={{ background: '#111', color: '#fff', borderRadius: '10px', padding: '6px 14px', fontSize: '0.85rem', fontWeight: '800', letterSpacing: '0.3px' }}>👥 {res.guests} guests</span></div>
                         <span style={{ fontWeight: '700' }}>{res.timeHHMM ? formatTimeLabel(res.timeHHMM) : ""}</span>
                       </div>
                       {res.celebration && res.celebration !== "None" && <div style={{ fontSize: '0.68rem', color: '#d4ab00', marginTop: '4px' }}>🎉 {res.celebration}</div>}
