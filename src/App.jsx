@@ -11,7 +11,7 @@ import logo from "/logo.png"; // Logo principal para la interfaz
  * BLOQUE 1 — CONFIG / CONSTANTES
  *******************************************************/
 const MAX_GUESTS = 12;
-const SERVERS = ['JAIME 👴🏻🍋','NOE 🐪','APACHE 👴🏻','PANCHO 👨🏻‍🦲','CALERO 🎅🏻','HUGO 🧞','PATO 👰‍♂️🐍','EDGAR 🤓','VALENTIN 🧛‍♂️','WALTER 👳🏻‍♂️','DEYNI 🥦','SONIA 🦋'];
+const SERVERS = ['JAIME 👴🏻🍋','NOE 🐪','APACHE 👴🏻','PANCHO 👨🏻‍🦲','CALERO 🎅🏻','HUGO 🧞','PATO 👰‍♂️🐍','EDGAR 🤓','VALENTIN 🧛‍♂️','WALTER 👳🏻‍♂️','DEYNI 🥦','SONIA 🦋','CHAKA SEGOVIA','SAMUEL'];
 const COUNTRY_CODES = [
   { code: '+1',  label: '🇺🇸 +1'  },
   { code: '+52', label: '🇲🇽 +52' },
@@ -22,6 +22,8 @@ const COUNTRY_CODES = [
   { code: '+49', label: '🇩🇪 +49' },
 ];
 const SLOT_MINUTES = 15;
+const MAX_RESERVATIONS_PER_HOUR = 5;
+const RESTAURANT_CAPACITY = 200;
 const HOSTESS_PASSWORD = "1234";
 
 // Horarios por día (0=Dom, 1=Lun, ..., 6=Sáb)
@@ -903,10 +905,14 @@ const ClientSearchView = React.memo(function ClientSearchView({
   guests, setGuests,
   timeHHMM, setTimeHHMM,
   isBlackout, setStep, handleSwitchToHostess,
-  bookedSlotCounts
+  bookedHourCounts, bookedHourGuests
 }) {
   const range = getAvailableTimeRange(dateISO);
-  const availableSlots = getTimeSlots(dateISO, true).filter(slot => (bookedSlotCounts[slot] || 0) < 5);
+  const availableSlots = getTimeSlots(dateISO, true).filter(slot => {
+    const hour = Math.floor(minutesFromHHMM(slot) / 60);
+    return (bookedHourCounts[hour] || 0) < MAX_RESERVATIONS_PER_HOUR &&
+           (bookedHourGuests[hour] || 0) < RESTAURANT_CAPACITY;
+  });
   // Auto-reset time if selected slot is no longer available (e.g. same-day cutoff)
   useEffect(() => {
     const slots = getTimeSlots(dateISO, true);
@@ -942,17 +948,23 @@ const ClientSearchView = React.memo(function ClientSearchView({
           </div>
           <div className="sr-row" style={{cursor: 'default'}}>
             <div className="sr-center" style={{gridColumn: '1 / -1'}}>
-              <select className="sr-time-select" value={timeHHMM} onChange={e => setTimeHHMM(e.target.value)}>
-                {availableSlots.map(slot => (
-                  <option key={slot} value={slot}>{formatTimeLabel(slot)}</option>
-                ))}
-              </select>
+              {availableSlots.length > 0 ? (
+                <select className="sr-time-select" value={timeHHMM} onChange={e => setTimeHHMM(e.target.value)}>
+                  {availableSlots.map(slot => (
+                    <option key={slot} value={slot}>{formatTimeLabel(slot)}</option>
+                  ))}
+                </select>
+              ) : (
+                <div style={{fontSize: '1rem', fontWeight: '700', color: '#b91c1c'}}>No availability</div>
+              )}
               <div className="sr-label" style={{marginTop: '6px'}}>Time</div>
             </div>
           </div>
         </div>
         {isBlackout ? (
           <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px'}}>Closed today.</div>
+        ) : availableSlots.length === 0 ? (
+          <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px'}}>No availability for this date. Please try another day.</div>
         ) : (
           <button className="sr-search" onClick={() => setStep("details")}>Search</button>
         )}
@@ -975,6 +987,15 @@ const ClientDetailsView = React.memo(function ClientDetailsView({
 }) {
   const { firstName, lastName, phone, phoneCode, email, celebration, dietary, notes, smsOptIn } = formState;
   const updateForm = (key, val) => setFormState(prev => ({ ...prev, [key]: val }));
+  const [smsReminderShown, setSmsReminderShown] = useState(false);
+
+  const handleSubmit = () => {
+    if (!smsOptIn && !smsReminderShown) {
+      setSmsReminderShown(true);
+      return;
+    }
+    onSubmitClientRes();
+  };
 
   return (
     <div className="sr-page sr-form-step">
@@ -991,7 +1012,13 @@ const ClientDetailsView = React.memo(function ClientDetailsView({
             <div className="sr-field"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={dietary} onChange={e => updateForm('dietary', e.target.value)}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
             <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={notes} onChange={e => updateForm('notes', e.target.value)} /></div>
           </div>
-          <label style={{display:'flex',alignItems:'flex-start',gap:'10px',margin:'12px 0 4px',cursor:'pointer',fontSize:'0.78rem',color:'#374151',lineHeight:'1.5'}}>
+          {smsReminderShown && !smsOptIn && (
+            <div style={{margin:'12px 0 0',padding:'10px 14px',background:'#fef9c3',border:'1px solid #fbbf24',borderRadius:'10px',fontSize:'0.78rem',color:'#92400e',display:'flex',alignItems:'center',gap:'8px'}}>
+              <span style={{fontSize:'1.1rem'}}>📱</span>
+              <span>Don't miss reservation updates! Check the box below to receive SMS notifications. You can still proceed without it.</span>
+            </div>
+          )}
+          <label style={{display:'flex',alignItems:'flex-start',gap:'10px',margin:'12px 0 4px',cursor:'pointer',fontSize:'0.78rem',color:'#374151',lineHeight:'1.5',outline: smsReminderShown && !smsOptIn ? '2px solid #fbbf24' : 'none',borderRadius:'8px',padding: smsReminderShown && !smsOptIn ? '6px 8px' : '0'}}>
             <input type="checkbox" checked={smsOptIn} onChange={e => updateForm('smsOptIn', e.target.checked)} style={{marginTop:'3px',flexShrink:0,width:'16px',height:'16px',accentColor:'#1d4ed8'}} />
             <span>
               I agree to receive SMS notifications about my reservation from Lindo Michoacan (up to 2 messages per reservation). Msg &amp; data rates may apply. Reply <strong>STOP</strong> to cancel, <strong>HELP</strong> for help. Consent is not required to complete your reservation.{' '}
@@ -1002,7 +1029,7 @@ const ClientDetailsView = React.memo(function ClientDetailsView({
           </label>
           <div className="sr-actions">
             <button className="sr-btn" onClick={() => setStep("search")}>Back</button>
-            <button className="sr-btn sr-btnPrimary" onClick={onSubmitClientRes} disabled={submitting}>{submitting ? 'Enviando...' : 'Submit'}</button>
+            <button className="sr-btn sr-btnPrimary" onClick={handleSubmit} disabled={submitting}>{submitting ? 'Enviando...' : 'Submit'}</button>
           </div>
         </section>
       </main>
@@ -1077,11 +1104,25 @@ export default function App() {
   const seatedList = useMemo(() => rows.filter((r) => r.status === "seated"), [rows]);
   const canceledList = useMemo(() => rows.filter((r) => r.status === "cancelled"), [rows]);
 
-  // Cuenta reservaciones confirmadas por slot (para limitar a 5 en client view)
-  const bookedSlotCounts = useMemo(() => {
+  // Cuenta reservaciones y guests por ventana de 1 hora (para límites en client/hostess view)
+  const bookedHourCounts = useMemo(() => {
     const counts = {};
     rows.filter(r => r.status === "reserved").forEach(r => {
-      if (r.timeHHMM) counts[r.timeHHMM] = (counts[r.timeHHMM] || 0) + 1;
+      if (r.timeHHMM) {
+        const hour = Math.floor(minutesFromHHMM(r.timeHHMM) / 60);
+        counts[hour] = (counts[hour] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [rows]);
+
+  const bookedHourGuests = useMemo(() => {
+    const counts = {};
+    rows.filter(r => r.status === "reserved").forEach(r => {
+      if (r.timeHHMM) {
+        const hour = Math.floor(minutesFromHHMM(r.timeHHMM) / 60);
+        counts[hour] = (counts[hour] || 0) + (r.guests || 0);
+      }
     });
     return counts;
   }, [rows]);
@@ -1260,6 +1301,28 @@ export default function App() {
           ? `Reservations only accepted between ${formatTimeLabel(range.open)} and ${formatTimeLabel(range.lastSlot)}.`
           : "The restaurant is closed this day."
       );
+    }
+
+    // Advertencia de overbooking (límite por hora)
+    const selectedHour = Math.floor(minutesFromHHMM(timeHHMM) / 60);
+    const hourResCount = rows.filter(
+      r => r.status === "reserved" && r.timeHHMM &&
+           Math.floor(minutesFromHHMM(r.timeHHMM) / 60) === selectedHour
+    ).length;
+    const hourGuestCount = rows
+      .filter(r => r.status === "reserved" && r.timeHHMM &&
+                   Math.floor(minutesFromHHMM(r.timeHHMM) / 60) === selectedHour)
+      .reduce((sum, r) => sum + (r.guests || 0), 0);
+
+    const resOver = hourResCount >= MAX_RESERVATIONS_PER_HOUR;
+    const capOver = hourGuestCount + (guests || 1) > RESTAURANT_CAPACITY;
+
+    if (resOver || capOver) {
+      const reasons = [];
+      if (resOver) reasons.push(`${hourResCount}/${MAX_RESERVATIONS_PER_HOUR} reservations in this hour`);
+      if (capOver) reasons.push(`${hourGuestCount + (guests || 1)} guests would exceed capacity of ${RESTAURANT_CAPACITY}`);
+      const proceed = window.confirm(`⚠️ Overbooking warning:\n${reasons.join('\n')}\n\nContinue anyway?`);
+      if (!proceed) return;
     }
 
     const cancelToken = generateToken();
@@ -1545,7 +1608,8 @@ export default function App() {
         isBlackout={isBlackout}
         setStep={setStep}
         handleSwitchToHostess={handleSwitchToHostess}
-        bookedSlotCounts={bookedSlotCounts}
+        bookedHourCounts={bookedHourCounts}
+        bookedHourGuests={bookedHourGuests}
       />
     );
   }
