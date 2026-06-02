@@ -49,7 +49,7 @@ body {
 /* Tarjeta Blanca Principal */
 .sr-card {
   width: min(1100px, 100%);
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-radius: 26px;
@@ -425,7 +425,7 @@ body {
   overflow: hidden;
 }
 
-.sr-foot { text-align: center; padding: 20px; color: #555; font-size: 14px; }
+.sr-foot { text-align: center; padding: 20px; color: #111; font-size: 14px; font-weight: 600; }
 
 /* --- RESPONSIVE --- */
 @media (max-width: 900px) {
