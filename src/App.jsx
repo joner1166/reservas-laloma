@@ -11,6 +11,7 @@ import logo from "/logo.png"; // Logo principal para la interfaz
  * BLOQUE 1 — CONFIG / CONSTANTES
  *******************************************************/
 const MAX_GUESTS = 12;
+const MAX_CLIENT_GUESTS = 25;
 const SERVERS = ['JAIME 👴🏻🍋','NOE 🐪','APACHE 👴🏻','PANCHO 👨🏻‍🦲','CALERO 🎅🏻','HUGO 🧞','PATO 👰‍♂️🐍','EDGAR 🤓','VALENTIN 🧛‍♂️','WALTER 👳🏻‍♂️','DEYNI 🥦','SONIA 🦋','CHAKA SEGOVIA','SAMUEL'];
 const COUNTRY_CODES = [
   { code: '+1',  label: '🇺🇸 +1'  },
@@ -432,7 +433,7 @@ const HostessView = React.memo(function HostessView({
                 <div style={{display:'flex', gap:'24px', justifyContent:'center', alignItems:'center', flexWrap:'wrap', marginBottom:'20px'}}>
                   <div style={{textAlign:'center', background:'#fff', border:'1.5px solid #e5e7eb', borderRadius:'14px', padding:'12px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', minWidth:'110px'}}>
                     <label style={{fontSize:'0.62rem', fontWeight:'800', letterSpacing:'0.08em', color:'#6b7280', display:'block', marginBottom:'6px'}}>PARTY SIZE</label>
-                    <input type="number" min="1" max="20" value={guests === null ? "" : guests} onChange={e => setGuests(e.target.value === "" ? null : parseInt(e.target.value))} disabled={isBlackout} style={{width:'60px', textAlign:'center', fontSize:'2rem', fontWeight:'800', border:'none', outline:'none', background:'transparent', color:'#111', display:'block', margin:'0 auto'}} />
+                    <input type="number" min="1" value={guests === null ? "" : guests} onChange={e => setGuests(e.target.value === "" ? null : parseInt(e.target.value))} disabled={isBlackout} style={{width:'60px', textAlign:'center', fontSize:'2rem', fontWeight:'800', border:'none', outline:'none', background:'transparent', color:'#111', display:'block', margin:'0 auto'}} />
                   </div>
                   <div style={{textAlign:'center', background:'#fff', border:'1.5px solid #e5e7eb', borderRadius:'14px', padding:'12px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', minWidth:'130px', position:'relative'}}>
                     <label style={{fontSize:'0.62rem', fontWeight:'800', letterSpacing:'0.08em', color:'#6b7280', display:'block', marginBottom:'6px'}}>ESTIMATED WAIT</label>
@@ -487,7 +488,7 @@ const HostessView = React.memo(function HostessView({
                   <div className="sr-booking-divider" />
                   <div className="sr-booking-field">
                     <label className="sr-fieldLabel">Guests</label>
-                    <input type="number" className="sr-booking-input" min="1" max={MAX_GUESTS} placeholder="—" value={guests === null ? '' : guests} onChange={e => setGuests(e.target.value === '' ? null : parseInt(e.target.value))} onFocus={() => setGuests(null)} disabled={isBlackout} />
+                    <input type="number" className="sr-booking-input" min="1" placeholder="—" value={guests === null ? '' : guests} onChange={e => setGuests(e.target.value === '' ? null : parseInt(e.target.value))} onFocus={() => setGuests(null)} disabled={isBlackout} />
                   </div>
                 </div>
                 <div className="sr-formGrid">
@@ -846,7 +847,7 @@ const HostessView = React.memo(function HostessView({
               <div className="sr-field"><label className="sr-fieldLabel">Email</label><input className="sr-input" value={editingRes.email || ''} onChange={e => setEditingRes({...editingRes, email: e.target.value})} /></div>
               <div className="sr-field"><label className="sr-fieldLabel">Date</label><input className="sr-input" type="date" style={{cursor:'pointer'}} value={editingRes.dateISO || ''} onChange={e => setEditingRes({...editingRes, dateISO: e.target.value, timeHHMM: getTimeSlots(e.target.value)[0] || editingRes.timeHHMM})} onClick={e => e.target.showPicker()} /></div>
               <div className="sr-field"><label className="sr-fieldLabel">Time</label><select className="sr-input" value={editingRes.timeHHMM || ''} onChange={e => setEditingRes({...editingRes, timeHHMM: e.target.value})}>{getTimeSlots(editingRes.dateISO).map(slot => (<option key={slot} value={slot}>{formatTimeLabel(slot)}</option>))}</select></div>
-              <div className="sr-field"><label className="sr-fieldLabel">Guests</label><input className="sr-input" type="number" min="1" max={MAX_GUESTS} placeholder="—" value={editingRes.guests ?? ''} onFocus={e => e.target.select()} onChange={e => setEditingRes({...editingRes, guests: e.target.value === '' ? '' : parseInt(e.target.value) || 1})} /></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Guests</label><input className="sr-input" type="number" min="1" placeholder="—" value={editingRes.guests ?? ''} onFocus={e => e.target.select()} onChange={e => setEditingRes({...editingRes, guests: e.target.value === '' ? '' : parseInt(e.target.value) || 1})} /></div>
               <div className="sr-field"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={editingRes.celebration || 'None'} onChange={e => setEditingRes({...editingRes, celebration: e.target.value})}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Wedding</option><option>Graduation</option><option>Other</option></select></div>
               <div className="sr-field"><label className="sr-fieldLabel">Dietary</label><select className="sr-input" value={editingRes.dietary || 'None'} onChange={e => setEditingRes({...editingRes, dietary: e.target.value})}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
               <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={editingRes.notes || ''} onChange={e => setEditingRes({...editingRes, notes: e.target.value})} /></div>
@@ -938,11 +939,20 @@ const ClientSearchView = React.memo(function ClientSearchView({
           </div>
           <div className="sr-row" style={{cursor: 'default'}}>
             <div className="sr-center" style={{gridColumn: '1 / -1'}}>
-              <select className="sr-time-select" value={guests ?? 2} onChange={e => setGuests(parseInt(e.target.value))}>
-                {Array.from({length: MAX_GUESTS}, (_, i) => i + 1).map(n => (
-                  <option key={n} value={n}>{n} {n === 1 ? 'Guest' : 'Guests'}</option>
-                ))}
-              </select>
+              <input
+                type="number"
+                min="1"
+                max={MAX_CLIENT_GUESTS}
+                inputMode="numeric"
+                value={guests === null ? '' : guests}
+                onChange={e => setGuests(e.target.value === '' ? null : Math.min(parseInt(e.target.value) || 1, MAX_CLIENT_GUESTS))}
+                style={{
+                  width: '90px', textAlign: 'center', fontSize: '1.8rem', fontWeight: '800',
+                  border: 'none', outline: 'none', background: 'transparent', color: '#111',
+                  display: 'block', margin: '0 auto',
+                  MozAppearance: 'textfield', WebkitAppearance: 'none',
+                }}
+              />
               <div className="sr-label" style={{marginTop: '4px'}}>Guests</div>
             </div>
           </div>
@@ -966,7 +976,7 @@ const ClientSearchView = React.memo(function ClientSearchView({
         ) : availableSlots.length === 0 ? (
           <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px'}}>No availability for this date. Please try another day.</div>
         ) : (
-          <button className="sr-search" onClick={() => setStep("details")}>Search</button>
+          <button className="sr-search" onClick={() => { if (!guests || guests < 1) return alert("Please enter the number of guests."); setStep("details"); }}>Search</button>
         )}
         <div className="sr-foot">
           If your party is over 25 people please call us so we can properly accommodate you.
