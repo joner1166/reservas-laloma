@@ -425,7 +425,7 @@ body {
   overflow: hidden;
 }
 
-.sr-foot { text-align: center; padding: 20px; color: #111; font-size: 14px; font-weight: 600; }
+.sr-foot { text-align: center; padding: 20px; color: #333; font-size: 14px; font-weight: 600; }
 
 /* --- RESPONSIVE --- */
 @media (max-width: 900px) {
