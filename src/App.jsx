@@ -969,9 +969,7 @@ const ClientSearchView = React.memo(function ClientSearchView({
           <button className="sr-search" onClick={() => setStep("details")}>Search</button>
         )}
         <div className="sr-foot">
-          {range
-            ? `Available: ${formatTimeLabel(range.open)} – ${formatTimeLabel(range.lastSlot)} · Max ${MAX_GUESTS} guests`
-            : `Max party size: ${MAX_GUESTS} · 15 min slots`}
+          If your party is over 25 people please call us so we can properly accommodate you.
         </div>
       </main>
       <button className="sr-view-toggle" onClick={handleSwitchToHostess}>Switch to Hostess View</button>
