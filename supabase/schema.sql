@@ -193,6 +193,7 @@ begin
   ) then execute 'alter publication supabase_realtime add table public.blackout_dates'; end if;
 end $$;
 alter table public.blackout_dates add column if not exists notes text;
+alter table public.blackout_dates add column if not exists type text default 'closed';
 alter table public.table_status  add column if not exists server_names text[] default '{}';
 
 /* =========================================================

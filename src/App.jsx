@@ -25,7 +25,7 @@ const COUNTRY_CODES = [
 const SLOT_MINUTES = 15;
 const MAX_RESERVATIONS_PER_HOUR = 5;
 const RESTAURANT_CAPACITY = 200;
-const HOSTESS_PASSWORD = "2655";
+const HOSTESS_PASSWORD = "162655";
 
 // Horarios por día (0=Dom, 1=Lun, ..., 6=Sáb)
 const RESTAURANT_HOURS = {
@@ -325,7 +325,7 @@ const HostessView = React.memo(function HostessView({
   handleTableSelection, setViewMode,
 
   // Estado y UI
-  activeFloor, setActiveFloor, isBlackout,
+  activeFloor, setActiveFloor, isBlackout, isWalkInOnly,
   dateISO, setDateISO, onDateChange, dateLabel, stepDate,
   guests, setGuests,
   estimatedWait, setEstimatedWait,
@@ -409,6 +409,7 @@ const HostessView = React.memo(function HostessView({
             <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
               <h2>{activeTab === 'walkin' ? 'New Walk-in' : activeTab === 'phoneres' ? 'New Phone Reservation' : activeTab === 'waitlist' ? 'Wait List' : activeTab === 'reservations' ? 'Reservations' : activeTab === 'seated' ? 'Seated History' : activeTab === 'canceled' ? 'Canceled' : activeTab === 'blackout' ? 'Manage Blackout' : activeTab === 'servers' ? 'Servers' : 'Floor Plan'}</h2>
               {isBlackout && <span style={{background: '#ef4444', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.64rem', fontWeight: 'bold'}}>CLOSED TODAY</span>}
+              {isWalkInOnly && <span style={{background: '#f59e0b', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.64rem', fontWeight: 'bold'}}>ONLY WALK-IN</span>}
             </div>
             <div className="sr-hostess-date-picker" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button className="sr-btn-mini" onClick={() => stepDate(-1)}>‹</button>
@@ -430,6 +431,7 @@ const HostessView = React.memo(function HostessView({
             {activeTab === 'walkin' && (
               <div className="sr-walkin-form">
                 {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed.</div>}
+                {isWalkInOnly && <div style={{padding: '12px 15px', background: '#fef3c7', color: '#92400e', borderRadius: '8px', marginBottom: '16px', fontSize: '0.78rem', lineHeight: '1.6'}}>🚶 <strong>Only Walk-In today.</strong> If a customer calls to make a reservation, please tell them: <em>"We are only accepting walk-ins today, but please come by and we will try to seat you as fast as we can."</em></div>}
                 <div style={{display:'flex', gap:'24px', justifyContent:'center', alignItems:'center', flexWrap:'wrap', marginBottom:'20px'}}>
                   <div style={{textAlign:'center', background:'#fff', border:'1.5px solid #e5e7eb', borderRadius:'14px', padding:'12px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', minWidth:'110px'}}>
                     <label style={{fontSize:'0.62rem', fontWeight:'800', letterSpacing:'0.08em', color:'#6b7280', display:'block', marginBottom:'6px'}}>PARTY SIZE</label>
@@ -466,6 +468,7 @@ const HostessView = React.memo(function HostessView({
             {activeTab === 'phoneres' && (
               <div className="sr-walkin-form">
                 {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed.</div>}
+                {isWalkInOnly && <div style={{padding: '12px 15px', background: '#fef3c7', color: '#92400e', borderRadius: '8px', marginBottom: '16px', fontSize: '0.78rem', lineHeight: '1.6'}}>🚶 <strong>Only Walk-In today.</strong> If a customer calls to make a reservation, please tell them: <em>"We are only accepting walk-ins today, but please come by and we will try to seat you as fast as we can."</em></div>}
                 {!isBlackout && range && (
                   <div style={{padding: '10px 15px', background: '#f0fdf4', color: '#166534', borderRadius: '8px', marginBottom: '16px', fontSize: '0.68rem', textAlign: 'center'}}>
                     Reservations accepted: {formatTimeLabel(range.open)} – {formatTimeLabel(range.lastSlot)}
@@ -782,24 +785,43 @@ const HostessView = React.memo(function HostessView({
                     />
                   </div>
                 </div>
-                <button
-                  className="sr-btn sr-btnPrimary"
-                  disabled={!blackoutForm.date}
-                  onClick={async () => {
-                    await toggleBlackoutDate(blackoutForm.date, blackoutForm.notes);
-                    setBlackoutForm({ date: '', notes: '' });
-                  }}
-                >
-                  Block Date
-                </button>
+                <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+                  <button
+                    className="sr-btn"
+                    disabled={!blackoutForm.date}
+                    style={{background: '#ef4444', color: '#fff', flex: 1, opacity: !blackoutForm.date ? 0.5 : 1}}
+                    onClick={async () => {
+                      await toggleBlackoutDate(blackoutForm.date, blackoutForm.notes, 'closed');
+                      setBlackoutForm({ date: '', notes: '' });
+                    }}
+                  >
+                    🚫 Closed Today
+                  </button>
+                  <button
+                    className="sr-btn"
+                    disabled={!blackoutForm.date}
+                    style={{background: '#f59e0b', color: '#fff', flex: 1, opacity: !blackoutForm.date ? 0.5 : 1}}
+                    onClick={async () => {
+                      await toggleBlackoutDate(blackoutForm.date, blackoutForm.notes, 'walkin_only');
+                      setBlackoutForm({ date: '', notes: '' });
+                    }}
+                  >
+                    🚶 Only Walk-In
+                  </button>
+                </div>
 
                 <div style={{marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '10px'}}>
                   {blackoutDates.length === 0 && <p style={{color: '#999', fontSize: '0.72rem'}}>No blocked dates.</p>}
                   {blackoutDates.map(b => (
-                    <div key={b.date_iso} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff5f5', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 16px'}}>
+                    <div key={b.date_iso} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: b.type === 'walkin_only' ? '#fffbeb' : '#fff5f5', border: `1px solid ${b.type === 'walkin_only' ? '#fcd34d' : '#fecaca'}`, borderRadius: '10px', padding: '12px 16px'}}>
                       <div>
-                        <div style={{fontWeight: '700', fontSize: '0.76rem'}}>{b.date_iso}</div>
-                        {b.notes && <div style={{fontSize: '0.66rem', color: '#b91c1c', marginTop: '2px'}}>{b.notes}</div>}
+                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                          <span style={{fontWeight: '700', fontSize: '0.76rem'}}>{b.date_iso}</span>
+                          <span style={{fontSize: '0.6rem', fontWeight: '800', padding: '2px 8px', borderRadius: '20px', background: b.type === 'walkin_only' ? '#f59e0b' : '#ef4444', color: '#fff'}}>
+                            {b.type === 'walkin_only' ? 'WALK-IN' : 'CLOSED'}
+                          </span>
+                        </div>
+                        {b.notes && <div style={{fontSize: '0.66rem', color: b.type === 'walkin_only' ? '#92400e' : '#b91c1c', marginTop: '2px'}}>{b.notes}</div>}
                       </div>
                       <button
                         style={{background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '1.1rem', fontWeight: '700', padding: '4px 8px'}}
@@ -905,7 +927,7 @@ const ClientSearchView = React.memo(function ClientSearchView({
   dateISO, onDateChange, dateLabel, stepDate,
   guests, setGuests,
   timeHHMM, setTimeHHMM,
-  isBlackout, setStep, handleSwitchToHostess,
+  isBlackout, isWalkInOnly, setStep, handleSwitchToHostess,
   bookedHourCounts, bookedHourGuests
 }) {
   const range = getAvailableTimeRange(dateISO);
@@ -973,13 +995,19 @@ const ClientSearchView = React.memo(function ClientSearchView({
         </div>
         {isBlackout ? (
           <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px'}}>Closed today.</div>
+        ) : isWalkInOnly ? (
+          <div style={{marginTop: '20px', textAlign: 'center', color: '#92400e', background: '#fef3c7', padding: '15px', borderRadius: '8px', fontWeight: '600'}}>Walk-ins only today. Please come by and we'll seat you as soon as possible.</div>
         ) : availableSlots.length === 0 ? (
           <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px'}}>No availability for this date. Please try another day.</div>
         ) : (
           <button className="sr-search" onClick={() => { if (!guests || guests < 1) return alert("Please enter the number of guests."); setStep("details"); }}>Search</button>
         )}
         <div className="sr-foot">
-          If your party is over 25 people please call us so we can properly accommodate you.
+          If your party is over 25 people please{' '}
+          <a href="tel:7027356828" style={{color: '#222', fontWeight: '700', textDecoration: 'underline'}}>
+            call us at (702) 735-6828
+          </a>
+          {' '}so we can properly accommodate you.
         </div>
       </main>
       <button className="sr-view-toggle" onClick={handleSwitchToHostess}>Switch to Hostess View</button>
@@ -1097,11 +1125,15 @@ export default function App() {
   const dateLabel = useMemo(() => formatDateLabel(dateISO), [dateISO]);
   const timeLabel = useMemo(() => formatTimeLabel(timeHHMM), [timeHHMM]);
 
-  // isBlackout ahora también cubre días fuera del horario del restaurante
-  const isBlackout = useMemo(
-    () => blackoutDates.some(b => b.date_iso === dateISO) || !isRestaurantOpen(dateISO),
-    [dateISO, blackoutDates]
-  );
+  // dayStatus: 'open' | 'closed' | 'walkin_only'
+  const dayStatus = useMemo(() => {
+    if (!isRestaurantOpen(dateISO)) return 'closed';
+    const entry = blackoutDates.find(b => b.date_iso === dateISO);
+    if (!entry) return 'open';
+    return entry.type || 'closed';
+  }, [dateISO, blackoutDates]);
+  const isBlackout = dayStatus === 'closed';
+  const isWalkInOnly = dayStatus === 'walkin_only';
 
   const history = useMemo(() => rows.filter((r) => r.status === "reserved").sort((a, b) => {
     const notifDiff = (b.notified_at ? 1 : 0) - (a.notified_at ? 1 : 0);
@@ -1163,8 +1195,8 @@ export default function App() {
   // Cargar y sincronizar blackout_dates en tiempo real
   useEffect(() => {
     const load = () =>
-      supabase.from('blackout_dates').select('date_iso, notes').then(({ data }) => {
-        if (data) setBlackoutDates(data.map(r => ({ date_iso: r.date_iso, notes: r.notes || '' })));
+      supabase.from('blackout_dates').select('date_iso, notes, type').then(({ data }) => {
+        if (data) setBlackoutDates(data.map(r => ({ date_iso: r.date_iso, notes: r.notes || '', type: r.type || 'closed' })));
       });
     load();
     const channel = supabase
@@ -1214,12 +1246,12 @@ export default function App() {
     } else if (pass !== null) alert("Incorrect password");
   };
 
-  const toggleBlackoutDate = async (dateToToggle, notes) => {
+  const toggleBlackoutDate = async (dateToToggle, notes, type = 'closed') => {
     if (!dateToToggle) return;
     if (blackoutDates.some(b => b.date_iso === dateToToggle)) {
       await supabase.from('blackout_dates').delete().eq('date_iso', dateToToggle);
     } else {
-      await supabase.from('blackout_dates').insert({ date_iso: dateToToggle, notes: notes || null });
+      await supabase.from('blackout_dates').insert({ date_iso: dateToToggle, notes: notes || null, type });
     }
   };
 
@@ -1568,6 +1600,7 @@ export default function App() {
         activeFloor={activeFloor}
         setActiveFloor={setActiveFloor}
         isBlackout={isBlackout}
+        isWalkInOnly={isWalkInOnly}
         dateISO={dateISO}
         setDateISO={setDateISO}
         onDateChange={handleDateChange}
@@ -1614,6 +1647,7 @@ export default function App() {
         timeLabel={timeLabel}
         stepTime={stepTime}
         isBlackout={isBlackout}
+        isWalkInOnly={isWalkInOnly}
         setStep={setStep}
         handleSwitchToHostess={handleSwitchToHostess}
         bookedHourCounts={bookedHourCounts}
