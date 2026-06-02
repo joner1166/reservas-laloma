@@ -994,9 +994,9 @@ const ClientSearchView = React.memo(function ClientSearchView({
           </div>
         </div>
         {isBlackout ? (
-          <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px'}}>Closed today.</div>
+          <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px'}}>We are closed today, but please visit us on any other date! We will be more than happy to host your party.</div>
         ) : isWalkInOnly ? (
-          <div style={{marginTop: '20px', textAlign: 'center', color: '#92400e', background: '#fef3c7', padding: '15px', borderRadius: '8px', fontWeight: '600'}}>Walk-ins only today. Please come by and we'll seat you as soon as possible.</div>
+          <div style={{marginTop: '20px', textAlign: 'center', color: '#92400e', background: '#fef3c7', padding: '15px', borderRadius: '8px', fontWeight: '600'}}>Today we are only accepting walk-ins, but please come by and we will do our best to seat you as quickly as possible!</div>
         ) : availableSlots.length === 0 ? (
           <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px'}}>No availability for this date. Please try another day.</div>
         ) : (
@@ -1206,7 +1206,7 @@ export default function App() {
     return () => supabase.removeChannel(channel);
   }, []);
 
-  const isDateBlocked = (d) => blackoutDates.some(b => b.date_iso === d) || !isRestaurantOpen(d);
+  const isDateBlocked = (d) => !isRestaurantOpen(d);
 
   const stepDate = (dir) => {
     setDateISO(prev => {
