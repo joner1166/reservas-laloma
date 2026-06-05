@@ -375,6 +375,8 @@ const HostessView = React.memo(function HostessView({
   const bookingDateRef = useRef(null);
   const headerDateRef = useRef(null);
   const [activeTab, setActiveTab] = useState("reservations");
+  const [newResAlert, setNewResAlert] = useState(false);
+  const notifChannelRef = useRef(null);
   const [editingRes, setEditingRes] = useState(null);
   const [blackoutForm, setBlackoutForm] = useState({ date: '', notes: '' });
   const [showWaitPicker, setShowWaitPicker] = useState(false);
@@ -431,7 +433,7 @@ const HostessView = React.memo(function HostessView({
             <button className={activeTab === 'walkin' ? 'active' : ''} onClick={() => setActiveTab('walkin')}>Walk-in</button>
             <button className={activeTab === 'phoneres' ? 'active' : ''} onClick={() => setActiveTab('phoneres')}>Phone Reservation</button>
             <button className={activeTab === 'waitlist' ? 'active' : ''} onClick={() => setActiveTab('waitlist')}>Wait List ({waitList.length})</button>
-            <button className={activeTab === 'reservations' ? 'active' : ''} onClick={() => setActiveTab('reservations')}>Reservations ({history.length})</button>
+            <button className={activeTab === 'reservations' ? 'active' : ''} onClick={() => { setActiveTab('reservations'); clearResAlert(); }}>Reservations ({history.length}){newResAlert && <span style={{ display: 'inline-block', background: '#ef4444', color: '#fff', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', fontWeight: '900', lineHeight: '16px', textAlign: 'center', marginLeft: '6px', verticalAlign: 'middle' }}>!</span>}</button>
             <button className={activeTab === 'seated' ? 'active' : ''} onClick={() => setActiveTab('seated')}>Seated ({seatedList.length})</button>
             <button className={activeTab === 'canceled' ? 'active' : ''} onClick={() => setActiveTab('canceled')} style={{color: activeTab === 'canceled' ? '#000' : '#ef4444'}}>Canceled ({canceledList.length})</button>
             <button className={activeTab === 'floorplan' ? 'active' : ''} onClick={() => setActiveTab('floorplan')}>Floor Plan</button>
@@ -1198,7 +1200,7 @@ export default function App() {
     return counts;
   }, [rows]);
 
-  useReservationsRealtime({ supabase, dateISO, setRows, onInsert: viewMode === 'server' ? playAlertSound : undefined });
+  useReservationsRealtime({ supabase, dateISO, setRows, onInsert: viewMode === 'server' ? () => setNewResAlert(true) : undefined });
 
   useEffect(() => {
     document.addEventListener('click', unlockAudio);
@@ -1208,6 +1210,21 @@ export default function App() {
       document.removeEventListener('touchstart', unlockAudio);
     };
   }, []);
+
+  useEffect(() => {
+    if (viewMode !== 'server') return;
+    const ch = supabase
+      .channel('hostess-notifications')
+      .on('broadcast', { event: 'reservations_seen' }, () => setNewResAlert(false))
+      .subscribe();
+    notifChannelRef.current = ch;
+    return () => supabase.removeChannel(ch);
+  }, [viewMode]);
+
+  const clearResAlert = () => {
+    setNewResAlert(false);
+    notifChannelRef.current?.send({ type: 'broadcast', event: 'reservations_seen', payload: {} });
+  };
 
   // Cargar y sincronizar table_status en tiempo real
   useEffect(() => {
