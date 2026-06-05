@@ -208,6 +208,25 @@ async function insertReservationRecord(entry) {
   return supabase.from("reservations").insert([entry]);
 }
 
+function playAlertSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const beep = (t) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.4, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc.start(t);
+      osc.stop(t + 0.25);
+    };
+    [0, 0.35, 0.7, 1.2, 1.7, 2.1].forEach(t => beep(ctx.currentTime + t));
+  } catch (e) { /* audio not available */ }
+}
+
 async function updatePartyToSeated(id) {
   return supabase
     .from("reservations")
@@ -257,7 +276,7 @@ async function fetchTableEvents(dateISO) {
 /*******************************************************
  * BLOQUE 4 — REALTIME (HOOK INTERNO)
  *******************************************************/
-function useReservationsRealtime({ supabase, dateISO, setRows }) {
+function useReservationsRealtime({ supabase, dateISO, setRows, onInsert }) {
   useEffect(() => {
     let isMounted = true;
 
@@ -280,6 +299,10 @@ function useReservationsRealtime({ supabase, dateISO, setRows }) {
             (oldRow && oldRow.dateISO === dateISO);
 
           if (!affectsThisDay) return;
+
+          if (payload.eventType === "INSERT" && newRow?.dateISO === dateISO) {
+            onInsert?.();
+          }
 
           setRows((prev) => {
             if (payload.eventType === "DELETE") return prev.filter((r) => r.id !== oldRow.id);
@@ -338,16 +361,15 @@ const HostessView = React.memo(function HostessView({
   const blackoutInputRef = useRef(null);
   const bookingDateRef = useRef(null);
   const headerDateRef = useRef(null);
-  const pressTimerRef = useRef(null);
-  const longPressTriggeredRef = useRef(false);
   const [activeTab, setActiveTab] = useState("reservations");
   const [editingRes, setEditingRes] = useState(null);
   const [blackoutForm, setBlackoutForm] = useState({ date: '', notes: '' });
   const [showWaitPicker, setShowWaitPicker] = useState(false);
   const [exitingIds, setExitingIds] = useState(new Set());
-  const [selectedTables, setSelectedTables] = useState(new Set());
-  const [pickedServers, setPickedServers] = useState(new Set());
-  const [showServerPicker, setShowServerPicker] = useState(false);
+  const [assignMode, setAssignMode] = useState(false);
+  const [assigningServers, setAssigningServers] = useState(new Set());
+  const [pendingAssignTables, setPendingAssignTables] = useState(new Set());
+  const [showAssignServerList, setShowAssignServerList] = useState(false);
   const [tableEvents, setTableEvents] = useState([]);
   useEffect(() => {
     fetchTableEvents(dateISO).then(({ data }) => setTableEvents(data || [])).catch(() => setTableEvents([]));
@@ -679,10 +701,49 @@ const HostessView = React.memo(function HostessView({
                     const allKeys = Object.keys(FLOOR_CONFIG).flatMap(floor =>
                       FLOOR_CONFIG[floor].map(t => `${floor}-${t.id}`)
                     );
-                    await Promise.all(allKeys.map(id => assignServersToTable(id, [])));
+                    await supabase.from('table_status').update({ server_names: [], status: 'av' }).in('id', allKeys);
                   }} style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.68rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                     Clear All
                   </button>
+                  {!assignMode ? (
+                    <div style={{ position: 'relative' }}>
+                      <button onClick={() => setShowAssignServerList(p => !p)} style={{ background: '#f2c300', color: '#000', border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Asignar Mesas ▾
+                      </button>
+                      {showAssignServerList && (
+                        <div style={{ position: 'absolute', top: '110%', right: 0, background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '8px', zIndex: 100, minWidth: '160px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>
+                          {SERVERS.map(name => (
+                            <button key={name} onClick={() => setAssigningServers(prev => { const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s; })}
+                              style={{ display: 'block', width: '100%', textAlign: 'left', background: assigningServers.has(name) ? '#3b82f6' : 'transparent', color: '#f1f5f9', border: 'none', borderRadius: '6px', padding: '6px 10px', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' }}>
+                              {name}
+                            </button>
+                          ))}
+                          <div style={{ borderTop: '1px solid #334155', marginTop: '6px', paddingTop: '6px' }}>
+                            <button onClick={() => { if (assigningServers.size > 0) { setAssignMode(true); setShowAssignServerList(false); } }}
+                              style={{ width: '100%', background: assigningServers.size > 0 ? '#22c55e' : '#334155', color: assigningServers.size > 0 ? '#fff' : '#64748b', border: 'none', borderRadius: '6px', padding: '6px', fontWeight: '800', fontSize: '0.75rem', cursor: assigningServers.size > 0 ? 'pointer' : 'default' }}>
+                              Asignar {assigningServers.size > 0 ? `(${assigningServers.size}) →` : ''}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                        {[...assigningServers].map(n => n.split(' ')[0]).join(', ')} — {pendingAssignTables.size}
+                      </span>
+                      <button onClick={async () => {
+                        await Promise.all([...pendingAssignTables].map(id => assignServersToTable(id, [...assigningServers])));
+                        setAssignMode(false); setAssigningServers(new Set()); setPendingAssignTables(new Set());
+                      }} style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Confirmar
+                      </button>
+                      <button onClick={() => { setAssignMode(false); setAssigningServers(new Set()); setPendingAssignTables(new Set()); }}
+                        style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569', borderRadius: '8px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer' }}>
+                        ✕
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="sr-map-canvas">
                   <div className="sr-image-wrapper">
@@ -690,24 +751,19 @@ const HostessView = React.memo(function HostessView({
                     {FLOOR_CONFIG[activeFloor].map(table => {
                       const key = `${activeFloor}-${table.id}`;
                       const status = tableStatuses[key] ?? 'av';
-                      const isSelected = selectedTables.has(key);
                       const servers = tableServerNames?.[key] ?? [];
                       return (
                         <button
                           key={table.id}
                           className={`sr-table-marker shape-${table.shape || 'square'} ${status === 'occ' ? 'is-occupied' : 'is-available'}`}
-                          style={{ top: table.top, left: table.left, outline: isSelected ? '3px solid #f2c300' : undefined, outlineOffset: '2px' }}
-                          onPointerDown={() => {
-                            longPressTriggeredRef.current = false;
-                            pressTimerRef.current = setTimeout(() => {
-                              longPressTriggeredRef.current = true;
-                              setSelectedTables(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
-                              setShowServerPicker(false);
-                            }, 500);
+                          style={{ top: table.top, left: table.left, outline: assignMode && pendingAssignTables.has(key) ? '3px solid #22c55e' : undefined, outlineOffset: '2px' }}
+                          onClick={() => {
+                            if (assignMode) {
+                              setPendingAssignTables(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
+                            } else {
+                              handleTableSelection(table);
+                            }
                           }}
-                          onPointerUp={() => clearTimeout(pressTimerRef.current)}
-                          onPointerLeave={() => clearTimeout(pressTimerRef.current)}
-                          onClick={() => { if (!longPressTriggeredRef.current) handleTableSelection(table); }}
                         >
                           <span className="table-id">{table.id}</span>
                           <span className="table-cap">{table.cap}p</span>
@@ -722,42 +778,6 @@ const HostessView = React.memo(function HostessView({
                   </div>
                 </div>
               </div>
-              {selectedTables.size > 0 && (
-                <div style={{ position: 'sticky', bottom: 0, background: '#1e293b', color: '#fff', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', zIndex: 50 }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: '700' }}>{selectedTables.size} table{selectedTables.size > 1 ? 's' : ''} selected</span>
-                  <div style={{ position: 'relative' }}>
-                    <button onClick={() => setShowServerPicker(p => !p)} style={{ background: '#f2c300', color: '#000', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}>
-                      Assign Server ▾
-                    </button>
-                    {showServerPicker && (
-                      <div style={{ position: 'absolute', bottom: '110%', left: 0, background: '#fff', color: '#000', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)', minWidth: '160px', zIndex: 100 }}>
-                        {SERVERS.map(name => (
-                          <label key={name} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', cursor: 'pointer', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '600', background: '#1e293b', color: '#f1f5f9' }}>
-                            <input type="checkbox" checked={pickedServers.has(name)} onChange={() => setPickedServers(prev => { const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s; })} />
-                            {name}
-                          </label>
-                        ))}
-                        <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '6px', paddingTop: '6px', display: 'flex', gap: '6px' }}>
-                          <button onClick={async () => {
-                            const names = [...pickedServers];
-                            await Promise.all([...selectedTables].map(id => assignServersToTable(id, names)));
-                            setSelectedTables(new Set()); setPickedServers(new Set()); setShowServerPicker(false);
-                          }} style={{ flex: 1, background: '#000', color: '#fff', border: 'none', borderRadius: '6px', padding: '5px', fontWeight: '700', fontSize: '0.72rem', cursor: 'pointer' }}>Confirm</button>
-                          <button onClick={async () => {
-                            await Promise.all([...selectedTables].map(id => assignServersToTable(id, [])));
-                            setSelectedTables(new Set()); setPickedServers(new Set()); setShowServerPicker(false);
-                          }} style={{ background: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '6px', padding: '5px 8px', fontWeight: '700', fontSize: '0.72rem', cursor: 'pointer' }}>Clear</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <button onClick={async () => {
-                    await Promise.all([...selectedTables].map(id => assignServersToTable(id, [])));
-                    setSelectedTables(new Set()); setPickedServers(new Set()); setShowServerPicker(false);
-                  }} style={{ background: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '8px', padding: '6px 12px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}>Unassign</button>
-                  <button onClick={() => { setSelectedTables(new Set()); setPickedServers(new Set()); setShowServerPicker(false); }} style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569', borderRadius: '8px', padding: '6px 12px', fontSize: '0.72rem', cursor: 'pointer' }}>✕ Cancel</button>
-                </div>
-              )}
               </>
             )}
             {activeTab === 'blackout' && (
@@ -836,13 +856,11 @@ const HostessView = React.memo(function HostessView({
               <div className="sr-walkin-form">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {SERVERS.map(name => {
-                    const myTables = Object.entries(tableServerNames || {}).filter(([, v]) => Array.isArray(v) && v.includes(name)).map(([id]) => id);
                     const myCount = tableEvents.filter(e => e.server_name === name).length;
                     return (
                       <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '12px 16px' }}>
                         <div>
                           <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#f1f5f9' }}>{name}</div>
-                          <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '2px' }}>{myTables.length > 0 ? myTables.join(', ') : 'No tables assigned'}</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ fontSize: '1.4rem', fontWeight: '900', color: myCount > 0 ? '#f87171' : '#475569' }}>{myCount}</div>
@@ -1167,7 +1185,7 @@ export default function App() {
     return counts;
   }, [rows]);
 
-  useReservationsRealtime({ supabase, dateISO, setRows });
+  useReservationsRealtime({ supabase, dateISO, setRows, onInsert: viewMode === 'server' ? playAlertSound : undefined });
 
   // Cargar y sincronizar table_status en tiempo real
   useEffect(() => {
