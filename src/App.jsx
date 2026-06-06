@@ -374,10 +374,12 @@ const HostessView = React.memo(function HostessView({
   const blackoutInputRef = useRef(null);
   const bookingDateRef = useRef(null);
   const headerDateRef = useRef(null);
+  const autoCancelledRef = useRef(new Set());
   const [activeTab, setActiveTab] = useState("reservations");
   const [newResAlert, setNewResAlert] = useState(false);
   const notifChannelRef = useRef(null);
   const [editingRes, setEditingRes] = useState(null);
+  const [editingWaitItem, setEditingWaitItem] = useState(null);
   const [blackoutForm, setBlackoutForm] = useState({ date: '', notes: '' });
   const [showWaitPicker, setShowWaitPicker] = useState(false);
   const [exitingIds, setExitingIds] = useState(new Set());
@@ -414,6 +416,18 @@ const HostessView = React.memo(function HostessView({
     const id = setInterval(() => setNowSec(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    waitList.forEach(item => {
+      if (!item.notified_at || autoCancelledRef.current.has(item.id)) return;
+      const elapsed = nowSec - new Date(item.notified_at).getTime();
+      if (elapsed >= 10 * 60 * 1000) {
+        autoCancelledRef.current.add(item.id);
+        setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: 'cancelled' } : r));
+        updateReservationRecord(item.id, { status: 'cancelled' });
+      }
+    });
+  }, [nowSec, waitList]);
 
   const seatButtonStyle = {
     background: 'linear-gradient(135deg, #f2c300 0%, #d4ab00 100%)',
@@ -545,7 +559,11 @@ const HostessView = React.memo(function HostessView({
             )}
             {activeTab === 'waitlist' && (
               <div className="sr-res-list">
-                {waitList.length === 0 ? <p>No guests in wait list.</p> : waitList.map(item => (
+                {waitList.length === 0 ? <p>No guests in wait list.</p> : [...waitList].sort((a, b) => {
+                  const nA = a.notified_at ? 1 : 0, nB = b.notified_at ? 1 : 0;
+                  if (nB !== nA) return nB - nA;
+                  return new Date(b.created_at) - new Date(a.created_at);
+                }).map(item => (
                   <div key={item.id} className={`sr-list-item${exitingIds.has(item.id) ? ' sr-item-exit' : ''}`} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', ...(item.notified_at ? {borderLeft: '4px solid rgba(15, 40, 80, 0.85)', borderBottom: 'none', background: 'rgba(15, 40, 80, 0.15)', boxShadow: '0 2px 14px rgba(15, 40, 80, 0.28)', borderRadius: '10px', margin: '4px 8px'} : {})}}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -596,6 +614,7 @@ const HostessView = React.memo(function HostessView({
                       })()}
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
+                      <button onClick={() => setEditingWaitItem({...item})} style={{ ...seatButtonStyle, fontSize: '0.75rem', padding: '8px 12px', background: '#f1f5f9', color: '#1e293b', border: '1px solid #cbd5e1' }}>Edit</button>
                       <button
                         style={{ ...seatButtonStyle, fontSize: '0.75rem', padding: '8px 12px', border: 'none', background: item.notified_at ? '#16a34a' : '#000', color: '#fff', cursor: item.notified_at ? 'default' : 'pointer' }}
                         onClick={() => !item.notified_at && onNotifyReady(item)}
@@ -683,7 +702,7 @@ const HostessView = React.memo(function HostessView({
                   <div key={item.id} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
-                        <div><strong style={{ fontSize: '1.1rem', textDecoration: 'line-through', color: '#9ca3af' }}>{item.firstName} {item.lastName}</strong><span style={{ color: '#9ca3af', marginLeft: '8px' }}>({item.guests} pax)</span></div>
+                        <div><strong style={{ fontSize: '1.1rem', textDecoration: 'line-through', color: '#9ca3af' }}>{item.firstName} {item.lastName}</strong><span style={{ color: '#9ca3af', marginLeft: '8px' }}>({item.guests} pax)</span>{item.notified_at && <span style={{ background: '#ef4444', color: '#fff', borderRadius: '6px', padding: '2px 8px', fontSize: '0.62rem', fontWeight: '800', marginLeft: '8px', verticalAlign: 'middle' }}>Didn't Show</span>}</div>
                         <span style={{ fontWeight: '700', color: '#9ca3af' }}>{item.timeHHMM ? formatTimeLabel(item.timeHHMM) : ""}</span>
                       </div>
                       {item.phone && <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: '2px' }}>📞 {item.phone}</div>}
@@ -891,6 +910,30 @@ const HostessView = React.memo(function HostessView({
         </section>
       </main>
       <button className="sr-view-toggle" onClick={() => { setViewMode("client"); localStorage.removeItem("viewMode"); }}>Return to Client View</button>
+      {editingWaitItem && (
+        <div className="sr-modal-overlay" onClick={() => setEditingWaitItem(null)}>
+          <div className="sr-modal" onClick={e => e.stopPropagation()}>
+            <h3 style={{margin: '0 0 20px', fontSize: '0.96rem', fontWeight: '800'}}>Edit Walk-in</h3>
+            <div className="sr-formGrid">
+              <div className="sr-field">
+                <label className="sr-fieldLabel">Guests</label>
+                <input className="sr-input" type="number" min="1" value={editingWaitItem.guests ?? ''} onFocus={e => e.target.select()} onChange={e => setEditingWaitItem({...editingWaitItem, guests: e.target.value === '' ? '' : parseInt(e.target.value) || 1})} />
+              </div>
+              <div className="sr-field sr-span2">
+                <label className="sr-fieldLabel">Notes</label>
+                <textarea className="sr-textarea" value={editingWaitItem.notes || ''} onChange={e => setEditingWaitItem({...editingWaitItem, notes: e.target.value})} />
+              </div>
+            </div>
+            <div className="sr-actions" style={{marginTop: '20px'}}>
+              <button className="sr-btn" onClick={() => setEditingWaitItem(null)}>Cancel</button>
+              <button className="sr-btn sr-btnPrimary" onClick={async () => {
+                await updateReservationRecord(editingWaitItem.id, { guests: editingWaitItem.guests, notes: editingWaitItem.notes });
+                setEditingWaitItem(null);
+              }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
       {editingRes && (
         <div className="sr-modal-overlay" onClick={() => setEditingRes(null)}>
           <div className="sr-modal" onClick={e => e.stopPropagation()}>
