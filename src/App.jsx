@@ -1030,18 +1030,22 @@ const ClientSearchView = React.memo(function ClientSearchView({
   bookedHourCounts, bookedHourGuests
 }) {
   const range = getAvailableTimeRange(dateISO);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
   const availableSlots = getTimeSlots(dateISO, true).filter(slot => {
     const hour = Math.floor(minutesFromHHMM(slot) / 60);
     return (bookedHourCounts[hour] || 0) < MAX_RESERVATIONS_PER_HOUR &&
            (bookedHourGuests[hour] || 0) < RESTAURANT_CAPACITY;
   });
-  // Auto-reset time if selected slot is no longer available (e.g. same-day cutoff)
+  // Auto-reset time if selected slot is no longer available (e.g. same-day cutoff advancing)
   useEffect(() => {
-    const slots = getTimeSlots(dateISO, true);
-    if (slots.length > 0 && !slots.includes(timeHHMM)) {
-      setTimeHHMM(slots[0]);
+    if (availableSlots.length > 0 && !availableSlots.includes(timeHHMM)) {
+      setTimeHHMM(availableSlots[0]);
     }
-  }, [dateISO]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dateISO, tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="sr-page">
