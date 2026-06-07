@@ -41,7 +41,7 @@ const RESTAURANT_HOURS = {
 // Tiempo mínimo antes del cierre para aceptar reservaciones (en minutos)
 const LAST_RESERVATION_BUFFER = 0;
 // Tiempo mínimo de anticipación para reservaciones same-day en client view (en minutos)
-const SAME_DAY_BUFFER = 120;
+const SAME_DAY_BUFFER = 30;
 
 const responsiveStyles = `
   * { box-sizing: border-box; }
@@ -369,7 +369,8 @@ const HostessView = React.memo(function HostessView({
 
   // Datos
   walkInForm, setWalkInForm, phoneResForm, setPhoneResForm,
-  waitList, history, seatedList, canceledList, blackoutDates, tableStatuses, tableServerNames
+  waitList, history, seatedList, canceledList, blackoutDates, tableStatuses, tableServerNames,
+  walkinLoading, phoneResLoading
 }) {
   const blackoutInputRef = useRef(null);
   const bookingDateRef = useRef(null);
@@ -384,6 +385,7 @@ const HostessView = React.memo(function HostessView({
   const [showWaitPicker, setShowWaitPicker] = useState(false);
   const [exitingIds, setExitingIds] = useState(new Set());
   const [assignMode, setAssignMode] = useState(false);
+  const [unassignMode, setUnassignMode] = useState(false);
   const [assigningServers, setAssigningServers] = useState(new Set());
   const [pendingAssignTables, setPendingAssignTables] = useState(new Set());
   const [showAssignServerList, setShowAssignServerList] = useState(false);
@@ -416,6 +418,17 @@ const HostessView = React.memo(function HostessView({
     const id = setInterval(() => setNowSec(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    waitList.forEach(item => {
+      if (!item.notified_at || autoCancelledRef.current.has(item.id)) return;
+      const elapsed = nowSec - new Date(item.notified_at).getTime();
+      if (elapsed >= 10 * 60 * 1000) {
+        autoCancelledRef.current.add(item.id);
+        onRemoveFromWaitlist(item);
+      }
+    });
+  }, [nowSec, waitList]);
 
   const seatButtonStyle = {
     background: 'linear-gradient(135deg, #f2c300 0%, #d4ab00 100%)',
@@ -501,7 +514,7 @@ const HostessView = React.memo(function HostessView({
                   <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={walkInForm.notes} onChange={e => setWalkInForm({...walkInForm, notes: e.target.value})} disabled={isBlackout}/></div>
                 </div>
                 <p style={{fontSize:'0.72rem',color:'#94a3b8',margin:'16px 0 0',lineHeight:'1.5'}}><strong style={{color:'#ef4444'}}>IMPORTANT NOTE:</strong> By providing their phone number, the guest consents to receive up to 2 SMS notifications (waitlist confirmation + table ready). Msg &amp; data rates may apply. Reply <strong>STOP</strong> to opt out.</p>
-                <button className="sr-btn sr-btnPrimary" style={{marginTop: '20px', opacity: isBlackout ? 0.5 : 1}} onClick={onAddWaitlist} disabled={isBlackout}>Add to Wait List</button>
+                <button className="sr-btn sr-btnPrimary" style={{marginTop: '20px', opacity: (isBlackout || walkinLoading) ? 0.5 : 1}} onClick={onAddWaitlist} disabled={isBlackout || walkinLoading}>{walkinLoading ? 'Adding...' : 'Add to Wait List'}</button>
               </div>
             )}
             {activeTab === 'phoneres' && (
@@ -542,7 +555,7 @@ const HostessView = React.memo(function HostessView({
                   <div className="sr-field"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={phoneResForm.dietary} onChange={e => setPhoneResForm({...phoneResForm, dietary: e.target.value})} disabled={isBlackout}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
                   <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={phoneResForm.notes} onChange={e => setPhoneResForm({...phoneResForm, notes: e.target.value})} disabled={isBlackout}/></div>
                 </div>
-                <button className="sr-btn sr-btnPrimary" style={{marginTop: '20px'}} onClick={onAddPhoneRes} disabled={isBlackout}>Confirm Phone Reservation</button>
+                <button className="sr-btn sr-btnPrimary" style={{marginTop: '20px', opacity: (isBlackout || phoneResLoading) ? 0.5 : 1}} onClick={onAddPhoneRes} disabled={isBlackout || phoneResLoading}>{phoneResLoading ? 'Saving...' : 'Confirm Phone Reservation'}</button>
               </div>
             )}
             {activeTab === 'waitlist' && (
@@ -727,29 +740,35 @@ const HostessView = React.memo(function HostessView({
                   }} style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.68rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                     Clear All
                   </button>
-                  {!assignMode ? (
-                    <div style={{ position: 'relative' }}>
-                      <button onClick={() => setShowAssignServerList(p => !p)} style={{ background: '#f2c300', color: '#000', border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        Asignar Mesas ▾
-                      </button>
-                      {showAssignServerList && (
-                        <div style={{ position: 'absolute', top: '110%', right: 0, background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '8px', zIndex: 100, minWidth: '160px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>
-                          {SERVERS.map(name => (
-                            <button key={name} onClick={() => setAssigningServers(prev => { const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s; })}
-                              style={{ display: 'block', width: '100%', textAlign: 'left', background: assigningServers.has(name) ? '#3b82f6' : 'transparent', color: '#f1f5f9', border: 'none', borderRadius: '6px', padding: '6px 10px', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' }}>
-                              {name}
-                            </button>
-                          ))}
-                          <div style={{ borderTop: '1px solid #334155', marginTop: '6px', paddingTop: '6px' }}>
-                            <button onClick={() => { if (assigningServers.size > 0) { setAssignMode(true); setShowAssignServerList(false); } }}
-                              style={{ width: '100%', background: assigningServers.size > 0 ? '#22c55e' : '#334155', color: assigningServers.size > 0 ? '#fff' : '#64748b', border: 'none', borderRadius: '6px', padding: '6px', fontWeight: '800', fontSize: '0.75rem', cursor: assigningServers.size > 0 ? 'pointer' : 'default' }}>
-                              Asignar {assigningServers.size > 0 ? `(${assigningServers.size}) →` : ''}
-                            </button>
+                  {!assignMode && !unassignMode ? (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <div style={{ position: 'relative' }}>
+                        <button onClick={() => setShowAssignServerList(p => !p)} style={{ background: '#f2c300', color: '#000', border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          Assign Tables ▾
+                        </button>
+                        {showAssignServerList && (
+                          <div style={{ position: 'absolute', top: '110%', right: 0, background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '8px', zIndex: 100, minWidth: '160px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>
+                            {SERVERS.map(name => (
+                              <button key={name} onClick={() => setAssigningServers(prev => { const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s; })}
+                                style={{ display: 'block', width: '100%', textAlign: 'left', background: assigningServers.has(name) ? '#3b82f6' : 'transparent', color: '#f1f5f9', border: 'none', borderRadius: '6px', padding: '6px 10px', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' }}>
+                                {name}
+                              </button>
+                            ))}
+                            <div style={{ borderTop: '1px solid #334155', marginTop: '6px', paddingTop: '6px' }}>
+                              <button onClick={() => { if (assigningServers.size > 0) { setAssignMode(true); setShowAssignServerList(false); } }}
+                                style={{ width: '100%', background: assigningServers.size > 0 ? '#22c55e' : '#334155', color: assigningServers.size > 0 ? '#fff' : '#64748b', border: 'none', borderRadius: '6px', padding: '6px', fontWeight: '800', fontSize: '0.75rem', cursor: assigningServers.size > 0 ? 'pointer' : 'default' }}>
+                                Assign {assigningServers.size > 0 ? `(${assigningServers.size}) →` : ''}
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
+                      <button onClick={() => { setUnassignMode(true); setPendingAssignTables(new Set()); }}
+                        style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: '8px', padding: '4px 10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Unassign
+                      </button>
                     </div>
-                  ) : (
+                  ) : assignMode ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '600', whiteSpace: 'nowrap' }}>
                         {[...assigningServers].map(n => n.split(' ')[0]).join(', ')} — {pendingAssignTables.size}
@@ -758,9 +777,25 @@ const HostessView = React.memo(function HostessView({
                         await Promise.all([...pendingAssignTables].map(id => assignServersToTable(id, [...assigningServers])));
                         setAssignMode(false); setAssigningServers(new Set()); setPendingAssignTables(new Set());
                       }} style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        Confirmar
+                        Confirm
                       </button>
                       <button onClick={() => { setAssignMode(false); setAssigningServers(new Set()); setPendingAssignTables(new Set()); }}
+                        style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569', borderRadius: '8px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer' }}>
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                        Remove: {pendingAssignTables.size} table(s)
+                      </span>
+                      <button onClick={async () => {
+                        await Promise.all([...pendingAssignTables].map(id => assignServersToTable(id, [])));
+                        setUnassignMode(false); setPendingAssignTables(new Set());
+                      }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        Confirm
+                      </button>
+                      <button onClick={() => { setUnassignMode(false); setPendingAssignTables(new Set()); }}
                         style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569', borderRadius: '8px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer' }}>
                         ✕
                       </button>
@@ -778,9 +813,9 @@ const HostessView = React.memo(function HostessView({
                         <button
                           key={table.id}
                           className={`sr-table-marker shape-${table.shape || 'square'} ${status === 'occ' ? 'is-occupied' : 'is-available'}`}
-                          style={{ top: table.top, left: table.left, outline: assignMode && pendingAssignTables.has(key) ? '3px solid #22c55e' : undefined, outlineOffset: '2px' }}
+                          style={{ top: table.top, left: table.left, outline: assignMode && pendingAssignTables.has(key) ? '3px solid #22c55e' : unassignMode && pendingAssignTables.has(key) ? '3px solid #ef4444' : undefined, outlineOffset: '2px' }}
                           onClick={() => {
-                            if (assignMode) {
+                            if (assignMode || unassignMode) {
                               setPendingAssignTables(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
                             } else {
                               handleTableSelection(table);
@@ -1144,6 +1179,8 @@ const ClientDetailsView = React.memo(function ClientDetailsView({
 export default function App() {
   const isSubmitting = useRef(false);
   const [submitting, setSubmitting] = useState(false);
+  const [walkinLoading, setWalkinLoading] = useState(false);
+  const [phoneResLoading, setPhoneResLoading] = useState(false);
   const [viewMode, setViewMode] = useState(() => localStorage.getItem("viewMode") || "client");
   const [step, setStep] = useState("search");
   const [dateISO, setDateISO] = useState(() => dateISOFromDate(new Date()));
@@ -1207,18 +1244,6 @@ export default function App() {
   const waitList = useMemo(() => rows.filter((r) => r.status === "waitlist").sort((a, b) => (b.notified_at ? 1 : 0) - (a.notified_at ? 1 : 0)), [rows]);
   const seatedList = useMemo(() => rows.filter((r) => r.status === "seated"), [rows]);
   const canceledList = useMemo(() => rows.filter((r) => r.status === "cancelled"), [rows]);
-
-  useEffect(() => {
-    waitList.forEach(item => {
-      if (!item.notified_at || autoCancelledRef.current.has(item.id)) return;
-      const elapsed = nowSec - new Date(item.notified_at).getTime();
-      if (elapsed >= 10 * 60 * 1000) {
-        autoCancelledRef.current.add(item.id);
-        setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: 'cancelled' } : r));
-        updateReservationRecord(item.id, { status: 'cancelled' });
-      }
-    });
-  }, [nowSec, waitList]);
 
   // Cuenta reservaciones y guests por ventana de 1 hora (para límites en client/hostess view)
   const bookedHourCounts = useMemo(() => {
@@ -1376,8 +1401,10 @@ export default function App() {
   };
 
   const handleAddToWaitlist = async () => {
+    if (walkinLoading) return;
     if (isBlackout) return alert("Cannot add to waitlist on a closed day.");
     if (!walkInForm.firstName) return alert("First name is required.");
+    setWalkinLoading(true);
 
     const cancelToken = generateToken();
 
@@ -1425,9 +1452,11 @@ export default function App() {
     setWalkInForm({ firstName: "", lastName: "", phone: "", celebration: "None", dietary: "None", notes: "" });
     setEstimatedWait(15);
     setActiveTab("waitlist");
+    setWalkinLoading(false);
   };
 
   const handleAddPhoneReservation = async () => {
+    if (phoneResLoading) return;
     if (isBlackout) return alert("Cannot make reservations on a closed day.");
     if (!phoneResForm.firstName || !phoneResForm.lastName || !phoneResForm.phone) {
       return alert("Name, Last Name and Phone are required.");
@@ -1465,6 +1494,7 @@ export default function App() {
       if (!proceed) return;
     }
 
+    setPhoneResLoading(true);
     const cancelToken = generateToken();
 
     const newRes = {
@@ -1525,6 +1555,8 @@ export default function App() {
     } catch (e) {
       console.error(e);
       alert("Error saving reservation.");
+    } finally {
+      setPhoneResLoading(false);
     }
   };
   const handleSeatParty = useCallback(async (party) => {
@@ -1687,6 +1719,8 @@ export default function App() {
        <HostessView
         onAddWaitlist={handleAddToWaitlist}
         onAddPhoneRes={handleAddPhoneReservation}
+        walkinLoading={walkinLoading}
+        phoneResLoading={phoneResLoading}
         onSeatParty={handleSeatParty}
         onUnseatParty={handleUnseatParty}
         onCancelRes={handleCancelReservation}
