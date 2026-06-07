@@ -417,18 +417,6 @@ const HostessView = React.memo(function HostessView({
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    waitList.forEach(item => {
-      if (!item.notified_at || autoCancelledRef.current.has(item.id)) return;
-      const elapsed = nowSec - new Date(item.notified_at).getTime();
-      if (elapsed >= 10 * 60 * 1000) {
-        autoCancelledRef.current.add(item.id);
-        setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: 'cancelled' } : r));
-        updateReservationRecord(item.id, { status: 'cancelled' });
-      }
-    });
-  }, [nowSec, waitList]);
-
   const seatButtonStyle = {
     background: 'linear-gradient(135deg, #f2c300 0%, #d4ab00 100%)',
     color: '#000', border: 'none', padding: '10px 24px', borderRadius: '12px', fontWeight: '700',
@@ -1219,6 +1207,18 @@ export default function App() {
   const waitList = useMemo(() => rows.filter((r) => r.status === "waitlist").sort((a, b) => (b.notified_at ? 1 : 0) - (a.notified_at ? 1 : 0)), [rows]);
   const seatedList = useMemo(() => rows.filter((r) => r.status === "seated"), [rows]);
   const canceledList = useMemo(() => rows.filter((r) => r.status === "cancelled"), [rows]);
+
+  useEffect(() => {
+    waitList.forEach(item => {
+      if (!item.notified_at || autoCancelledRef.current.has(item.id)) return;
+      const elapsed = nowSec - new Date(item.notified_at).getTime();
+      if (elapsed >= 10 * 60 * 1000) {
+        autoCancelledRef.current.add(item.id);
+        setRows(prev => prev.map(r => r.id === item.id ? { ...r, status: 'cancelled' } : r));
+        updateReservationRecord(item.id, { status: 'cancelled' });
+      }
+    });
+  }, [nowSec, waitList]);
 
   // Cuenta reservaciones y guests por ventana de 1 hora (para límites en client/hostess view)
   const bookedHourCounts = useMemo(() => {
