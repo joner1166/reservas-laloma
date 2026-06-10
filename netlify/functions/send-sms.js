@@ -55,7 +55,6 @@ exports.handler = async (event) => {
         `📅 ${dateLabel || ""}\n` +
         `⏰ ${timeLabel || ""}\n` +
         `👥 ${guests ?? ""} guests\n\n` +
-        `${manageLink ? `Cancel reservation: ${manageLink}\n\n` : ""}` +
         `Reply STOP to opt-out.`;
       break;
   }

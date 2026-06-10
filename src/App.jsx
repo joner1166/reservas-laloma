@@ -555,7 +555,7 @@ const HostessView = React.memo(function HostessView({
                   <div className="sr-field"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={phoneResForm.dietary} onChange={e => setPhoneResForm({...phoneResForm, dietary: e.target.value})} disabled={isBlackout}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
                   <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={phoneResForm.notes} onChange={e => setPhoneResForm({...phoneResForm, notes: e.target.value})} disabled={isBlackout}/></div>
                 </div>
-                <button className="sr-btn sr-btnPrimary" style={{marginTop: '20px', opacity: (isBlackout || phoneResLoading) ? 0.5 : 1}} onClick={onAddPhoneRes} disabled={isBlackout || phoneResLoading}>{phoneResLoading ? 'Saving...' : 'Confirm Phone Reservation'}</button>
+                <button className="sr-btn sr-btnPrimary" style={{marginTop: '20px', opacity: (isBlackout || phoneResLoading) ? 0.5 : 1}} onClick={async () => { const ok = await onAddPhoneRes(); if (ok) setActiveTab("reservations"); }} disabled={isBlackout || phoneResLoading}>{phoneResLoading ? 'Saving...' : 'Confirm Phone Reservation'}</button>
               </div>
             )}
             {activeTab === 'waitlist' && (
@@ -1184,7 +1184,9 @@ export default function App() {
   const isSubmitting = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [walkinLoading, setWalkinLoading] = useState(false);
+  const walkinSubmittingRef = useRef(false);
   const [phoneResLoading, setPhoneResLoading] = useState(false);
+  const phoneResSubmittingRef = useRef(false);
   const [viewMode, setViewMode] = useState(() => localStorage.getItem("viewMode") || "client");
   const [step, setStep] = useState("search");
   const [dateISO, setDateISO] = useState(() => dateISOFromDate(new Date()));
@@ -1405,9 +1407,10 @@ export default function App() {
   };
 
   const handleAddToWaitlist = async () => {
-    if (walkinLoading) return;
-    if (isBlackout) return alert("Cannot add to waitlist on a closed day.");
-    if (!walkInForm.firstName) return alert("First name is required.");
+    if (walkinSubmittingRef.current) return;
+    walkinSubmittingRef.current = true;
+    if (isBlackout) { walkinSubmittingRef.current = false; return alert("Cannot add to waitlist on a closed day."); }
+    if (!walkInForm.firstName) { walkinSubmittingRef.current = false; return alert("First name is required."); }
     setWalkinLoading(true);
 
     const cancelToken = generateToken();
@@ -1430,7 +1433,7 @@ export default function App() {
     };
 
     const { error } = await insertWaitlistRecord(newEntry);
-    if (error) return alert("Error adding to wait list: " + error.message);
+    if (error) { walkinSubmittingRef.current = false; setWalkinLoading(false); return alert("Error adding to wait list: " + error.message); }
 
     // SMS de Waitlist (solo si hay phone)
     if (walkInForm.phone) {
@@ -1456,19 +1459,25 @@ export default function App() {
     setWalkInForm({ firstName: "", lastName: "", phone: "", celebration: "None", dietary: "None", notes: "" });
     setEstimatedWait(15);
     setActiveTab("waitlist");
+    walkinSubmittingRef.current = false;
     setWalkinLoading(false);
   };
 
   const handleAddPhoneReservation = async () => {
-    if (phoneResLoading) return;
-    if (isBlackout) return alert("Cannot make reservations on a closed day.");
+    if (phoneResSubmittingRef.current) return;
+    phoneResSubmittingRef.current = true;
+
+    const _resetPhoneRef = () => { phoneResSubmittingRef.current = false; };
+
+    if (isBlackout) { _resetPhoneRef(); return alert("Cannot make reservations on a closed day."); }
     if (!phoneResForm.firstName || !phoneResForm.lastName || !phoneResForm.phone) {
-      return alert("Name, Last Name and Phone are required.");
+      _resetPhoneRef(); return alert("Name, Last Name and Phone are required.");
     }
 
     // Validación de horario
     if (!isTimeAllowed(dateISO, timeHHMM)) {
       const range = getAvailableTimeRange(dateISO);
+      _resetPhoneRef();
       return alert(
         range
           ? `Reservations only accepted between ${formatTimeLabel(range.open)} and ${formatTimeLabel(range.lastSlot)}.`
@@ -1495,7 +1504,7 @@ export default function App() {
       if (resOver) reasons.push(`${hourResCount}/${MAX_RESERVATIONS_PER_HOUR} reservations in this hour`);
       if (capOver) reasons.push(`${hourGuestCount + (guests || 1)} guests would exceed capacity of ${RESTAURANT_CAPACITY}`);
       const proceed = window.confirm(`⚠️ Overbooking warning:\n${reasons.join('\n')}\n\nContinue anyway?`);
-      if (!proceed) return;
+      if (!proceed) { _resetPhoneRef(); return; }
     }
 
     setPhoneResLoading(true);
@@ -1541,9 +1550,13 @@ export default function App() {
       }
 
       // Calendar
-      const startISO = toLocalDateTimeISO(dateISO, timeHHMM);
-      const endISO = addMinutesToLocalDateTimeISO(dateISO, timeHHMM, 90);
-      await createCalendarEventService({ ...newRes, startISO, endISO });
+      try {
+        const startISO = toLocalDateTimeISO(dateISO, timeHHMM);
+        const endISO = addMinutesToLocalDateTimeISO(dateISO, timeHHMM, 90);
+        await createCalendarEventService({ ...newRes, startISO, endISO });
+      } catch (calErr) {
+        console.error("Calendar fail:", calErr);
+      }
 
       alert("✅ Phone reservation confirmed!");
       setPhoneResForm({
@@ -1555,11 +1568,12 @@ export default function App() {
         dietary: "None",
         notes: "",
       });
-      setActiveTab("reservations");
+      return true;
     } catch (e) {
       console.error(e);
       alert("Error saving reservation.");
     } finally {
+      phoneResSubmittingRef.current = false;
       setPhoneResLoading(false);
     }
   };
