@@ -514,7 +514,7 @@ const HostessView = React.memo(function HostessView({
                   <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={walkInForm.notes} onChange={e => setWalkInForm({...walkInForm, notes: e.target.value})} disabled={isBlackout}/></div>
                 </div>
                 <p style={{fontSize:'0.72rem',color:'#94a3b8',margin:'16px 0 0',lineHeight:'1.5'}}><strong style={{color:'#ef4444'}}>IMPORTANT NOTE:</strong> By providing their phone number, the guest consents to receive up to 2 SMS notifications (waitlist confirmation + table ready). Msg &amp; data rates may apply. Reply <strong>STOP</strong> to opt out.</p>
-                <button className="sr-btn sr-btnPrimary" style={{marginTop: '20px', opacity: (isBlackout || walkinLoading) ? 0.5 : 1}} onClick={onAddWaitlist} disabled={isBlackout || walkinLoading}>{walkinLoading ? 'Adding...' : 'Add to Wait List'}</button>
+                <button className="sr-btn sr-btnPrimary" style={{marginTop: '20px', opacity: (isBlackout || walkinLoading) ? 0.5 : 1}} onClick={async () => { const ok = await onAddWaitlist(); if (ok) setActiveTab("waitlist"); }} disabled={isBlackout || walkinLoading}>{walkinLoading ? 'Adding...' : 'Add to Wait List'}</button>
               </div>
             )}
             {activeTab === 'phoneres' && (
@@ -563,7 +563,7 @@ const HostessView = React.memo(function HostessView({
                 {waitList.length === 0 ? <p>No guests in wait list.</p> : [...waitList].sort((a, b) => {
                   const nA = a.notified_at ? 1 : 0, nB = b.notified_at ? 1 : 0;
                   if (nB !== nA) return nB - nA;
-                  return new Date(b.created_at) - new Date(a.created_at);
+                  return new Date(a.created_at) - new Date(b.created_at);
                 }).map(item => (
                   <div key={item.id} className={`sr-list-item${exitingIds.has(item.id) ? ' sr-item-exit' : ''}`} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', ...(item.notified_at ? {borderLeft: '4px solid rgba(15, 40, 80, 0.85)', borderBottom: 'none', background: 'rgba(15, 40, 80, 0.15)', boxShadow: '0 2px 14px rgba(15, 40, 80, 0.28)', borderRadius: '10px', margin: '4px 8px'} : {})}}>
                     <div style={{ flex: 1 }}>
@@ -1432,35 +1432,41 @@ export default function App() {
       estimated_wait: estimatedWait,
     };
 
-    const { error } = await insertWaitlistRecord(newEntry);
-    if (error) { walkinSubmittingRef.current = false; setWalkinLoading(false); return alert("Error adding to wait list: " + error.message); }
+    try {
+      const { error } = await insertWaitlistRecord(newEntry);
+      if (error) throw error;
 
-    // SMS de Waitlist (solo si hay phone)
-    if (walkInForm.phone) {
-      try {
-        await fetch("/.netlify/functions/send-sms", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "waitlist",
-            phone: walkInForm.phone,
-            firstName: walkInForm.firstName,
-            guests: guests || 1,
-            dateLabel,
-            timeLabel,
-            cancel_token: cancelToken,
-          }),
-        });
-      } catch (e) {
-        console.error("SMS waitlist fail:", e);
+      // SMS de Waitlist (solo si hay phone)
+      if (walkInForm.phone) {
+        try {
+          await fetch("/.netlify/functions/send-sms", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "waitlist",
+              phone: walkInForm.phone,
+              firstName: walkInForm.firstName,
+              guests: guests || 1,
+              dateLabel,
+              timeLabel,
+              cancel_token: cancelToken,
+            }),
+          });
+        } catch (e) {
+          console.error("SMS waitlist fail:", e);
+        }
       }
-    }
 
-    setWalkInForm({ firstName: "", lastName: "", phone: "", celebration: "None", dietary: "None", notes: "" });
-    setEstimatedWait(15);
-    setActiveTab("waitlist");
-    walkinSubmittingRef.current = false;
-    setWalkinLoading(false);
+      setWalkInForm({ firstName: "", lastName: "", phone: "", celebration: "None", dietary: "None", notes: "" });
+      setEstimatedWait(15);
+      return true;
+    } catch (e) {
+      console.error(e);
+      alert("Error adding to wait list: " + (e?.message || e));
+    } finally {
+      walkinSubmittingRef.current = false;
+      setWalkinLoading(false);
+    }
   };
 
   const handleAddPhoneReservation = async () => {
