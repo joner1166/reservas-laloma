@@ -50,10 +50,10 @@ exports.handler = async (event) => {
       "<h1>Reservation Cancelled</h1>" +
       "<p>" + message + "</p>" +
       "<p style=\"font-size:.88rem;color:#666\">If you change your mind, we’d love to have you — make a new reservation below.</p>" +
-      "<a href=\"https://reservas-demo.netlify.app/\" class=\"btn\">Make a new reservation</a>" +
+      "<a href=\"https://bookingtheoriginallindomichoacan.netlify.app/\" class=\"btn\">Make a new reservation</a>" +
       "<footer>&copy; 2025 Lindo Michoacan Restaurant. All rights reserved. | " +
-      "<a href=\"https://reservas-demo.netlify.app/privacy.html\">Privacy Policy</a> | " +
-      "<a href=\"https://reservas-demo.netlify.app/terms.html\">Terms &amp; Conditions</a></footer>" +
+      "<a href=\"https://bookingtheoriginallindomichoacan.netlify.app/privacy.html\">Privacy Policy</a> | " +
+      "<a href=\"https://bookingtheoriginallindomichoacan.netlify.app/terms.html\">Terms &amp; Conditions</a></footer>" +
       "</body></html>";
 
     return {
