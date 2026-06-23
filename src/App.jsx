@@ -1204,7 +1204,7 @@ function ManagerPinView({ onSuccess }) {
   const [pin, setPin] = useState('');
   const check = () => { if (pin === MANAGER_PASSWORD) onSuccess(); else alert('Incorrect PIN'); };
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#000', padding: '24px' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: '60px', background: '#000', padding: '60px 24px 24px' }}>
       <img src="/logo.png" alt="Logo" style={{ width: '304px', marginBottom: '32px', background: 'rgba(255,255,255,0.15)', borderRadius: '12px', padding: '12px' }} />
       <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '16px', padding: '32px 24px', boxShadow: '0 4px 24px rgba(0,0,0,0.3)', width: '100%', maxWidth: '360px' }}>
         <h2 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '1.1rem', fontWeight: '700', color: '#fff' }}>Manager Access</h2>
@@ -1225,11 +1225,15 @@ function ManagerPinView({ onSuccess }) {
 
 function StatCard({ label, value, sub, color, onClick }) {
   return (
-    <div onClick={onClick} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', padding: '18px 12px', textAlign: 'center', backdropFilter: 'blur(8px)', cursor: onClick ? 'pointer' : 'default' }}>
-      <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>{label}</div>
-      <div style={{ fontSize: '2.4rem', fontWeight: '800', color, lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: '6px' }}>{sub}</div>
-      {onClick && <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', marginTop: '8px' }}>tap for details</div>}
+    <div onClick={onClick} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: onClick ? 'pointer' : 'default', marginBottom: '10px' }}>
+      <div>
+        <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2px' }}>{label}</div>
+        <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)' }}>{sub}</div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ fontSize: '2rem', fontWeight: '800', color }}>{value}</div>
+        {onClick && <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '1.2rem' }}>›</span>}
+      </div>
     </div>
   );
 }
@@ -1336,12 +1340,12 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
           </>
         ) : (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-              <StatCard label="Reservations" value={history.length} sub={`${totalResGuests} guests`} color="#60a5fa" onClick={() => setActiveSection('reservations')} />
-              <StatCard label="Wait List" value={waitList.length} sub="currently waiting" color="#fbbf24" onClick={() => setActiveSection('waitlist')} />
-              <StatCard label="Seated" value={seatedList.length} sub={`${seatedGuests} guests`} color="#4ade80" onClick={() => setActiveSection('seated')} />
+            <div style={{ marginBottom: '2px' }}>
+              <StatCard label="Reservations" value={history.length} sub={`${totalResGuests} guests`} color="#f87171" onClick={() => setActiveSection('reservations')} />
+              <StatCard label="Wait List" value={waitList.length} sub="currently waiting" color="#f87171" onClick={() => setActiveSection('waitlist')} />
+              <StatCard label="Seated" value={seatedList.length} sub={`${seatedGuests} guests`} color="#f87171" onClick={() => setActiveSection('seated')} />
               <StatCard label="Canceled" value={canceledList.length} sub="today" color="#f87171" onClick={() => setActiveSection('canceled')} />
-              <StatCard label="Occupancy" value={`${occupancyPct}%`} sub={`${occupiedTables}/${totalTables} tables`} color="#c084fc" />
+              <StatCard label="Occupancy" value={`${occupancyPct}%`} sub={`${occupiedTables}/${totalTables} tables`} color="#f87171" />
             </div>
 
             <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', padding: '20px', marginBottom: '12px', textAlign: 'center' }}>
