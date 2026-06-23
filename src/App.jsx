@@ -26,6 +26,7 @@ const SLOT_MINUTES = 15;
 const MAX_RESERVATIONS_PER_HOUR = 5;
 const RESTAURANT_CAPACITY = 200;
 const HOSTESS_PASSWORD = "162655";
+const MANAGER_PASSWORD = "010690";
 
 // Horarios por día (0=Dom, 1=Lun, ..., 6=Sáb)
 const RESTAURANT_HOURS = {
@@ -376,7 +377,8 @@ const HostessView = React.memo(function HostessView({
   const bookingDateRef = useRef(null);
   const headerDateRef = useRef(null);
   const autoCancelledRef = useRef(new Set());
-  const [activeTab, setActiveTab] = useState("reservations");
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem("hostessTab") || "reservations");
+  useEffect(() => { localStorage.setItem("hostessTab", activeTab); }, [activeTab]);
   const [newResAlert, setNewResAlert] = useState(false);
   const notifChannelRef = useRef(null);
   const [editingRes, setEditingRes] = useState(null);
@@ -1195,7 +1197,172 @@ const ClientDetailsView = React.memo(function ClientDetailsView({
 });
 
 /*******************************************************
- * BLOQUE 7 — APP (CONTROLLER PRINCIPAL)
+ * BLOQUE 7 — MANAGER VIEW
+ *******************************************************/
+
+function ManagerPinView({ onSuccess }) {
+  const [pin, setPin] = useState('');
+  const check = () => { if (pin === MANAGER_PASSWORD) onSuccess(); else alert('Incorrect PIN'); };
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#000', padding: '24px' }}>
+      <img src="/logo.png" alt="Logo" style={{ width: '304px', marginBottom: '32px', background: 'rgba(255,255,255,0.15)', borderRadius: '12px', padding: '12px' }} />
+      <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '16px', padding: '32px 24px', boxShadow: '0 4px 24px rgba(0,0,0,0.3)', width: '100%', maxWidth: '360px' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '1.1rem', fontWeight: '700', color: '#fff' }}>Manager Access</h2>
+        <input
+          type="password" value={pin} onChange={e => setPin(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && check()}
+          placeholder="Enter PIN"
+          style={{ width: '100%', padding: '14px', fontSize: '1.4rem', textAlign: 'center', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '10px', outline: 'none', letterSpacing: '6px', boxSizing: 'border-box', background: 'rgba(255,255,255,0.1)', color: '#fff' }}
+          autoFocus
+        />
+        <button onClick={check} style={{ width: '100%', marginTop: '16px', padding: '14px', background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
+          Access
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, sub, color, onClick }) {
+  return (
+    <div onClick={onClick} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', padding: '18px 12px', textAlign: 'center', backdropFilter: 'blur(8px)', cursor: onClick ? 'pointer' : 'default' }}>
+      <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>{label}</div>
+      <div style={{ fontSize: '2.4rem', fontWeight: '800', color, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: '6px' }}>{sub}</div>
+      {onClick && <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.25)', marginTop: '8px' }}>tap for details</div>}
+    </div>
+  );
+}
+
+const SECTION_COLORS = { reservations: '#60a5fa', waitlist: '#fbbf24', seated: '#4ade80', canceled: '#f87171' };
+const SECTION_LABELS = { reservations: 'Reservations', waitlist: 'Wait List', seated: 'Seated', canceled: 'Canceled' };
+
+function StatusBadge({ status, source }) {
+  const color = source === 'walkin' && status === 'waitlist' ? '#22d3ee'
+    : status === 'reserved' ? '#60a5fa'
+    : status === 'waitlist' ? '#fbbf24'
+    : status === 'seated' ? '#4ade80'
+    : status === 'cancelled' ? '#f87171'
+    : 'rgba(255,255,255,0.3)';
+  const label = source === 'walkin' && status !== 'seated' && status !== 'cancelled' ? 'Walk-in'
+    : status === 'reserved' ? 'Reserved'
+    : status === 'waitlist' ? 'Waiting'
+    : status === 'seated' ? 'Seated'
+    : status === 'cancelled' ? 'Canceled'
+    : status;
+  return (
+    <span style={{ background: `${color}22`, border: `1px solid ${color}55`, color, borderRadius: '20px', padding: '2px 10px', fontSize: '0.72rem', fontWeight: '600' }}>{label}</span>
+  );
+}
+
+function RecordCard({ r }) {
+  const name = [r.firstName, r.lastName].filter(Boolean).join(' ') || '—';
+  const sourceLabel = r.source === 'walkin' ? 'Walk-in' : r.source === 'phone' ? 'Phone' : r.source === 'online' ? 'Online' : r.source || '';
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+        <div style={{ fontSize: '1rem', fontWeight: '700', color: '#fff' }}>{name}</div>
+        <StatusBadge status={r.status} source={r.source} />
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 20px' }}>
+        {r.guests != null && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Guests: <strong style={{ color: '#fff' }}>{r.guests}</strong></span>}
+        {r.timeHHMM && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Time: <strong style={{ color: '#fff' }}>{r.timeHHMM}</strong></span>}
+        {r.phone && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Phone: <strong style={{ color: '#fff' }}>{r.phone}</strong></span>}
+        {sourceLabel && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Source: <strong style={{ color: '#fff' }}>{sourceLabel}</strong></span>}
+        {r.celebration && r.celebration !== 'None' && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Celebration: <strong style={{ color: '#fff' }}>{r.celebration}</strong></span>}
+        {r.dietary && r.dietary !== 'None' && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Dietary: <strong style={{ color: '#fff' }}>{r.dietary}</strong></span>}
+        {r.notes && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', width: '100%' }}>Notes: <strong style={{ color: '#fff' }}>{r.notes}</strong></span>}
+      </div>
+    </div>
+  );
+}
+
+const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDate, history, waitList, seatedList, canceledList, rows, tableStatuses }) {
+  const [activeSection, setActiveSection] = useState(null);
+
+  const totalResGuests = history.reduce((s, r) => s + (r.guests || 0), 0);
+  const seatedGuests = seatedList.reduce((s, r) => s + (r.guests || 0), 0);
+  const tableKeys = Object.keys(tableStatuses);
+  const occupiedTables = tableKeys.filter(k => tableStatuses[k] === 'occ').length;
+  const totalTables = tableKeys.length;
+  const occupancyPct = totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0;
+  const allDayGuests = rows.reduce((s, r) => s + (r.guests || 0), 0);
+
+  const hourlyRes = {};
+  history.forEach(r => { if (r.timeHHMM) { const h = r.timeHHMM.split(':')[0]; hourlyRes[h] = (hourlyRes[h] || 0) + 1; } });
+
+  const sectionData = { reservations: history, waitlist: waitList, seated: seatedList, canceled: canceledList };
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#000', fontFamily: 'system-ui, sans-serif', color: '#fff' }}>
+      <div style={{ background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#fff', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(12px)' }}>
+        {activeSection ? (
+          <button onClick={() => setActiveSection(null)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '1.4rem', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>‹</button>
+        ) : (
+          <button onClick={() => stepDate(-1)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '1.4rem', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>‹</button>
+        )}
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{activeSection ? SECTION_LABELS[activeSection] : 'Manager Dashboard'}</div>
+          <div style={{ fontSize: '1rem', fontWeight: '700', color: '#fff' }}>{dateLabel}</div>
+        </div>
+        {activeSection ? (
+          <div style={{ width: '44px' }} />
+        ) : (
+          <button onClick={() => stepDate(1)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '1.4rem', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>›</button>
+        )}
+      </div>
+
+      <div style={{ padding: '16px', maxWidth: '480px', margin: '0 auto' }}>
+        {activeSection ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '1.1rem', fontWeight: '700', color: SECTION_COLORS[activeSection] }}>{SECTION_LABELS[activeSection]}</div>
+              <span style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '20px', padding: '2px 10px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>{sectionData[activeSection].length}</span>
+            </div>
+            {sectionData[activeSection].length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', padding: '40px 0', fontSize: '0.9rem' }}>No records for this date</div>
+            ) : (
+              sectionData[activeSection].map((r, i) => <RecordCard key={r.id || i} r={r} />)
+            )}
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+              <StatCard label="Reservations" value={history.length} sub={`${totalResGuests} guests`} color="#60a5fa" onClick={() => setActiveSection('reservations')} />
+              <StatCard label="Wait List" value={waitList.length} sub="currently waiting" color="#fbbf24" onClick={() => setActiveSection('waitlist')} />
+              <StatCard label="Seated" value={seatedList.length} sub={`${seatedGuests} guests`} color="#4ade80" onClick={() => setActiveSection('seated')} />
+              <StatCard label="Canceled" value={canceledList.length} sub="today" color="#f87171" onClick={() => setActiveSection('canceled')} />
+              <StatCard label="Occupancy" value={`${occupancyPct}%`} sub={`${occupiedTables}/${totalTables} tables`} color="#c084fc" />
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', padding: '20px', marginBottom: '12px', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total Guests Today</div>
+              <div style={{ fontSize: '3.2rem', fontWeight: '800', color: '#fff', lineHeight: 1.1 }}>{allDayGuests}</div>
+            </div>
+
+            {Object.keys(hourlyRes).length > 0 && (
+              <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', padding: '16px', marginBottom: '24px' }}>
+                <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px' }}>Reservations by Hour</div>
+                {Object.keys(hourlyRes).sort().map(h => (
+                  <div key={h} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', width: '48px', flexShrink: 0 }}>{h}:00</span>
+                    <div style={{ flex: 1, background: 'rgba(255,255,255,0.08)', borderRadius: '4px', height: '22px', overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.min((hourlyRes[h] / MAX_RESERVATIONS_PER_HOUR) * 100, 100)}%`, background: 'linear-gradient(90deg, #60a5fa, #a78bfa)', height: '100%', borderRadius: '4px' }} />
+                    </div>
+                    <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#fff', width: '18px', textAlign: 'right' }}>{hourlyRes[h]}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+});
+
+/*******************************************************
+ * BLOQUE 8 — APP (CONTROLLER PRINCIPAL)
  *******************************************************/
 export default function App() {
   const isSubmitting = useRef(false);
@@ -1204,7 +1371,10 @@ export default function App() {
   const walkinSubmittingRef = useRef(false);
   const [phoneResLoading, setPhoneResLoading] = useState(false);
   const phoneResSubmittingRef = useRef(false);
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem("viewMode") || "client");
+  const [viewMode, setViewMode] = useState(() => {
+    if (new URLSearchParams(window.location.search).has('manager')) return 'manager-lock';
+    return localStorage.getItem("viewMode") || "client";
+  });
   const [step, setStep] = useState("search");
   const [dateISO, setDateISO] = useState(() => dateISOFromDate(new Date()));
   const [guests, setGuests] = useState(null);
@@ -1763,6 +1933,15 @@ export default function App() {
   };
 
   // --- RENDER ---
+  if (viewMode === 'manager-lock') return <ManagerPinView onSuccess={() => setViewMode('manager')} />;
+  if (viewMode === 'manager') return (
+    <ManagerView
+      dateISO={dateISO} dateLabel={dateLabel} stepDate={stepDate}
+      history={history} waitList={waitList} seatedList={seatedList}
+      canceledList={canceledList} rows={rows} tableStatuses={tableStatuses}
+    />
+  );
+
   if (viewMode === "hostess") {
     return (   
        <HostessView
