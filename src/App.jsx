@@ -1277,7 +1277,7 @@ function RecordCard({ r }) {
   );
 }
 
-const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDate, history, waitList, seatedList, canceledList, rows, tableStatuses }) {
+const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDate, onDateChange, history, waitList, seatedList, canceledList, rows, tableStatuses }) {
   const [activeSection, setActiveSection] = useState(null);
 
   const totalResGuests = history.reduce((s, r) => s + (r.guests || 0), 0);
@@ -1301,9 +1301,18 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
         ) : (
           <button onClick={() => stepDate(-1)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '1.4rem', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>‹</button>
         )}
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{activeSection ? SECTION_LABELS[activeSection] : 'Manager Dashboard'}</div>
-          <div style={{ fontSize: '1rem', fontWeight: '700', color: '#fff' }}>{dateLabel}</div>
+        <div style={{ textAlign: 'center', flex: 1, margin: '0 8px' }}>
+          <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>{activeSection ? SECTION_LABELS[activeSection] : 'Manager Dashboard'}</div>
+          {activeSection ? (
+            <div style={{ fontSize: '1rem', fontWeight: '700', color: '#fff' }}>{dateLabel}</div>
+          ) : (
+            <input
+              type="date"
+              value={dateISO}
+              onChange={e => e.target.value && onDateChange(e.target.value)}
+              style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.95rem', fontWeight: '700', textAlign: 'center', outline: 'none', cursor: 'pointer', width: '100%', colorScheme: 'dark' }}
+            />
+          )}
         </div>
         {activeSection ? (
           <div style={{ width: '44px' }} />
@@ -1372,7 +1381,7 @@ export default function App() {
   const [phoneResLoading, setPhoneResLoading] = useState(false);
   const phoneResSubmittingRef = useRef(false);
   const [viewMode, setViewMode] = useState(() => {
-    if (new URLSearchParams(window.location.search).has('manager')) return 'manager-lock';
+    if (window.location.pathname === '/managerview') return 'manager-lock';
     return localStorage.getItem("viewMode") || "client";
   });
   const [step, setStep] = useState("search");
@@ -1936,7 +1945,7 @@ export default function App() {
   if (viewMode === 'manager-lock') return <ManagerPinView onSuccess={() => setViewMode('manager')} />;
   if (viewMode === 'manager') return (
     <ManagerView
-      dateISO={dateISO} dateLabel={dateLabel} stepDate={stepDate}
+      dateISO={dateISO} dateLabel={dateLabel} stepDate={stepDate} onDateChange={handleDateChange}
       history={history} waitList={waitList} seatedList={seatedList}
       canceledList={canceledList} rows={rows} tableStatuses={tableStatuses}
     />
