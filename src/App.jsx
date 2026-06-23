@@ -483,6 +483,7 @@ const HostessView = React.memo(function HostessView({
             {activeTab === 'walkin' && (
               <div className="sr-walkin-form">
                 {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed.</div>}
+                {dateISO !== dateISOFromDate(new Date()) && <div style={{padding: '10px 14px', background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '8px', marginBottom: '12px', color: '#92400e', fontSize: '0.85rem'}}>Warning: You are viewing <strong>{dateLabel}</strong>, not today. Walk-ins cannot be added for this date.</div>}
                 {isWalkInOnly && <div style={{padding: '12px 15px', background: '#fef3c7', color: '#92400e', borderRadius: '8px', marginBottom: '16px', fontSize: '0.78rem', lineHeight: '1.6'}}>🚶 <strong>Only Walk-In today.</strong> If a customer calls to make a reservation, please tell them: <em>"We are only accepting walk-ins today, but please come by and we will try to seat you as fast as we can."</em></div>}
                 <div style={{display:'flex', gap:'24px', justifyContent:'center', alignItems:'center', flexWrap:'wrap', marginBottom:'20px'}}>
                   <div style={{textAlign:'center', background:'#fff', border:'1.5px solid #e5e7eb', borderRadius:'14px', padding:'12px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', minWidth:'110px'}}>
@@ -1031,6 +1032,7 @@ const ClientSearchView = React.memo(function ClientSearchView({
 }) {
   const range = getAvailableTimeRange(dateISO);
   const [tick, setTick] = useState(0);
+  const [searchError, setSearchError] = useState('');
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(id);
@@ -1053,14 +1055,14 @@ const ClientSearchView = React.memo(function ClientSearchView({
         <header className="sr-header"><img className="sr-logo" src="/logo.png" alt="Logo" /></header>
         <div className="sr-rows">
           <div className="sr-row">
-            <button className="sr-arrow" style={{ position: 'relative', zIndex: 3 }} onClick={(e) => { e.stopPropagation(); stepDate(-1); }}>‹</button>
+            <button className="sr-arrow" style={{ position: 'relative', zIndex: 3 }} onClick={(e) => { e.stopPropagation(); setSearchError(''); stepDate(-1); }}>‹</button>
             <div className="sr-center" style={{ position: 'relative' }}>
               <div className="sr-value">{dateLabel}</div>
               <div className="sr-label">Date</div>
-              <input type="date" value={dateISO} onChange={(e) => onDateChange(e.target.value)}
+              <input type="date" value={dateISO} min={dateISOFromDate(new Date())} onChange={(e) => { setSearchError(''); onDateChange(e.target.value); }}
                 style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 2 }} />
             </div>
-            <button className="sr-arrow" style={{ position: 'relative', zIndex: 3 }} onClick={(e) => { e.stopPropagation(); stepDate(1); }}>›</button>
+            <button className="sr-arrow" style={{ position: 'relative', zIndex: 3 }} onClick={(e) => { e.stopPropagation(); setSearchError(''); stepDate(1); }}>›</button>
           </div>
           <div className="sr-row" style={{cursor: 'default'}}>
             <div className="sr-center" style={{gridColumn: '1 / -1'}}>
@@ -1103,7 +1105,22 @@ const ClientSearchView = React.memo(function ClientSearchView({
         ) : availableSlots.length === 0 ? (
           <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px'}}>No availability for this date. Please try another day.</div>
         ) : (
-          <button className="sr-search" onClick={() => { if (!guests || guests < 1) return alert("Please enter the number of guests."); setStep("details"); }}>Search</button>
+          <>
+            {searchError && (
+              <div style={{ margin: '16px 0 8px', padding: '12px 16px', background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '12px', color: '#92400e', fontSize: '0.88rem', textAlign: 'center', fontWeight: '500' }}>
+                {searchError}
+              </div>
+            )}
+            <button className="sr-search" onClick={() => {
+              setSearchError('');
+              if (dateISO < dateISOFromDate(new Date())) {
+                setSearchError('Please select another date, bookings in past dates are not allowed.');
+                return;
+              }
+              if (!guests || guests < 1) return alert("Please enter the number of guests.");
+              setStep("details");
+            }}>Search</button>
+          </>
         )}
         <div className="sr-foot">
           If your party is over 25 people please{' '}
@@ -1410,6 +1427,8 @@ export default function App() {
     if (walkinSubmittingRef.current) return;
     walkinSubmittingRef.current = true;
     if (isBlackout) { walkinSubmittingRef.current = false; return alert("Cannot add to waitlist on a closed day."); }
+    const todayISO = dateISOFromDate(new Date());
+    if (dateISO !== todayISO) { walkinSubmittingRef.current = false; return alert("Walk-ins can only be added for today's date. Please switch to today."); }
     if (!walkInForm.firstName) { walkinSubmittingRef.current = false; return alert("First name is required."); }
     setWalkinLoading(true);
 
@@ -1476,6 +1495,7 @@ export default function App() {
     const _resetPhoneRef = () => { phoneResSubmittingRef.current = false; };
 
     if (isBlackout) { _resetPhoneRef(); return alert("Cannot make reservations on a closed day."); }
+    if (dateISO < dateISOFromDate(new Date())) { _resetPhoneRef(); return alert("Cannot make reservations for a past date."); }
     if (!phoneResForm.firstName || !phoneResForm.lastName || !phoneResForm.phone) {
       _resetPhoneRef(); return alert("Name, Last Name and Phone are required.");
     }
@@ -1665,7 +1685,12 @@ export default function App() {
     isSubmitting.current = true;
     setSubmitting(true);
 
-    // Validación de horario
+    // Validación de fecha y horario
+    if (dateISO < dateISOFromDate(new Date())) {
+      isSubmitting.current = false;
+      setSubmitting(false);
+      return;
+    }
     if (!isTimeAllowed(dateISO, timeHHMM)) {
       const range = getAvailableTimeRange(dateISO);
       return alert(
