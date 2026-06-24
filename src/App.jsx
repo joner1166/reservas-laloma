@@ -1259,14 +1259,17 @@ function StatusBadge({ status, source }) {
   );
 }
 
-function RecordCard({ r }) {
+function RecordCard({ r, onClick }) {
   const name = [r.firstName, r.lastName].filter(Boolean).join(' ') || '—';
   const sourceLabel = r.source === 'walkin' ? 'Walk-in' : r.source === 'phone' ? 'Phone' : r.source === 'online' ? 'Online' : r.source || '';
   return (
-    <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
+    <div onClick={onClick} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px', cursor: onClick ? 'pointer' : 'default' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
         <div style={{ fontSize: '1rem', fontWeight: '700', color: '#fff' }}>{name}</div>
-        <StatusBadge status={r.status} source={r.source} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <StatusBadge status={r.status} source={r.source} />
+          {onClick && <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '1.1rem' }}>›</span>}
+        </div>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 20px' }}>
         {r.guests != null && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Guests: <strong style={{ color: '#fff' }}>{r.guests}</strong></span>}
@@ -1281,8 +1284,85 @@ function RecordCard({ r }) {
   );
 }
 
-const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDate, onDateChange, history, waitList, seatedList, canceledList, rows, tableStatuses }) {
+const CELEBRATION_OPTIONS = ['None','Birthday','Anniversary','Quinceañera','Graduation','Baby Shower','Other'];
+const DIETARY_OPTIONS = ['None','Vegetarian','Vegan','Gluten-Free','Nut Allergy','Dairy-Free','Other'];
+const mgInput = { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '10px 12px', color: '#fff', fontSize: '0.9rem', width: '100%', boxSizing: 'border-box', outline: 'none' };
+const mgLabel = { display: 'block', fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' };
+
+const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDate, onDateChange, history, waitList, seatedList, canceledList, rows, tableStatuses, isBlackout, onRefresh }) {
   const [activeSection, setActiveSection] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
+  const [addMode, setAddMode] = useState(null);
+  const [addForm, setAddForm] = useState({ firstName: '', lastName: '', phone: '', guests: 2, timeHHMM: '19:00', celebration: 'None', dietary: 'None', notes: '' });
+  const [addSaving, setAddSaving] = useState(false);
+  const aef = (field) => (e) => setAddForm(prev => ({ ...prev, [field]: e.target.value }));
+  const resetAdd = () => { setAddMode(null); setAddForm({ firstName: '', lastName: '', phone: '', guests: 2, timeHHMM: '19:00', celebration: 'None', dietary: 'None', notes: '' }); };
+  const mkToken = () => { try { if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID(); } catch(_){} return `${Date.now()}-${Math.random().toString(16).slice(2)}`; };
+
+  const handleAddWalkin = async () => {
+    if (isBlackout) return alert('Cannot add walk-ins on a closed day.');
+    if (dateISO !== dateISOFromDate(new Date())) return alert('Walk-ins can only be added for today\'s date.');
+    if (!addForm.firstName.trim()) return alert('First name is required.');
+    setAddSaving(true);
+    try {
+      const cancelToken = mkToken();
+      const { error } = await insertWaitlistRecord({ firstName: addForm.firstName.trim().toUpperCase(), lastName: (addForm.lastName || '').trim().toUpperCase(), guests: Number(addForm.guests) || 1, dateISO, timeHHMM: addForm.timeHHMM, phone: addForm.phone || null, celebration: addForm.celebration, dietary: addForm.dietary, notes: addForm.notes || null, status: 'waitlist', source: 'walkin', cancel_token: cancelToken, estimated_wait: 15 });
+      if (error) throw error;
+      if (addForm.phone) {
+        try { await fetch('/.netlify/functions/send-sms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'waitlist', phone: addForm.phone, firstName: addForm.firstName, guests: Number(addForm.guests) || 1, cancel_token: cancelToken }) }); } catch(e) { console.error('SMS fail', e); }
+      }
+      resetAdd();
+    } catch(e) { alert('Error: ' + (e?.message || e)); }
+    finally { setAddSaving(false); }
+  };
+
+  const handleAddReservation = async () => {
+    if (isBlackout) return alert('Cannot make reservations on a closed day.');
+    if (dateISO < dateISOFromDate(new Date())) return alert('Cannot make reservations for a past date.');
+    if (!addForm.firstName.trim() || !addForm.lastName.trim()) return alert('First and last name are required.');
+    if (!isTimeAllowed(dateISO, addForm.timeHHMM)) {
+      const range = getAvailableTimeRange(dateISO);
+      return alert(range ? `Reservations only accepted between ${formatTimeLabel(range.open)} and ${formatTimeLabel(range.lastSlot)}.` : 'The restaurant is closed this day.');
+    }
+    setAddSaving(true);
+    try {
+      const cancelToken = mkToken();
+      const phone = addForm.phone || null;
+      const { error } = await insertReservationRecord({ firstName: addForm.firstName.trim().toUpperCase(), lastName: addForm.lastName.trim().toUpperCase(), guests: Number(addForm.guests) || 1, dateISO, timeHHMM: addForm.timeHHMM, phone, celebration: addForm.celebration, dietary: addForm.dietary, notes: addForm.notes || null, status: 'reserved', source: 'reservation', cancel_token: cancelToken });
+      if (error) throw error;
+      if (phone) {
+        try { await fetch('/.netlify/functions/send-sms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'confirm', phone, firstName: addForm.firstName, dateLabel, timeLabel: formatTimeLabel(addForm.timeHHMM), guests: Number(addForm.guests) || 1, cancel_token: cancelToken }) }); } catch(e) { console.error('SMS fail', e); }
+      }
+      resetAdd();
+    } catch(e) { alert('Error: ' + (e?.message || e)); }
+    finally { setAddSaving(false); }
+  };
+
+  const openEdit = (r) => {
+    setEditingRecord(r);
+    setEditForm({ firstName: r.firstName || '', lastName: r.lastName || '', guests: r.guests ?? '', timeHHMM: r.timeHHMM || '', phone: r.phone || '', notes: r.notes || '', celebration: r.celebration || 'None', dietary: r.dietary || 'None' });
+  };
+  const closeEdit = () => { setEditingRecord(null); setEditForm({}); };
+
+  const handleSave = async () => {
+    setEditSaving(true);
+    try {
+      await updateReservationRecord(editingRecord.id, { firstName: editForm.firstName, lastName: editForm.lastName, guests: Number(editForm.guests) || editingRecord.guests, timeHHMM: editForm.timeHHMM || null, phone: editForm.phone, notes: editForm.notes, celebration: editForm.celebration, dietary: editForm.dietary });
+      closeEdit();
+    } finally { setEditSaving(false); }
+  };
+
+  const handleCancelReservation = async () => {
+    if (!window.confirm('Cancel this reservation?')) return;
+    setEditSaving(true);
+    try { await cancelReservation(editingRecord.id); closeEdit(); }
+    finally { setEditSaving(false); }
+  };
+
+  const ef = (field) => (e) => setEditForm(prev => ({ ...prev, [field]: e.target.value }));
 
   const totalResGuests = history.reduce((s, r) => s + (r.guests || 0), 0);
   const seatedGuests = seatedList.reduce((s, r) => s + (r.guests || 0), 0);
@@ -1300,25 +1380,18 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
   return (
     <div style={{ minHeight: '100vh', background: '#000', fontFamily: 'system-ui, sans-serif', color: '#fff' }}>
       <div style={{ background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#fff', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(12px)' }}>
-        {activeSection ? (
-          <button onClick={() => setActiveSection(null)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '1.4rem', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>‹</button>
-        ) : (
-          <button onClick={() => stepDate(-1)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '1.4rem', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>‹</button>
-        )}
+        <button onClick={() => { if (addMode) { resetAdd(); } else if (editingRecord) { closeEdit(); } else if (activeSection) { setActiveSection(null); } else { stepDate(-1); } }} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '1.4rem', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>‹</button>
         <div style={{ textAlign: 'center', flex: 1, margin: '0 8px' }}>
-          <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>{activeSection ? SECTION_LABELS[activeSection] : 'Manager Dashboard'}</div>
-          {activeSection ? (
+          <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>
+            {addMode === 'walkin' ? 'Add Walk-in' : addMode === 'reservation' ? 'Add Reservation' : editingRecord ? 'Edit Record' : activeSection ? SECTION_LABELS[activeSection] : 'Manager Dashboard'}
+          </div>
+          {activeSection || editingRecord || addMode ? (
             <div style={{ fontSize: '1rem', fontWeight: '700', color: '#fff' }}>{dateLabel}</div>
           ) : (
-            <input
-              type="date"
-              value={dateISO}
-              onChange={e => e.target.value && onDateChange(e.target.value)}
-              style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.95rem', fontWeight: '700', textAlign: 'center', outline: 'none', cursor: 'pointer', width: '100%', colorScheme: 'dark' }}
-            />
+            <input type="date" value={dateISO} onChange={e => e.target.value && onDateChange(e.target.value)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.95rem', fontWeight: '700', textAlign: 'center', outline: 'none', cursor: 'pointer', width: '100%', colorScheme: 'dark' }} />
           )}
         </div>
-        {activeSection ? (
+        {activeSection || editingRecord || addMode ? (
           <div style={{ width: '44px' }} />
         ) : (
           <button onClick={() => stepDate(1)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '1.4rem', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>›</button>
@@ -1326,7 +1399,71 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
       </div>
 
       <div style={{ padding: '16px', maxWidth: '480px', margin: '0 auto' }}>
-        {activeSection ? (
+        {addMode ? (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+              <div><label style={mgLabel}>First Name *</label><input style={mgInput} value={addForm.firstName} onChange={aef('firstName')} autoFocus /></div>
+              <div><label style={mgLabel}>Last Name</label><input style={mgInput} value={addForm.lastName} onChange={aef('lastName')} /></div>
+              <div><label style={mgLabel}>Guests</label><input type="number" min="1" max="20" style={mgInput} value={addForm.guests} onChange={aef('guests')} /></div>
+              {addMode === 'reservation' && <div><label style={mgLabel}>Time</label><input type="time" style={mgInput} value={addForm.timeHHMM} onChange={aef('timeHHMM')} /></div>}
+            </div>
+            <div style={{ marginBottom: '12px' }}><label style={mgLabel}>Phone</label><input type="tel" style={mgInput} value={addForm.phone} onChange={aef('phone')} placeholder="+1..." /></div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={mgLabel}>Celebration</label>
+              <select style={{ ...mgInput, appearance: 'none' }} value={addForm.celebration} onChange={aef('celebration')}>
+                {CELEBRATION_OPTIONS.map(o => <option key={o} value={o} style={{ background: '#111' }}>{o}</option>)}
+              </select>
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={mgLabel}>Dietary</label>
+              <select style={{ ...mgInput, appearance: 'none' }} value={addForm.dietary} onChange={aef('dietary')}>
+                {DIETARY_OPTIONS.map(o => <option key={o} value={o} style={{ background: '#111' }}>{o}</option>)}
+              </select>
+            </div>
+            <div style={{ marginBottom: '20px' }}><label style={mgLabel}>Notes</label><textarea rows={3} style={{ ...mgInput, resize: 'vertical' }} value={addForm.notes} onChange={aef('notes')} /></div>
+            <button onClick={addMode === 'walkin' ? handleAddWalkin : handleAddReservation} disabled={addSaving} style={{ width: '100%', padding: '14px', background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
+              {addSaving ? 'Saving...' : addMode === 'walkin' ? 'Add to Wait List' : 'Confirm Reservation'}
+            </button>
+          </div>
+        ) : editingRecord ? (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+              <div><label style={mgLabel}>First Name</label><input style={mgInput} value={editForm.firstName} onChange={ef('firstName')} /></div>
+              <div><label style={mgLabel}>Last Name</label><input style={mgInput} value={editForm.lastName} onChange={ef('lastName')} /></div>
+              <div><label style={mgLabel}>Guests</label><input type="number" min="1" max="20" style={mgInput} value={editForm.guests} onChange={ef('guests')} /></div>
+              {(editingRecord.status === 'reserved' || editingRecord.status === 'seated') && (
+                <div><label style={mgLabel}>Time</label><input type="time" style={mgInput} value={editForm.timeHHMM} onChange={ef('timeHHMM')} /></div>
+              )}
+            </div>
+            <div style={{ marginBottom: '12px' }}><label style={mgLabel}>Phone</label><input style={mgInput} value={editForm.phone} onChange={ef('phone')} /></div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={mgLabel}>Celebration</label>
+              <select style={{ ...mgInput, appearance: 'none' }} value={editForm.celebration} onChange={ef('celebration')}>
+                {CELEBRATION_OPTIONS.map(o => <option key={o} value={o} style={{ background: '#111' }}>{o}</option>)}
+              </select>
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={mgLabel}>Dietary</label>
+              <select style={{ ...mgInput, appearance: 'none' }} value={editForm.dietary} onChange={ef('dietary')}>
+                {DIETARY_OPTIONS.map(o => <option key={o} value={o} style={{ background: '#111' }}>{o}</option>)}
+              </select>
+            </div>
+            <div style={{ marginBottom: '20px' }}><label style={mgLabel}>Notes</label><textarea rows={3} style={{ ...mgInput, resize: 'vertical' }} value={editForm.notes} onChange={ef('notes')} /></div>
+            <button onClick={handleSave} disabled={editSaving} style={{ width: '100%', padding: '14px', background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', marginBottom: '10px' }}>
+              {editSaving ? 'Saving...' : 'Save Changes'}
+            </button>
+            {editingRecord.status === 'waitlist' && (
+              <button onClick={async () => { setEditSaving(true); try { await updatePartyToSeated(editingRecord.id); closeEdit(); } finally { setEditSaving(false); } }} disabled={editSaving} style={{ width: '100%', padding: '14px', background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', marginBottom: '10px' }}>
+                Seat Party
+              </button>
+            )}
+            {editingRecord.status !== 'cancelled' && (
+              <button onClick={handleCancelReservation} disabled={editSaving} style={{ width: '100%', padding: '14px', background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
+                Cancel Reservation
+              </button>
+            )}
+          </div>
+        ) : activeSection ? (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
               <div style={{ fontSize: '1.1rem', fontWeight: '700', color: SECTION_COLORS[activeSection] }}>{SECTION_LABELS[activeSection]}</div>
@@ -1335,7 +1472,7 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
             {sectionData[activeSection].length === 0 ? (
               <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', padding: '40px 0', fontSize: '0.9rem' }}>No records for this date</div>
             ) : (
-              sectionData[activeSection].map((r, i) => <RecordCard key={r.id || i} r={r} />)
+              sectionData[activeSection].map((r, i) => <RecordCard key={r.id || i} r={r} onClick={() => openEdit(r)} />)
             )}
           </>
         ) : (
@@ -1354,7 +1491,7 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
             </div>
 
             {Object.keys(hourlyRes).length > 0 && (
-              <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', padding: '16px', marginBottom: '24px' }}>
+              <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
                 <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px' }}>Reservations by Hour</div>
                 {Object.keys(hourlyRes).sort().map(h => (
                   <div key={h} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -1367,9 +1504,16 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
                 ))}
               </div>
             )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px' }}>
+              <button onClick={() => setAddMode('walkin')} style={{ padding: '14px', background: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '10px', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' }}>+ Walk-in</button>
+              <button onClick={() => setAddMode('reservation')} style={{ padding: '14px', background: 'rgba(96,165,250,0.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.3)', borderRadius: '10px', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' }}>+ Reservation</button>
+            </div>
           </>
         )}
       </div>
+      <button onClick={async () => { setRefreshing(true); try { await onRefresh(); } finally { setRefreshing(false); } }} style={{ position: 'fixed', bottom: '24px', right: '20px', width: '48px', height: '48px', borderRadius: '50%', background: '#1e3a5f', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '1.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', opacity: refreshing ? 0.5 : 1, zIndex: 50 }}>
+        {refreshing ? '…' : '↻'}
+      </button>
     </div>
   );
 });
@@ -1951,7 +2095,8 @@ export default function App() {
     <ManagerView
       dateISO={dateISO} dateLabel={dateLabel} stepDate={stepDate} onDateChange={handleDateChange}
       history={history} waitList={waitList} seatedList={seatedList}
-      canceledList={canceledList} rows={rows} tableStatuses={tableStatuses}
+      canceledList={canceledList} rows={rows} tableStatuses={tableStatuses} isBlackout={isBlackout}
+      onRefresh={async () => { const { data } = await fetchRowsForDay(supabase, dateISO); setRows(data || []); }}
     />
   );
 
