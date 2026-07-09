@@ -1204,36 +1204,38 @@ function ManagerPinView({ onSuccess }) {
   const [pin, setPin] = useState('');
   const check = () => { if (pin === MANAGER_PASSWORD) onSuccess(); else alert('Incorrect PIN'); };
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: '60px', background: '#000', padding: '60px 24px 24px' }}>
-      <img src="/logo.png" alt="Logo" style={{ width: '304px', marginBottom: '32px', background: 'rgba(255,255,255,0.15)', borderRadius: '12px', padding: '12px' }} />
-      <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '16px', padding: '32px 24px', boxShadow: '0 4px 24px rgba(0,0,0,0.3)', width: '100%', maxWidth: '360px' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '1.1rem', fontWeight: '700', color: '#fff' }}>Manager Access</h2>
-        <input
-          type="password" value={pin} onChange={e => setPin(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && check()}
-          placeholder="Enter PIN"
-          style={{ width: '100%', padding: '14px', fontSize: '1.4rem', textAlign: 'center', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '10px', outline: 'none', letterSpacing: '6px', boxSizing: 'border-box', background: 'rgba(255,255,255,0.1)', color: '#fff' }}
-          autoFocus
-        />
-        <button onClick={check} style={{ width: '100%', marginTop: '16px', padding: '14px', background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
+    <div style={{ minHeight: '100vh', background: '#120D08', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 26, padding: '24px 20px', fontFamily: "'Space Grotesk',system-ui,sans-serif", position: 'relative', overflow: 'hidden' }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap'); @keyframes lmPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}`}</style>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(1300px 640px at 50% -12%,rgba(227,169,74,0.12),transparent 62%),radial-gradient(900px 500px at 100% 110%,rgba(226,123,92,0.07),transparent 60%)' }} />
+      <img src="/logo.png" alt="Logo" style={{ height: 72, position: 'relative', filter: 'drop-shadow(0 8px 26px rgba(0,0,0,.6))' }} />
+      <div style={{ position: 'relative', width: '100%', maxWidth: 380, background: 'linear-gradient(180deg,#201911,#17110A)', border: '1px solid rgba(227,169,74,0.16)', borderRadius: 22, padding: '34px 30px 30px', boxShadow: '0 34px 90px -34px rgba(0,0,0,.85)', animation: 'lmPop .5s ease both' }}>
+        <div style={{ textAlign: 'center', marginBottom: 26 }}>
+          <div style={{ textTransform: 'uppercase', letterSpacing: '.3em', fontSize: 11, color: '#8A7C6B' }}>Restaurant Manager</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 600, fontSize: 32, color: '#F1E8DA', marginTop: 4 }}>Manager Access</div>
+        </div>
+        <input type="password" value={pin} onChange={e => setPin(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} placeholder="Enter access number"
+          style={{ width: '100%', padding: '17px 18px', borderRadius: 13, border: '1px solid rgba(227,169,74,0.22)', background: 'rgba(255,255,255,0.03)', color: '#F1E8DA', fontSize: '1.6rem', textAlign: 'center', letterSpacing: '6px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', colorScheme: 'dark' }} autoFocus />
+        <button onClick={check} style={{ width: '100%', marginTop: 18, padding: 15, borderRadius: 13, border: 'none', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.9rem', letterSpacing: '.14em', textTransform: 'uppercase', cursor: pin ? 'pointer' : 'not-allowed', ...(pin ? { background: 'linear-gradient(90deg,#E9B65C,#E27B5C)', color: '#241505', boxShadow: '0 14px 32px -14px rgba(227,169,74,.75)' } : { background: 'rgba(255,255,255,0.05)', color: '#6B5F52' }) }}>
           Access
         </button>
       </div>
+      <div style={{ position: 'relative', fontSize: 12, color: '#6B5F52' }}>Enter your access number to open the dashboard</div>
     </div>
   );
 }
 
 function StatCard({ label, value, sub, color, onClick }) {
+  const active = !!onClick;
   return (
-    <div onClick={onClick} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: onClick ? 'pointer' : 'default', marginBottom: '10px' }}>
-      <div>
-        <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2px' }}>{label}</div>
-        <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)' }}>{sub}</div>
+    <div onClick={onClick} style={{ background: active ? 'linear-gradient(180deg,#201911,#181109)' : 'linear-gradient(180deg,#1D170F,#161009)', border: `1px solid rgba(227,169,74,${active ? 0.28 : 0.10})`, borderRadius: 16, padding: '16px 16px 15px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 104, cursor: active ? 'pointer' : 'default' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ textTransform: 'uppercase', letterSpacing: '.18em', fontSize: 11, color: active ? '#C9A876' : '#8A7C6B' }}>{label}</div>
+          <div style={{ fontSize: 12, color: active ? '#8A7C6B' : '#5A5145', marginTop: 5 }}>{sub}</div>
+        </div>
+        {active && <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#7A6D5C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18"/></svg>}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{ fontSize: '2rem', fontWeight: '800', color }}>{value}</div>
-        {onClick && <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '1.2rem' }}>›</span>}
-      </div>
+      <div style={{ fontWeight: 700, fontSize: 40, lineHeight: 1, fontVariantNumeric: 'tabular-nums', color: active ? color : '#5A5145', marginTop: 10 }}>{value}</div>
     </div>
   );
 }
@@ -1242,20 +1244,21 @@ const SECTION_COLORS = { reservations: '#60a5fa', waitlist: '#fbbf24', seated: '
 const SECTION_LABELS = { reservations: 'Reservations', waitlist: 'Wait List', seated: 'Seated', canceled: 'Canceled' };
 
 function StatusBadge({ status, source }) {
-  const color = source === 'walkin' && status === 'waitlist' ? '#22d3ee'
-    : status === 'reserved' ? '#60a5fa'
-    : status === 'waitlist' ? '#fbbf24'
-    : status === 'seated' ? '#4ade80'
-    : status === 'cancelled' ? '#f87171'
+  const isWalkin = source === 'walkin' && status !== 'seated' && status !== 'cancelled';
+  const color = isWalkin ? '#E3A94A'
+    : status === 'reserved' ? '#5B8FCB'
+    : status === 'waitlist' ? '#E3A94A'
+    : status === 'seated' ? '#8CC98F'
+    : status === 'cancelled' ? '#E27B5C'
     : 'rgba(255,255,255,0.3)';
-  const label = source === 'walkin' && status !== 'seated' && status !== 'cancelled' ? 'Walk-in'
+  const label = isWalkin ? 'Walk-in'
     : status === 'reserved' ? 'Reserved'
     : status === 'waitlist' ? 'Waiting'
     : status === 'seated' ? 'Seated'
     : status === 'cancelled' ? 'Canceled'
     : status;
   return (
-    <span style={{ background: `${color}22`, border: `1px solid ${color}55`, color, borderRadius: '20px', padding: '2px 10px', fontSize: '0.72rem', fontWeight: '600' }}>{label}</span>
+    <span style={{ background: `${color}1A`, border: `1px solid ${color}55`, color, borderRadius: 99, padding: '5px 13px', fontSize: '0.72rem', fontWeight: 600 }}>{label}</span>
   );
 }
 
@@ -1263,31 +1266,31 @@ function RecordCard({ r, onClick }) {
   const name = [r.firstName, r.lastName].filter(Boolean).join(' ') || '—';
   const sourceLabel = r.source === 'walkin' ? 'Walk-in' : r.source === 'phone' ? 'Phone' : r.source === 'online' ? 'Online' : r.source || '';
   return (
-    <div onClick={onClick} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px', cursor: onClick ? 'pointer' : 'default' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <div style={{ fontSize: '1rem', fontWeight: '700', color: '#fff' }}>{name}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div onClick={onClick} style={{ background: 'linear-gradient(180deg,#201911,#181109)', border: '1px solid rgba(227,169,74,0.14)', borderRadius: 16, padding: 20, marginBottom: 14, cursor: onClick ? 'pointer' : 'default' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ fontWeight: 600, fontSize: 18, letterSpacing: '.02em', color: '#F1E8DA' }}>{name}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <StatusBadge status={r.status} source={r.source} />
-          {onClick && <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '1.1rem' }}>›</span>}
+          {onClick && <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#7A6D5C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18"/></svg>}
         </div>
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 20px' }}>
-        {r.guests != null && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Guests: <strong style={{ color: '#fff' }}>{r.guests}</strong></span>}
-        {r.timeHHMM && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Time: <strong style={{ color: '#fff' }}>{r.timeHHMM}</strong></span>}
-        {r.phone && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Phone: <strong style={{ color: '#fff' }}>{r.phone}</strong></span>}
-        {sourceLabel && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Source: <strong style={{ color: '#fff' }}>{sourceLabel}</strong></span>}
-        {r.celebration && r.celebration !== 'None' && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Celebration: <strong style={{ color: '#fff' }}>{r.celebration}</strong></span>}
-        {r.dietary && r.dietary !== 'None' && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>Dietary: <strong style={{ color: '#fff' }}>{r.dietary}</strong></span>}
-        {r.notes && <span style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', width: '100%' }}>Notes: <strong style={{ color: '#fff' }}>{r.notes}</strong></span>}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 34px', fontSize: 14, color: '#8A7C6B' }}>
+        {r.guests != null && <div>Guests: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{r.guests}</strong></div>}
+        {r.timeHHMM && <div>Time: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{r.timeHHMM}</strong></div>}
+        {r.phone && <div>Phone: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{r.phone}</strong></div>}
+        {sourceLabel && <div>Source: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{sourceLabel}</strong></div>}
+        {r.celebration && r.celebration !== 'None' && <div>Celebration: <strong style={{ color: '#E9B65C', fontWeight: 600 }}>{r.celebration}</strong></div>}
+        {r.dietary && r.dietary !== 'None' && <div>Dietary: <strong style={{ color: '#E9B65C', fontWeight: 600 }}>{r.dietary}</strong></div>}
       </div>
+      {r.notes && <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(227,169,74,0.08)', fontSize: 14, color: '#8A7C6B' }}>Notes: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{r.notes}</strong></div>}
     </div>
   );
 }
 
 const CELEBRATION_OPTIONS = ['None','Birthday','Anniversary','Quinceañera','Graduation','Baby Shower','Other'];
 const DIETARY_OPTIONS = ['None','Vegetarian','Vegan','Gluten-Free','Nut Allergy','Dairy-Free','Other'];
-const mgInput = { background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '10px 12px', color: '#fff', fontSize: '0.9rem', width: '100%', boxSizing: 'border-box', outline: 'none' };
-const mgLabel = { display: 'block', fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' };
+const mgInput = { width: '100%', padding: '13px 14px', borderRadius: 10, border: '1px solid rgba(227,169,74,0.18)', background: 'rgba(255,255,255,0.03)', color: '#F1E8DA', fontFamily: "'Space Grotesk',system-ui,sans-serif", fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', colorScheme: 'dark' };
+const mgLabel = { display: 'block', fontSize: '0.68rem', color: '#C9A876', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 7 };
 
 const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDate, onDateChange, history, waitList, seatedList, canceledList, rows, tableStatuses, isBlackout, onRefresh }) {
   const [activeSection, setActiveSection] = useState(null);
@@ -1298,6 +1301,8 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
   const [addMode, setAddMode] = useState(null);
   const [addForm, setAddForm] = useState({ firstName: '', lastName: '', phone: '', guests: 2, timeHHMM: '19:00', celebration: 'None', dietary: 'None', notes: '' });
   const [addSaving, setAddSaving] = useState(false);
+  const [clock, setClock] = useState('');
+  useEffect(() => { const tick = () => setClock(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })); tick(); const iv = setInterval(tick, 10000); return () => clearInterval(iv); }, []);
   const aef = (field) => (e) => setAddForm(prev => ({ ...prev, [field]: e.target.value }));
   const resetAdd = () => { setAddMode(null); setAddForm({ firstName: '', lastName: '', phone: '', guests: 2, timeHHMM: '19:00', celebration: 'None', dietary: 'None', notes: '' }); };
   const mkToken = () => { try { if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID(); } catch(_){} return `${Date.now()}-${Math.random().toString(16).slice(2)}`; };
@@ -1378,56 +1383,90 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
   const sectionData = { reservations: history, waitlist: waitList, seated: seatedList, canceled: canceledList };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#000', fontFamily: 'system-ui, sans-serif', color: '#fff' }}>
-      <div style={{ background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#fff', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(12px)' }}>
-        <button onClick={() => { if (addMode) { resetAdd(); } else if (editingRecord) { closeEdit(); } else if (activeSection) { setActiveSection(null); } else { stepDate(-1); } }} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '1.4rem', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>‹</button>
-        <div style={{ textAlign: 'center', flex: 1, margin: '0 8px' }}>
-          <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>
-            {addMode === 'walkin' ? 'Add Walk-in' : addMode === 'reservation' ? 'Add Reservation' : editingRecord ? 'Edit Record' : activeSection ? SECTION_LABELS[activeSection] : 'Manager Dashboard'}
+    <div style={{ minHeight: '100vh', background: '#120D08', fontFamily: "'Space Grotesk',system-ui,sans-serif", color: '#F1E8DA', position: 'relative', overflow: 'hidden' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+        @keyframes lmFade { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+        @keyframes lmPulse { 0%,100%{opacity:1;} 50%{opacity:.5;} }
+        @keyframes lmSpin { to { transform: rotate(360deg); } }
+        input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.6) sepia(0.4) hue-rotate(0deg); opacity:.5; }
+        input::placeholder, textarea::placeholder { color: #6B5F52; }
+        select option { background: #1C1309; }
+      `}</style>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(1300px 640px at 50% -12%,rgba(227,169,74,0.10),transparent 62%),radial-gradient(900px 500px at 100% 110%,rgba(226,123,92,0.06),transparent 60%)' }} />
+
+      {/* ── HEADER ── */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, padding: '14px 16px', borderBottom: '1px solid rgba(227,169,74,0.10)', background: 'rgba(18,13,8,0.94)', backdropFilter: 'blur(12px)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: 480, margin: '0 auto' }}>
+          <button onClick={() => { if (addMode) resetAdd(); else if (editingRecord) closeEdit(); else if (activeSection) setActiveSection(null); else stepDate(-1); }}
+            style={{ flexShrink: 0, width: 42, height: 42, borderRadius: '50%', border: '1px solid rgba(227,169,74,0.18)', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#E3A94A' }}>
+            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
+          </button>
+          <div style={{ textAlign: 'center', flex: 1, margin: '0 8px' }}>
+            <div style={{ textTransform: 'uppercase', letterSpacing: '.22em', fontSize: 11, color: '#8A7C6B', marginBottom: 3 }}>
+              {addMode === 'walkin' ? 'Add Walk-in' : addMode === 'reservation' ? 'Add Reservation' : editingRecord ? 'Edit Record' : activeSection ? SECTION_LABELS[activeSection] : 'Manager Dashboard'}
+            </div>
+            {activeSection || editingRecord || addMode ? (
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 600, fontSize: 22, color: '#F1E8DA' }}>{dateLabel}</div>
+            ) : (
+              <input type="date" value={dateISO} onChange={e => e.target.value && onDateChange(e.target.value)}
+                style={{ background: 'transparent', border: 'none', color: '#F1E8DA', fontSize: '1rem', fontWeight: 700, textAlign: 'center', outline: 'none', cursor: 'pointer', width: '100%', colorScheme: 'dark', fontFamily: 'inherit' }} />
+            )}
           </div>
           {activeSection || editingRecord || addMode ? (
-            <div style={{ fontSize: '1rem', fontWeight: '700', color: '#fff' }}>{dateLabel}</div>
+            <div style={{ width: 42 }} />
           ) : (
-            <input type="date" value={dateISO} onChange={e => e.target.value && onDateChange(e.target.value)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.95rem', fontWeight: '700', textAlign: 'center', outline: 'none', cursor: 'pointer', width: '100%', colorScheme: 'dark' }} />
+            <button onClick={() => stepDate(1)} style={{ flexShrink: 0, width: 42, height: 42, borderRadius: '50%', border: '1px solid rgba(227,169,74,0.18)', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#E3A94A' }}>
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+            </button>
           )}
         </div>
-        {activeSection || editingRecord || addMode ? (
-          <div style={{ width: '44px' }} />
-        ) : (
-          <button onClick={() => stepDate(1)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '1.4rem', width: '44px', height: '44px', borderRadius: '50%', cursor: 'pointer' }}>›</button>
+        {!activeSection && !editingRecord && !addMode && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 12px', borderRadius: 99, border: '1px solid rgba(123,174,126,0.25)', background: 'rgba(123,174,126,0.08)' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#8CC98F', animation: 'lmPulse 2s infinite', flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: '#8A7C6B', fontVariantNumeric: 'tabular-nums' }}>{clock}</span>
+            </div>
+          </div>
         )}
       </div>
 
-      <div style={{ padding: '16px', maxWidth: '480px', margin: '0 auto' }}>
+      {/* ── CONTENT ── */}
+      <div style={{ padding: '16px', maxWidth: '480px', margin: '0 auto', paddingBottom: '96px', animation: 'lmFade .4s ease both' }}>
+
+        {/* ADD FORM */}
         {addMode ? (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <div><label style={mgLabel}>First Name *</label><input style={mgInput} value={addForm.firstName} onChange={aef('firstName')} autoFocus /></div>
               <div><label style={mgLabel}>Last Name</label><input style={mgInput} value={addForm.lastName} onChange={aef('lastName')} /></div>
               <div><label style={mgLabel}>Guests</label><input type="number" min="1" max="20" style={mgInput} value={addForm.guests} onChange={aef('guests')} /></div>
               {addMode === 'reservation' && <div><label style={mgLabel}>Time</label><input type="time" style={mgInput} value={addForm.timeHHMM} onChange={aef('timeHHMM')} /></div>}
             </div>
-            <div style={{ marginBottom: '12px' }}><label style={mgLabel}>Phone</label><input type="tel" style={mgInput} value={addForm.phone} onChange={aef('phone')} placeholder="+1..." /></div>
-            <div style={{ marginBottom: '12px' }}>
+            <div style={{ marginBottom: 14 }}><label style={mgLabel}>Phone</label><input type="tel" style={mgInput} value={addForm.phone} onChange={aef('phone')} placeholder="+1..." /></div>
+            <div style={{ marginBottom: 14 }}>
               <label style={mgLabel}>Celebration</label>
               <select style={{ ...mgInput, appearance: 'none' }} value={addForm.celebration} onChange={aef('celebration')}>
-                {CELEBRATION_OPTIONS.map(o => <option key={o} value={o} style={{ background: '#111' }}>{o}</option>)}
+                {CELEBRATION_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
-            <div style={{ marginBottom: '12px' }}>
+            <div style={{ marginBottom: 14 }}>
               <label style={mgLabel}>Dietary</label>
               <select style={{ ...mgInput, appearance: 'none' }} value={addForm.dietary} onChange={aef('dietary')}>
-                {DIETARY_OPTIONS.map(o => <option key={o} value={o} style={{ background: '#111' }}>{o}</option>)}
+                {DIETARY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
-            <div style={{ marginBottom: '20px' }}><label style={mgLabel}>Notes</label><textarea rows={3} style={{ ...mgInput, resize: 'vertical' }} value={addForm.notes} onChange={aef('notes')} /></div>
-            <button onClick={addMode === 'walkin' ? handleAddWalkin : handleAddReservation} disabled={addSaving} style={{ width: '100%', padding: '14px', background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
-              {addSaving ? 'Saving...' : addMode === 'walkin' ? 'Add to Wait List' : 'Confirm Reservation'}
+            <div style={{ marginBottom: 22 }}><label style={mgLabel}>Notes</label><textarea rows={3} style={{ ...mgInput, resize: 'vertical', lineHeight: 1.5 }} value={addForm.notes} onChange={aef('notes')} /></div>
+            <button onClick={addMode === 'walkin' ? handleAddWalkin : handleAddReservation} disabled={addSaving}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 18, borderRadius: 14, border: '1px solid rgba(233,182,92,0.55)', background: 'linear-gradient(180deg,#E9B65C,#E27B5C)', color: '#2A1704', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.95rem', cursor: addSaving ? 'not-allowed' : 'pointer', opacity: addSaving ? 0.7 : 1, boxShadow: '0 16px 34px -16px rgba(226,123,92,.6)' }}>
+              {addSaving ? 'Saving…' : addMode === 'walkin' ? 'Add to Wait List' : 'Confirm Reservation'}
             </button>
           </div>
+
         ) : editingRecord ? (
+          /* EDIT FORM */
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <div><label style={mgLabel}>First Name</label><input style={mgInput} value={editForm.firstName} onChange={ef('firstName')} /></div>
               <div><label style={mgLabel}>Last Name</label><input style={mgInput} value={editForm.lastName} onChange={ef('lastName')} /></div>
               <div><label style={mgLabel}>Guests</label><input type="number" min="1" max="20" style={mgInput} value={editForm.guests} onChange={ef('guests')} /></div>
@@ -1435,84 +1474,148 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
                 <div><label style={mgLabel}>Time</label><input type="time" style={mgInput} value={editForm.timeHHMM} onChange={ef('timeHHMM')} /></div>
               )}
             </div>
-            <div style={{ marginBottom: '12px' }}><label style={mgLabel}>Phone</label><input style={mgInput} value={editForm.phone} onChange={ef('phone')} /></div>
-            <div style={{ marginBottom: '12px' }}>
+            <div style={{ marginBottom: 14 }}><label style={mgLabel}>Phone</label><input style={mgInput} value={editForm.phone} onChange={ef('phone')} /></div>
+            <div style={{ marginBottom: 14 }}>
               <label style={mgLabel}>Celebration</label>
               <select style={{ ...mgInput, appearance: 'none' }} value={editForm.celebration} onChange={ef('celebration')}>
-                {CELEBRATION_OPTIONS.map(o => <option key={o} value={o} style={{ background: '#111' }}>{o}</option>)}
+                {CELEBRATION_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
-            <div style={{ marginBottom: '12px' }}>
+            <div style={{ marginBottom: 14 }}>
               <label style={mgLabel}>Dietary</label>
               <select style={{ ...mgInput, appearance: 'none' }} value={editForm.dietary} onChange={ef('dietary')}>
-                {DIETARY_OPTIONS.map(o => <option key={o} value={o} style={{ background: '#111' }}>{o}</option>)}
+                {DIETARY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
-            <div style={{ marginBottom: '20px' }}><label style={mgLabel}>Notes</label><textarea rows={3} style={{ ...mgInput, resize: 'vertical' }} value={editForm.notes} onChange={ef('notes')} /></div>
-            <button onClick={handleSave} disabled={editSaving} style={{ width: '100%', padding: '14px', background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', marginBottom: '10px' }}>
-              {editSaving ? 'Saving...' : 'Save Changes'}
+            <div style={{ marginBottom: 22 }}><label style={mgLabel}>Notes</label><textarea rows={3} style={{ ...mgInput, resize: 'vertical', lineHeight: 1.5 }} value={editForm.notes} onChange={ef('notes')} /></div>
+            <button onClick={handleSave} disabled={editSaving}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 18, borderRadius: 14, border: '1px solid rgba(233,182,92,0.55)', background: 'linear-gradient(180deg,#E9B65C,#E27B5C)', color: '#2A1704', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.95rem', cursor: editSaving ? 'not-allowed' : 'pointer', opacity: editSaving ? 0.7 : 1, boxShadow: '0 16px 34px -16px rgba(226,123,92,.6)', marginBottom: 12 }}>
+              <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              {editSaving ? 'Saving…' : 'Save Changes'}
             </button>
             {editingRecord.status === 'waitlist' && (
-              <button onClick={async () => { setEditSaving(true); try { await updatePartyToSeated(editingRecord.id); closeEdit(); } finally { setEditSaving(false); } }} disabled={editSaving} style={{ width: '100%', padding: '14px', background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', marginBottom: '10px' }}>
+              <button onClick={async () => { setEditSaving(true); try { await updatePartyToSeated(editingRecord.id); closeEdit(); } finally { setEditSaving(false); } }} disabled={editSaving}
+                style={{ width: '100%', padding: 17, borderRadius: 14, border: '1px solid rgba(140,201,143,0.35)', background: 'rgba(140,201,143,0.10)', color: '#8CC98F', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.9rem', cursor: editSaving ? 'not-allowed' : 'pointer', marginBottom: 12 }}>
                 Seat Party
               </button>
             )}
             {editingRecord.status !== 'cancelled' && (
-              <button onClick={handleCancelReservation} disabled={editSaving} style={{ width: '100%', padding: '14px', background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
+              <button onClick={handleCancelReservation} disabled={editSaving}
+                style={{ width: '100%', padding: 17, borderRadius: 14, border: '1px solid rgba(226,123,92,0.35)', background: 'rgba(226,123,92,0.07)', color: '#E27B5C', fontFamily: 'inherit', fontWeight: 600, fontSize: '0.9rem', cursor: editSaving ? 'not-allowed' : 'pointer' }}>
                 Cancel Reservation
               </button>
             )}
           </div>
+
         ) : activeSection ? (
+          /* SECTION LIST */
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '1.1rem', fontWeight: '700', color: SECTION_COLORS[activeSection] }}>{SECTION_LABELS[activeSection]}</div>
-              <span style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '20px', padding: '2px 10px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>{sectionData[activeSection].length}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 600, fontSize: 24, color: SECTION_COLORS[activeSection] }}>{SECTION_LABELS[activeSection]}</div>
+              <span style={{ minWidth: 26, height: 26, padding: '0 9px', borderRadius: 99, background: `${SECTION_COLORS[activeSection]}1A`, border: `1px solid ${SECTION_COLORS[activeSection]}44`, color: SECTION_COLORS[activeSection], fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{sectionData[activeSection].length}</span>
             </div>
             {sectionData[activeSection].length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', padding: '40px 0', fontSize: '0.9rem' }}>No records for this date</div>
+              <div style={{ textAlign: 'center', color: '#5A5145', padding: '48px 0', fontSize: '0.9rem' }}>No records for this date</div>
             ) : (
               sectionData[activeSection].map((r, i) => <RecordCard key={r.id || i} r={r} onClick={() => openEdit(r)} />)
             )}
           </>
+
         ) : (
+          /* DASHBOARD SUMMARY */
           <>
-            <div style={{ marginBottom: '2px' }}>
-              <StatCard label="Reservations" value={history.length} sub={`${totalResGuests} guests`} color="#f87171" onClick={() => setActiveSection('reservations')} />
-              <StatCard label="Wait List" value={waitList.length} sub="currently waiting" color="#f87171" onClick={() => setActiveSection('waitlist')} />
-              <StatCard label="Seated" value={seatedList.length} sub={`${seatedGuests} guests`} color="#f87171" onClick={() => setActiveSection('seated')} />
-              <StatCard label="Canceled" value={canceledList.length} sub="today" color="#f87171" onClick={() => setActiveSection('canceled')} />
-              <StatCard label="Occupancy" value={`${occupancyPct}%`} sub={`${occupiedTables}/${totalTables} tables`} color="#f87171" />
+            {/* 2×2 KPI grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginBottom: 12 }}>
+              <StatCard label="Reservations" value={history.length} sub={`${totalResGuests} guests`} color="#E27B5C" onClick={() => setActiveSection('reservations')} />
+              <StatCard label="Wait List" value={waitList.length} sub="currently waiting" color="#E27B5C" onClick={() => setActiveSection('waitlist')} />
+              <StatCard label="Seated" value={seatedList.length} sub={`${seatedGuests} guests`} color="#E27B5C" onClick={() => setActiveSection('seated')} />
+              <StatCard label="Canceled" value={canceledList.length} sub="today" color="#E27B5C" onClick={() => setActiveSection('canceled')} />
             </div>
 
-            <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', padding: '20px', marginBottom: '12px', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total Guests Today</div>
-              <div style={{ fontSize: '3.2rem', fontWeight: '800', color: '#fff', lineHeight: 1.1 }}>{allDayGuests}</div>
-            </div>
+            {/* Occupancy */}
+            {totalTables > 0 && (
+              <div style={{ background: 'linear-gradient(180deg,#201911,#181109)', border: '1px solid rgba(227,169,74,0.14)', borderRadius: 18, padding: 22, marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+                  <div>
+                    <div style={{ textTransform: 'uppercase', letterSpacing: '.24em', fontSize: 11, color: '#C9A876' }}>Occupancy</div>
+                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontStyle: 'italic', fontSize: 16, color: '#8A7C6B', marginTop: 5 }}>{occupiedTables} of {totalTables} tables seated</div>
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 40, lineHeight: 1, color: '#E3A94A', fontVariantNumeric: 'tabular-nums' }}>
+                    {occupancyPct}<span style={{ fontSize: 22, color: '#B9884A' }}>%</span>
+                  </div>
+                </div>
+                <div style={{ height: 8, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 18 }}>
+                  <div style={{ height: '100%', width: `${occupancyPct}%`, borderRadius: 99, background: 'linear-gradient(90deg,#E9B65C,#E27B5C)' }} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(totalTables, 16)},1fr)`, gap: 4, marginBottom: 12 }}>
+                  {Array.from({ length: totalTables }).map((_, i) => (
+                    <div key={i} style={{ aspectRatio: '1', borderRadius: 3, background: i < occupiedTables ? 'linear-gradient(180deg,#E9B65C,#E27B5C)' : 'rgba(255,255,255,0.06)' }} />
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 20, fontSize: 12, color: '#8A7C6B' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span style={{ width: 11, height: 11, borderRadius: 3, background: 'linear-gradient(180deg,#E9B65C,#E27B5C)', flexShrink: 0 }} /> Seated</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span style={{ width: 11, height: 11, borderRadius: 3, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} /> Available</span>
+                </div>
+              </div>
+            )}
 
-            {Object.keys(hourlyRes).length > 0 && (
-              <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
-                <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px' }}>Reservations by Hour</div>
-                {Object.keys(hourlyRes).sort().map(h => (
-                  <div key={h} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', width: '48px', flexShrink: 0 }}>{h}:00</span>
-                    <div style={{ flex: 1, background: 'rgba(255,255,255,0.08)', borderRadius: '4px', height: '22px', overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.min((hourlyRes[h] / MAX_RESERVATIONS_PER_HOUR) * 100, 100)}%`, background: 'linear-gradient(90deg, #60a5fa, #a78bfa)', height: '100%', borderRadius: '4px' }} />
-                    </div>
-                    <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#fff', width: '18px', textAlign: 'right' }}>{hourlyRes[h]}</span>
+            {/* Total guests */}
+            <div style={{ background: 'linear-gradient(180deg,#201911,#181109)', border: '1px solid rgba(227,169,74,0.14)', borderRadius: 18, padding: 22, marginBottom: 12 }}>
+              <div style={{ textTransform: 'uppercase', letterSpacing: '.24em', fontSize: 11, color: '#C9A876' }}>Total Guests Today</div>
+              <div style={{ fontWeight: 700, fontSize: 62, lineHeight: 0.9, color: '#E27B5C', fontVariantNumeric: 'tabular-nums', margin: '8px 0 18px' }}>{allDayGuests}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[['Seated', seatedGuests, '#F1E8DA'], ['Expected (Reservations)', totalResGuests, '#E3A94A']].map(([l, v, col]) => (
+                  <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.03)' }}>
+                    <span style={{ fontSize: 13, color: '#8A7C6B' }}>{l}</span>
+                    <span style={{ fontWeight: 600, fontSize: 16, color: col }}>{v}</span>
                   </div>
                 ))}
               </div>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px' }}>
-              <button onClick={() => setAddMode('walkin')} style={{ padding: '14px', background: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '10px', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' }}>+ Walk-in</button>
-              <button onClick={() => setAddMode('reservation')} style={{ padding: '14px', background: 'rgba(96,165,250,0.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.3)', borderRadius: '10px', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' }}>+ Reservation</button>
+            </div>
+
+            {/* Hourly chart */}
+            {Object.keys(hourlyRes).length > 0 && (() => {
+              const maxCount = Math.max(1, ...Object.values(hourlyRes));
+              return (
+                <div style={{ background: 'linear-gradient(180deg,#201911,#181109)', border: '1px solid rgba(227,169,74,0.14)', borderRadius: 18, padding: 22, marginBottom: 14 }}>
+                  <div style={{ textTransform: 'uppercase', letterSpacing: '.24em', fontSize: 11, color: '#C9A876', marginBottom: 18 }}>Reservations by Hour</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {Object.keys(hourlyRes).sort().map(h => (
+                      <div key={h} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <span style={{ width: 50, fontSize: 13, color: '#B9A48A', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{h}:00</span>
+                        <div style={{ flex: 1, height: 13, borderRadius: 99, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#5B8FCB,#7E6FD2)', width: `${Math.max(6, Math.round((hourlyRes[h] / maxCount) * 100))}%` }} />
+                        </div>
+                        <span style={{ width: 20, textAlign: 'right', fontWeight: 600, fontSize: 14, fontVariantNumeric: 'tabular-nums', color: '#F1E8DA' }}>{hourlyRes[h]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button onClick={() => setAddMode('walkin')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '18px 22px', borderRadius: 15, border: '1px solid rgba(227,169,74,0.42)', background: 'linear-gradient(180deg,rgba(227,169,74,0.12),rgba(227,169,74,0.03))', color: '#EDBE6A', fontFamily: 'inherit', fontWeight: 600, fontSize: '1rem', cursor: 'pointer' }}>
+                <span style={{ width: 26, height: 26, borderRadius: '50%', border: '1px solid rgba(237,190,106,0.45)', background: 'rgba(237,190,106,0.10)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>+</span>
+                Walk-in
+              </button>
+              <button onClick={() => setAddMode('reservation')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '18px 22px', borderRadius: 15, border: '1px solid rgba(233,182,92,0.55)', background: 'linear-gradient(180deg,#E9B65C,#E27B5C)', color: '#2A1704', fontFamily: 'inherit', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 16px 34px -16px rgba(226,123,92,.6)' }}>
+                <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgba(42,23,4,0.16)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>+</span>
+                New Reservation
+              </button>
             </div>
           </>
         )}
       </div>
-      <button onClick={async () => { setRefreshing(true); try { await onRefresh(); } finally { setRefreshing(false); } }} style={{ position: 'fixed', bottom: '24px', right: '20px', width: '48px', height: '48px', borderRadius: '50%', background: '#1e3a5f', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '1.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', opacity: refreshing ? 0.5 : 1, zIndex: 50 }}>
-        {refreshing ? '…' : '↻'}
+
+      {/* REFRESH FAB */}
+      <button onClick={async () => { setRefreshing(true); try { await onRefresh(); } finally { setRefreshing(false); } }}
+        style={{ position: 'fixed', bottom: 18, right: 18, width: 54, height: 54, borderRadius: '50%', border: '1px solid rgba(226,123,92,0.4)', background: 'linear-gradient(180deg,#2A1D14,#1C130C)', color: '#E27B5C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 16px 40px -16px rgba(0,0,0,.9)', opacity: refreshing ? 0.6 : 1, zIndex: 50 }}>
+        <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={refreshing ? { transformBox: 'fill-box', transformOrigin: 'center', animation: 'lmSpin .75s linear infinite' } : undefined}>
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
       </button>
     </div>
   );
