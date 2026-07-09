@@ -1292,7 +1292,7 @@ const DIETARY_OPTIONS = ['None','Vegetarian','Vegan','Gluten-Free','Nut Allergy'
 const mgInput = { width: '100%', padding: '13px 14px', borderRadius: 10, border: '1px solid rgba(227,169,74,0.18)', background: 'rgba(255,255,255,0.03)', color: '#F1E8DA', fontFamily: "'Space Grotesk',system-ui,sans-serif", fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', colorScheme: 'dark' };
 const mgLabel = { display: 'block', fontSize: '0.68rem', color: '#C9A876', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 7 };
 
-const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDate, onDateChange, history, waitList, seatedList, canceledList, rows, tableStatuses, isBlackout, onRefresh }) {
+const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDate, onDateChange, history, waitList, seatedList, canceledList, rows, tableStatuses, isBlackout, onRefresh, onSignOut }) {
   const [activeSection, setActiveSection] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
@@ -1396,22 +1396,48 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(1300px 640px at 50% -12%,rgba(227,169,74,0.10),transparent 62%),radial-gradient(900px 500px at 100% 110%,rgba(226,123,92,0.06),transparent 60%)' }} />
 
       {/* ── HEADER ── */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, padding: '14px 16px', borderBottom: '1px solid rgba(227,169,74,0.10)', background: 'rgba(18,13,8,0.94)', backdropFilter: 'blur(12px)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: 480, margin: '0 auto' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, borderBottom: '1px solid rgba(227,169,74,0.10)', background: 'rgba(18,13,8,0.94)', backdropFilter: 'blur(12px)' }}>
+        {/* Row 1: logo + clock + sign out — only on dashboard */}
+        {!activeSection && !editingRecord && !addMode && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0', maxWidth: 480, margin: '0 auto' }}>
+            <img src="/logo.png" alt="Lindo Michoacan" style={{ height: 30, filter: 'brightness(0.9)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 12px', borderRadius: 99, border: '1px solid rgba(123,174,126,0.25)', background: 'rgba(123,174,126,0.08)' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#8CC98F', animation: 'lmPulse 2s infinite', flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: '#8A7C6B', fontVariantNumeric: 'tabular-nums' }}>{clock}</span>
+              </div>
+              <button onClick={onSignOut} style={{ padding: '7px 14px', borderRadius: 10, border: '1px solid rgba(227,169,74,0.18)', background: 'rgba(255,255,255,0.03)', color: '#B9A48A', fontFamily: 'inherit', fontSize: 12, cursor: 'pointer' }}>Sign out</button>
+            </div>
+          </div>
+        )}
+        {/* Row 2: nav + label + date */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: activeSection || editingRecord || addMode ? '14px 16px' : '10px 16px 14px', maxWidth: 480, margin: '0 auto' }}>
           <button onClick={() => { if (addMode) resetAdd(); else if (editingRecord) closeEdit(); else if (activeSection) setActiveSection(null); else stepDate(-1); }}
             style={{ flexShrink: 0, width: 42, height: 42, borderRadius: '50%', border: '1px solid rgba(227,169,74,0.18)', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#E3A94A' }}>
             <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
           </button>
           <div style={{ textAlign: 'center', flex: 1, margin: '0 8px' }}>
-            <div style={{ textTransform: 'uppercase', letterSpacing: '.22em', fontSize: 11, color: '#8A7C6B', marginBottom: 3 }}>
+            <div style={{ textTransform: 'uppercase', letterSpacing: '.22em', fontSize: 11, color: '#8A7C6B', marginBottom: 4 }}>
               {addMode === 'walkin' ? 'Add Walk-in' : addMode === 'reservation' ? 'Add Reservation' : editingRecord ? 'Edit Record' : activeSection ? SECTION_LABELS[activeSection] : 'Manager Dashboard'}
             </div>
             {activeSection || editingRecord || addMode ? (
               <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 600, fontSize: 22, color: '#F1E8DA' }}>{dateLabel}</div>
-            ) : (
-              <input type="date" value={dateISO} onChange={e => e.target.value && onDateChange(e.target.value)}
-                style={{ background: 'transparent', border: 'none', color: '#F1E8DA', fontSize: '1rem', fontWeight: 700, textAlign: 'center', outline: 'none', cursor: 'pointer', width: '100%', colorScheme: 'dark', fontFamily: 'inherit' }} />
-            )}
+            ) : (() => {
+              const [yyyy, mm, dd] = dateISO.split('-');
+              const wday = new Date(`${dateISO}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
+              return (
+                <div style={{ position: 'relative' }}>
+                  <div style={{ fontWeight: 700, fontSize: 26, letterSpacing: '.02em', color: '#F1E8DA', lineHeight: 1.15 }}>
+                    {mm}<span style={{ color: '#E3A94A', margin: '0 6px' }}>/</span>
+                    {dd}<span style={{ color: '#E3A94A', margin: '0 6px' }}>/</span>
+                    {yyyy}
+                  </div>
+                  <div style={{ fontFamily: "'Cormorant Garamond',serif", fontStyle: 'italic', fontSize: 14, color: '#B9A48A', marginTop: 2 }}>{wday}</div>
+                  <input type="date" value={dateISO} onChange={e => e.target.value && onDateChange(e.target.value)}
+                    style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', cursor: 'pointer', zIndex: 1 }} />
+                </div>
+              );
+            })()}
           </div>
           {activeSection || editingRecord || addMode ? (
             <div style={{ width: 42 }} />
@@ -1421,14 +1447,6 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
             </button>
           )}
         </div>
-        {!activeSection && !editingRecord && !addMode && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 12px', borderRadius: 99, border: '1px solid rgba(123,174,126,0.25)', background: 'rgba(123,174,126,0.08)' }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#8CC98F', animation: 'lmPulse 2s infinite', flexShrink: 0 }} />
-              <span style={{ fontSize: 11, color: '#8A7C6B', fontVariantNumeric: 'tabular-nums' }}>{clock}</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── CONTENT ── */}
@@ -2200,6 +2218,7 @@ export default function App() {
       history={history} waitList={waitList} seatedList={seatedList}
       canceledList={canceledList} rows={rows} tableStatuses={tableStatuses} isBlackout={isBlackout}
       onRefresh={async () => { const { data } = await fetchRowsForDay(supabase, dateISO); setRows(data || []); }}
+      onSignOut={() => setViewMode('manager-lock')}
     />
   );
 
