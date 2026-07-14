@@ -1084,7 +1084,7 @@ const ClientSearchView = React.memo(function ClientSearchView({
                     MozAppearance: 'textfield', WebkitAppearance: 'none',
                   }}
                 />
-                {guests === null && <div className="sr-guest-hint">№</div>}
+                {guests === null && <div className="sr-guest-hint"></div>}
               </div>
               <div className="sr-label" style={{marginTop: '4px'}}>Guests</div>
             </div>
