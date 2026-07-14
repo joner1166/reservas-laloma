@@ -301,16 +301,16 @@ body {
 .sr-item-exit { opacity: 0; pointer-events: none; }
 
 /* --- ESTILOS VISTA CLIENTE --- */
-.sr-header { padding: 30px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: center; }
+.sr-header { padding: 30px 20px; display: flex; justify-content: center; }
 .sr-logo { width: 100%; max-width: 450px; height: auto; display: block; }
 
-.sr-summary { padding: 30px 20px; border-bottom: 1px solid #eee; text-align: center; }
+.sr-summary { padding: 30px 20px; text-align: center; }
 .sr-summaryTitle { font-size: 28px; font-weight: 800; color: #111; margin-bottom: 5px; }
 
 /* Rows container (date / guests / time) */
 .sr-rows { display: flex; flex-direction: column; }
 
-.sr-row { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 20px 24px; border-bottom: 1px solid rgba(0,0,0,0.07); cursor: pointer; position: relative; transition: background 0.15s; }
+.sr-row { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 20px 24px; cursor: pointer; position: relative; transition: background 0.15s; }
 .sr-row:hover { background: #fafafa; }
 
 /* FIX: la fila del tiempo usa TimePicker custom — sin cursor pointer */
@@ -318,6 +318,8 @@ body {
 
 .sr-arrow { display: flex; align-items: center; justify-content: center; background: transparent; border: 1.5px solid #e0e0e0; border-radius: 50%; font-size: 22px; font-weight: 700; color: #555 !important; height: 40px; width: 40px; cursor: pointer; transition: all 0.15s; }
 .sr-arrow:hover { border-color: #f2c300; color: #000 !important; background: #fffbea; }
+
+.sr-guest-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; background: rgba(255,255,255,0.2); border-radius: 10px; color: #aaa; font-size: 1.4rem; font-weight: 800; white-space: nowrap; }
 
 .sr-center { text-align: center; }
 .sr-value { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; }

@@ -359,7 +359,7 @@ async function createCalendarEventService(reservation) {
 const HostessView = React.memo(function HostessView({
   // Acciones
   onAddWaitlist, onAddPhoneRes, onSeatParty, onUnseatParty, onCancelRes, onSaveEdit, onNotifyReady, onRemoveFromWaitlist, onUndoCancel, toggleBlackoutDate,
-  handleTableSelection, setViewMode,
+  handleTableSelection, onRefresh,
 
   // Estado y UI
   activeFloor, setActiveFloor, isBlackout, isWalkInOnly,
@@ -380,6 +380,7 @@ const HostessView = React.memo(function HostessView({
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem("hostessTab") || "reservations");
   useEffect(() => { localStorage.setItem("hostessTab", activeTab); }, [activeTab]);
   const [newResAlert, setNewResAlert] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const notifChannelRef = useRef(null);
   const [editingRes, setEditingRes] = useState(null);
   const [editingWaitItem, setEditingWaitItem] = useState(null);
@@ -475,9 +476,10 @@ const HostessView = React.memo(function HostessView({
               <button className="sr-btn-mini" onClick={() => stepDate(1)}>›</button>
               <button
                 className="sr-btn-mini"
-                onClick={() => window.location.reload()}
+                onClick={async () => { setRefreshing(true); try { await onRefresh(); } finally { setRefreshing(false); } }}
                 title="Refresh"
-                style={{ fontSize: '16px' }}
+                style={{ fontSize: '16px', opacity: refreshing ? 0.6 : 1 }}
+                disabled={refreshing}
               >↺</button>
             </div>
           </header>
@@ -935,7 +937,6 @@ const HostessView = React.memo(function HostessView({
           </div>
         </section>
       </main>
-      <button className="sr-view-toggle" onClick={() => { setViewMode("client"); localStorage.removeItem("viewMode"); }}>Return to Client View</button>
       {editingWaitItem && (
         <div className="sr-modal-overlay" onClick={() => setEditingWaitItem(null)}>
           <div className="sr-modal" onClick={e => e.stopPropagation()}>
@@ -1029,7 +1030,7 @@ const ClientSearchView = React.memo(function ClientSearchView({
   dateISO, onDateChange, dateLabel, stepDate,
   guests, setGuests,
   timeHHMM, setTimeHHMM,
-  isBlackout, isWalkInOnly, setStep, handleSwitchToHostess,
+  isBlackout, isWalkInOnly, setStep,
   bookedHourCounts, bookedHourGuests
 }) {
   const range = getAvailableTimeRange(dateISO);
@@ -1068,20 +1069,23 @@ const ClientSearchView = React.memo(function ClientSearchView({
           </div>
           <div className="sr-row" style={{cursor: 'default'}}>
             <div className="sr-center" style={{gridColumn: '1 / -1'}}>
-              <input
-                type="number"
-                min="1"
-                max={MAX_CLIENT_GUESTS}
-                inputMode="numeric"
-                value={guests === null ? '' : guests}
-                onChange={e => setGuests(e.target.value === '' ? null : Math.min(parseInt(e.target.value) || 1, MAX_CLIENT_GUESTS))}
-                style={{
-                  width: '90px', textAlign: 'center', fontSize: '1.8rem', fontWeight: '800',
-                  border: 'none', outline: 'none', background: 'transparent', color: '#111',
-                  display: 'block', margin: '0 auto',
-                  MozAppearance: 'textfield', WebkitAppearance: 'none',
-                }}
-              />
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <input
+                  type="number"
+                  min="1"
+                  max={MAX_CLIENT_GUESTS}
+                  inputMode="numeric"
+                  value={guests === null ? '' : guests}
+                  onChange={e => setGuests(e.target.value === '' ? null : Math.min(parseInt(e.target.value) || 1, MAX_CLIENT_GUESTS))}
+                  style={{
+                    width: '90px', textAlign: 'center', fontSize: '1.8rem', fontWeight: '800',
+                    border: 'none', outline: 'none', background: 'transparent', color: '#111',
+                    display: 'block', margin: '0 auto',
+                    MozAppearance: 'textfield', WebkitAppearance: 'none',
+                  }}
+                />
+                {guests === null && <div className="sr-guest-hint">№</div>}
+              </div>
               <div className="sr-label" style={{marginTop: '4px'}}>Guests</div>
             </div>
           </div>
@@ -1132,7 +1136,6 @@ const ClientSearchView = React.memo(function ClientSearchView({
           {' '}so we can properly accommodate you.
         </div>
       </main>
-      <button className="sr-view-toggle" onClick={handleSwitchToHostess}>Switch to Hostess View</button>
     </div>
   );
 });
@@ -1141,7 +1144,7 @@ const ClientSearchView = React.memo(function ClientSearchView({
 const ClientDetailsView = React.memo(function ClientDetailsView({
   dateLabel, timeLabel, guests,
   formState, setFormState,
-  setStep, onSubmitClientRes, submitting, handleSwitchToHostess
+  setStep, onSubmitClientRes, submitting
 }) {
   const { firstName, lastName, phone, phoneCode, email, celebration, dietary, notes, smsOptIn } = formState;
   const updateForm = (key, val) => setFormState(prev => ({ ...prev, [key]: val }));
@@ -1191,7 +1194,6 @@ const ClientDetailsView = React.memo(function ClientDetailsView({
           </div>
         </section>
       </main>
-      <button className="sr-view-toggle" onClick={handleSwitchToHostess}>Switch to Hostess View</button>
     </div>
   );
 });
@@ -1205,7 +1207,7 @@ function ManagerPinView({ onSuccess }) {
   const check = () => { if (pin === MANAGER_PASSWORD) onSuccess(); else alert('Incorrect PIN'); };
   return (
     <div style={{ minHeight: '100vh', background: '#120D08', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 26, padding: '24px 20px', fontFamily: "'Space Grotesk',system-ui,sans-serif", position: 'relative', overflow: 'hidden' }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap'); @keyframes lmPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap'); @keyframes lmPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}} .sr-manager-pin::placeholder{font-size:0.95rem;letter-spacing:1px;}`}</style>
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(1300px 640px at 50% -12%,rgba(227,169,74,0.12),transparent 62%),radial-gradient(900px 500px at 100% 110%,rgba(226,123,92,0.07),transparent 60%)' }} />
       <img src="/logo.png" alt="Logo" style={{ height: 72, position: 'relative', filter: 'drop-shadow(0 8px 26px rgba(0,0,0,.6))' }} />
       <div style={{ position: 'relative', width: '100%', maxWidth: 380, background: 'linear-gradient(180deg,#201911,#17110A)', border: '1px solid rgba(227,169,74,0.16)', borderRadius: 22, padding: '34px 30px 30px', boxShadow: '0 34px 90px -34px rgba(0,0,0,.85)', animation: 'lmPop .5s ease both' }}>
@@ -1213,13 +1215,37 @@ function ManagerPinView({ onSuccess }) {
           <div style={{ textTransform: 'uppercase', letterSpacing: '.3em', fontSize: 11, color: '#8A7C6B' }}>Restaurant Manager</div>
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 600, fontSize: 32, color: '#F1E8DA', marginTop: 4 }}>Manager Access</div>
         </div>
-        <input type="password" value={pin} onChange={e => setPin(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} placeholder="Enter access number"
+        <input type="password" className="sr-manager-pin" value={pin} onChange={e => setPin(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} placeholder="Enter access number"
           style={{ width: '100%', padding: '17px 18px', borderRadius: 13, border: '1px solid rgba(227,169,74,0.22)', background: 'rgba(255,255,255,0.03)', color: '#F1E8DA', fontSize: '1.6rem', textAlign: 'center', letterSpacing: '6px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', colorScheme: 'dark' }} autoFocus />
         <button onClick={check} style={{ width: '100%', marginTop: 18, padding: 15, borderRadius: 13, border: 'none', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.9rem', letterSpacing: '.14em', textTransform: 'uppercase', cursor: pin ? 'pointer' : 'not-allowed', ...(pin ? { background: 'linear-gradient(90deg,#E9B65C,#E27B5C)', color: '#241505', boxShadow: '0 14px 32px -14px rgba(227,169,74,.75)' } : { background: 'rgba(255,255,255,0.05)', color: '#6B5F52' }) }}>
           Access
         </button>
       </div>
       <div style={{ position: 'relative', fontSize: 12, color: '#6B5F52' }}>Enter your access number to open the dashboard</div>
+    </div>
+  );
+}
+
+function HostessPinView({ onSuccess }) {
+  const [pin, setPin] = useState('');
+  const check = () => { if (pin === HOSTESS_PASSWORD) onSuccess(); else alert('Incorrect PIN'); };
+  return (
+    <div style={{ minHeight: '100vh', background: '#F2E4C6', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 26, padding: '24px 20px', fontFamily: "'Space Grotesk',system-ui,sans-serif", position: 'relative', overflow: 'hidden' }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap'); @keyframes lmPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}} .sr-hostess-pin::placeholder{font-size:0.95rem;letter-spacing:1px;}`}</style>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(1300px 640px at 50% -12%,rgba(227,169,74,0.10),transparent 62%),radial-gradient(900px 500px at 100% 110%,rgba(226,123,92,0.06),transparent 60%)' }} />
+      <img src="/logo.png" alt="Logo" style={{ height: 103, position: 'relative', filter: 'drop-shadow(0 8px 26px rgba(0,0,0,.15))' }} />
+      <div style={{ position: 'relative', width: '100%', maxWidth: 380, background: '#FFFFFF', border: '1px solid rgba(227,169,74,0.25)', borderRadius: 22, padding: '34px 30px 30px', boxShadow: '0 34px 90px -34px rgba(0,0,0,.18)', animation: 'lmPop .5s ease both' }}>
+        <div style={{ textAlign: 'center', marginBottom: 26 }}>
+          <div style={{ textTransform: 'uppercase', letterSpacing: '.3em', fontSize: 11, color: '#9A8C7B' }}>Restaurant Hostess</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 600, fontSize: 32, color: '#241505', marginTop: 4 }}>Hostess Access</div>
+        </div>
+        <input type="password" className="sr-hostess-pin" value={pin} onChange={e => setPin(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} placeholder="Enter access number"
+          style={{ width: '100%', padding: '17px 18px', borderRadius: 13, border: '1px solid rgba(227,169,74,0.3)', background: '#FBF7F0', color: '#241505', fontSize: '1.6rem', textAlign: 'center', letterSpacing: '6px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} autoFocus />
+        <button onClick={check} style={{ width: '100%', marginTop: 18, padding: 15, borderRadius: 13, border: 'none', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.9rem', letterSpacing: '.14em', textTransform: 'uppercase', cursor: pin ? 'pointer' : 'not-allowed', ...(pin ? { background: 'linear-gradient(90deg,#E9B65C,#E27B5C)', color: '#241505', boxShadow: '0 14px 32px -14px rgba(227,169,74,.5)' } : { background: 'rgba(0,0,0,0.05)', color: '#B3A594' }) }}>
+          Access
+        </button>
+      </div>
+      <div style={{ position: 'relative', fontSize: 12, color: '#9A8C7B' }}>Enter your access number to open the dashboard</div>
     </div>
   );
 }
@@ -1243,15 +1269,18 @@ function StatCard({ label, value, sub, color, onClick }) {
 const SECTION_COLORS = { reservations: '#60a5fa', waitlist: '#fbbf24', seated: '#4ade80', canceled: '#f87171' };
 const SECTION_LABELS = { reservations: 'Reservations', waitlist: 'Wait List', seated: 'Seated', canceled: 'Canceled' };
 
-function StatusBadge({ status, source }) {
+function StatusBadge({ status, source, notified }) {
   const isWalkin = source === 'walkin' && status !== 'seated' && status !== 'cancelled';
-  const color = isWalkin ? '#E3A94A'
+  const isNotified = status === 'waitlist' && notified;
+  const color = isNotified ? '#5B8FCB'
+    : isWalkin ? '#E3A94A'
     : status === 'reserved' ? '#5B8FCB'
     : status === 'waitlist' ? '#E3A94A'
     : status === 'seated' ? '#8CC98F'
     : status === 'cancelled' ? '#E27B5C'
     : 'rgba(255,255,255,0.3)';
-  const label = isWalkin ? 'Walk-in'
+  const label = isNotified ? 'Notified'
+    : isWalkin ? 'Walk-in'
     : status === 'reserved' ? 'Reserved'
     : status === 'waitlist' ? 'Waiting'
     : status === 'seated' ? 'Seated'
@@ -1270,13 +1299,16 @@ function RecordCard({ r, onClick }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ fontWeight: 600, fontSize: 18, letterSpacing: '.02em', color: '#F1E8DA' }}>{name}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <StatusBadge status={r.status} source={r.source} />
+          <StatusBadge status={r.status} source={r.source} notified={!!r.notified_at} />
           {onClick && <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#7A6D5C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18"/></svg>}
         </div>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 34px', fontSize: 14, color: '#8A7C6B' }}>
         {r.guests != null && <div>Guests: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{r.guests}</strong></div>}
-        {r.timeHHMM && <div>Time: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{r.timeHHMM}</strong></div>}
+        {r.source === 'walkin'
+          ? r.created_at && <div>Time: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong></div>
+          : r.timeHHMM && <div>Time: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{r.timeHHMM}</strong></div>
+        }
         {r.phone && <div>Phone: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{r.phone}</strong></div>}
         {sourceLabel && <div>Source: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{sourceLabel}</strong></div>}
         {r.celebration && r.celebration !== 'None' && <div>Celebration: <strong style={{ color: '#E9B65C', fontWeight: 600 }}>{r.celebration}</strong></div>}
@@ -1651,7 +1683,8 @@ export default function App() {
   const phoneResSubmittingRef = useRef(false);
   const [viewMode, setViewMode] = useState(() => {
     if (window.location.pathname === '/managerview') return 'manager-lock';
-    return localStorage.getItem("viewMode") || "client";
+    if (window.location.pathname === '/hostessview') return 'hostess-lock';
+    return 'client';
   });
   const [step, setStep] = useState("search");
   const [dateISO, setDateISO] = useState(() => dateISOFromDate(new Date()));
@@ -1832,14 +1865,6 @@ export default function App() {
     mins = Math.max(open, Math.min(lastSlot, mins));
     mins = Math.round(mins / SLOT_MINUTES) * SLOT_MINUTES;
     setTimeHHMM(hhmmFromMinutes(mins));
-  };
-
-  const handleSwitchToHostess = () => {
-    const pass = prompt("Enter Hostess Password:");
-    if (pass === HOSTESS_PASSWORD) {
-      setViewMode("hostess");
-      localStorage.setItem("viewMode", "hostess");
-    } else if (pass !== null) alert("Incorrect password");
   };
 
   const toggleBlackoutDate = async (dateToToggle, notes, type = 'closed') => {
@@ -2210,14 +2235,20 @@ export default function App() {
     }
   };
 
+  const handleRefreshRows = async () => {
+    const { data } = await fetchRowsForDay(supabase, dateISO);
+    setRows(data || []);
+  };
+
   // --- RENDER ---
   if (viewMode === 'manager-lock') return <ManagerPinView onSuccess={() => setViewMode('manager')} />;
+  if (viewMode === 'hostess-lock') return <HostessPinView onSuccess={() => setViewMode('hostess')} />;
   if (viewMode === 'manager') return (
     <ManagerView
       dateISO={dateISO} dateLabel={dateLabel} stepDate={stepDate} onDateChange={handleDateChange}
       history={history} waitList={waitList} seatedList={seatedList}
       canceledList={canceledList} rows={rows} tableStatuses={tableStatuses} isBlackout={isBlackout}
-      onRefresh={async () => { const { data } = await fetchRowsForDay(supabase, dateISO); setRows(data || []); }}
+      onRefresh={handleRefreshRows}
       onSignOut={() => setViewMode('manager-lock')}
     />
   );
@@ -2238,7 +2269,7 @@ export default function App() {
         onNotifyReady={handleNotifyReady}
         toggleBlackoutDate={toggleBlackoutDate}
         handleTableSelection={handleTableSelection}
-        setViewMode={setViewMode}
+        onRefresh={handleRefreshRows}
         activeFloor={activeFloor}
         setActiveFloor={setActiveFloor}
         isBlackout={isBlackout}
@@ -2291,7 +2322,6 @@ export default function App() {
         isBlackout={isBlackout}
         isWalkInOnly={isWalkInOnly}
         setStep={setStep}
-        handleSwitchToHostess={handleSwitchToHostess}
         bookedHourCounts={bookedHourCounts}
         bookedHourGuests={bookedHourGuests}
       />
@@ -2318,7 +2348,6 @@ export default function App() {
       setStep={setStep}
       onSubmitClientRes={handleClientSubmit}
       submitting={submitting}
-      handleSwitchToHostess={handleSwitchToHostess}
     />
   );
 }

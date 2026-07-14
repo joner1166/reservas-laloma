@@ -1,0 +1,11 @@
+{
+  "name": "Lindo Michoacán",
+  "short_name": "Lindo Michoacán",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F2E4C6",
+  "theme_color": "#E9B65C",
+  "icons": [
+    { "src": "/logoreservaciones.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+  ]
+}

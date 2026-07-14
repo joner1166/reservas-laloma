@@ -30,31 +30,30 @@ exports.handler = async (event) => {
   switch (type) {
     case "waitlist":
       messageBody =
-        `Lindo Michoacan 🕒\n\n` +
-        `Hi ${name}, you've been added to our waitlist.\n\n` +
-        `👥 Party: ${guests ?? ""}\n\n` +
-        `We will send you 1 more message when your table is ready. Thank you for your patience!\n\n` +
+        `Lindo Michoacan\n\n` +
+        `Hi ${name}, you're on our waitlist.\n\n` +
+        `Party of ${guests ?? ""}.\n\n` +
+        `We'll text you when your table is ready. Thanks for your patience!\n\n` +
         `Msg & data rates may apply. Reply STOP to opt-out.`;
       break;
 
     case "table_ready":
       messageBody =
-        `Lindo Michoacan 🥂\n\n` +
+        `Lindo Michoacan\n\n` +
         `Your table is ready, ${name}!\n\n` +
-        `Please check in with the hostess within the next 10 minutes to hold your table.\n\n` +
-        `We look forward to seeing you!\n\n` +
-        `Reply STOP to opt-out.`;
+        `Please check in with the hostess within 10 minutes to hold your table.\n\n` +
+        `See you soon! Reply STOP to opt-out.`;
       break;
 
     case "confirm":
     default:
       messageBody =
-        `Lindo Michoacan 🥂\n\n` +
+        `Lindo Michoacan\n\n` +
         `Reservation Confirmed!\n\n` +
         `Hi ${name}, we look forward to hosting you.\n\n` +
-        `📅 ${dateLabel || ""}\n` +
-        `⏰ ${timeLabel || ""}\n` +
-        `👥 ${guests ?? ""} guests\n\n` +
+        `Date: ${dateLabel || ""}\n` +
+        `Time: ${timeLabel || ""}\n` +
+        `Guests: ${guests ?? ""}\n\n` +
         `Reply STOP to opt-out.`;
       break;
   }

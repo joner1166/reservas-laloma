@@ -1,0 +1,11 @@
+{
+  "name": "LM Hostess",
+  "short_name": "LM Hostess",
+  "start_url": "/hostessview",
+  "display": "standalone",
+  "background_color": "#F2E4C6",
+  "theme_color": "#E9B65C",
+  "icons": [
+    { "src": "/logoreservaciones.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+  ]
+}

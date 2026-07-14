@@ -1,0 +1,11 @@
+{
+  "name": "LM Manager",
+  "short_name": "LM Manager",
+  "start_url": "/managerview",
+  "display": "standalone",
+  "background_color": "#120D08",
+  "theme_color": "#E9B65C",
+  "icons": [
+    { "src": "/logoreservaciones.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+  ]
+}
