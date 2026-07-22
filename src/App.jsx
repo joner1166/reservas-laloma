@@ -12,7 +12,13 @@ import logo from "/logo.png"; // Logo principal para la interfaz
  *******************************************************/
 const MAX_GUESTS = 12;
 const MAX_CLIENT_GUESTS = 25;
-const SERVERS = ['JAIME 👴🏻🍋','NOE 🐪','APACHE 👴🏻','PANCHO 👨🏻‍🦲','CALERO 🎅🏻','HUGO 🧞','PATO 👰‍♂️🐍','EDGAR 🤓','VALENTIN 🧛‍♂️','WALTER 👳🏻‍♂️','DEYNI 🥦','SONIA 🦋','CHAKA SEGOVIA','SAMUEL'];
+const SERVERS = ['JAIME 👴🏻🍋','NOE 🐪','APACHE 👴🏻','PANCHO 👨🏻‍🦲','CALERO 🎅🏻','HUGO 🧞','PATO 👰‍♂️🐍','ALAN','VALENTIN 🧛‍♂️','WALTER 👳🏻‍♂️','DEYNI 🥦','SONIA 🦋','CHAKA SEGOVIA','SAMUEL'];
+function getInitials(name) {
+  const clean = String(name || '').replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return clean.slice(0, 2).toUpperCase();
+}
 const COUNTRY_CODES = [
   { code: '+1',  label: '🇺🇸 +1'  },
   { code: '+52', label: '🇲🇽 +52' },
@@ -87,9 +93,9 @@ const FLOOR_CONFIG = {
     { id: '30', cap: 4, top: '18%', left: '10%', status: 'av', shape: 'square' }, { id: '29', cap: 4, top: '18%', left: '26%', status: 'occ', shape: 'square' }, { id: '28', cap: 4, top: '18%', left: '42%', status: 'av', shape: 'square' }, { id: '27', cap: 4, top: '18%', left: '58%', status: 'occ', shape: 'square' }, { id: '26', cap: 4, top: '18%', left: '74%', status: 'av', shape: 'square' }, { id: '25', cap: 4, top: '18%', left: '90%', status: 'av', shape: 'square' }
   ],
   ROOM3: [
-    ...Array.from({ length: 7 }, (_, i) => ({ id: `${56 - i}`, cap: 4, top: '18%', left: `${9 + (i * 13.5)}%`, status: i % 3 === 0 ? 'occ' : 'av', shape: 'square' })),
-    { id: '57', cap: 8, top: '48%', left: '18%', status: 'occ', shape: 'rect' }, { id: '58', cap: 8, top: '48%', left: '34%', status: 'av', shape: 'rect' }, { id: '59', cap: 8, top: '48%', left: '50%', status: 'occ', shape: 'rect' }, { id: '60', cap: 8, top: '48%', left: '66%', status: 'av', shape: 'rect' }, { id: '61', cap: 8, top: '48%', left: '82%', status: 'occ', shape: 'rect' },
-    ...Array.from({ length: 7 }, (_, i) => ({ id: `${43 + i}`, cap: 4, top: '78%', left: `${9 + (i * 13.5)}%`, status: i % 2 === 0 ? 'av' : 'occ', shape: 'square' }))
+    ...Array.from({ length: 7 }, (_, i) => ({ id: `${56 - i}`, cap: 4, top: '82%', left: `${91 - (i * 13.5)}%`, status: i % 3 === 0 ? 'occ' : 'av', shape: 'square' })),
+    { id: '57', cap: 8, top: '52%', left: '82%', status: 'occ', shape: 'rect' }, { id: '58', cap: 8, top: '52%', left: '66%', status: 'av', shape: 'rect' }, { id: '59', cap: 8, top: '52%', left: '50%', status: 'occ', shape: 'rect' }, { id: '60', cap: 8, top: '52%', left: '34%', status: 'av', shape: 'rect' }, { id: '61', cap: 8, top: '52%', left: '18%', status: 'occ', shape: 'rect' },
+    ...Array.from({ length: 7 }, (_, i) => ({ id: `${43 + i}`, cap: 4, top: '22%', left: `${91 - (i * 13.5)}%`, status: i % 2 === 0 ? 'av' : 'occ', shape: 'square' }))
   ]
 };
 
@@ -274,7 +280,7 @@ async function markPartyNotified(id) {
 }
 
 async function assignServersToTable(tableId, serverNames) {
-  return supabase.from("table_status").update({ server_names: serverNames }).eq("id", tableId);
+  return supabase.from("table_status").upsert({ id: tableId, server_names: serverNames });
 }
 
 async function logTableOcc(tableId, serverNames, dateISO) {
@@ -356,6 +362,13 @@ async function createCalendarEventService(reservation) {
  * BLOQUE 6 — UI COMPONENTES INTERNOS
  *******************************************************/
 
+const LM_COLORS = {
+  navy: 'oklch(15% 0.015 255)', navyLight: 'oklch(17% 0.015 255)', navyBorder: 'oklch(25% 0.015 255)',
+  gold: 'oklch(80% 0.14 85)', goldDim: 'oklch(72% 0.14 82)', goldDark: 'oklch(18% 0.02 85)', goldText: 'oklch(62% 0.13 80)',
+  danger: 'oklch(62% 0.16 28)', warn: 'oklch(70% 0.14 70)', success: 'oklch(65% 0.15 145)', info: 'oklch(55% 0.12 250)',
+  textMuted: 'oklch(48% 0.01 90)', textFaint: 'oklch(60% 0.01 90)', textDark: 'oklch(20% 0.01 90)', border: 'oklch(88% 0.006 90)',
+};
+
 const HostessView = React.memo(function HostessView({
   // Acciones
   onAddWaitlist, onAddPhoneRes, onSeatParty, onUnseatParty, onCancelRes, onSaveEdit, onNotifyReady, onRemoveFromWaitlist, onUndoCancel, toggleBlackoutDate,
@@ -371,7 +384,7 @@ const HostessView = React.memo(function HostessView({
   // Datos
   walkInForm, setWalkInForm, phoneResForm, setPhoneResForm,
   waitList, history, seatedList, canceledList, blackoutDates, tableStatuses, tableServerNames,
-  walkinLoading, phoneResLoading
+  walkinLoading, phoneResLoading, newReservationTick
 }) {
   const blackoutInputRef = useRef(null);
   const bookingDateRef = useRef(null);
@@ -382,6 +395,28 @@ const HostessView = React.memo(function HostessView({
   const [newResAlert, setNewResAlert] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const notifChannelRef = useRef(null);
+
+  // Enciende el badge "!" cuando llega una reservación nueva por realtime (no en el primer render)
+  const isFirstTick = useRef(true);
+  useEffect(() => {
+    if (isFirstTick.current) { isFirstTick.current = false; return; }
+    setNewResAlert(true);
+  }, [newReservationTick]);
+
+  // Canal para avisarle a otras terminales de hostess que ya se vio la reservación nueva
+  useEffect(() => {
+    const ch = supabase
+      .channel('hostess-notifications')
+      .on('broadcast', { event: 'reservations_seen' }, () => setNewResAlert(false))
+      .subscribe();
+    notifChannelRef.current = ch;
+    return () => supabase.removeChannel(ch);
+  }, []);
+
+  const clearResAlert = () => {
+    setNewResAlert(false);
+    notifChannelRef.current?.send({ type: 'broadcast', event: 'reservations_seen', payload: {} });
+  };
   const [editingRes, setEditingRes] = useState(null);
   const [editingWaitItem, setEditingWaitItem] = useState(null);
   const [blackoutForm, setBlackoutForm] = useState({ date: '', notes: '' });
@@ -434,37 +469,38 @@ const HostessView = React.memo(function HostessView({
   }, [nowSec, waitList]);
 
   const seatButtonStyle = {
-    background: 'linear-gradient(135deg, #f2c300 0%, #d4ab00 100%)',
-    color: '#000', border: 'none', padding: '10px 24px', borderRadius: '12px', fontWeight: '700',
-    fontSize: '0.85rem', letterSpacing: '0.5px', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    transition: 'all 0.2s ease', textTransform: 'uppercase'
+    background: `linear-gradient(180deg, ${LM_COLORS.gold}, ${LM_COLORS.goldDim})`,
+    color: LM_COLORS.goldDark, border: 'none', padding: '10px 18px', borderRadius: '0', fontWeight: '600',
+    fontSize: '0.72rem', letterSpacing: '1px', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+    transition: 'all 0.2s ease', textTransform: 'uppercase', minWidth: '86px', textAlign: 'center'
   };
 
   const range = getAvailableTimeRange(dateISO);
 
   return (
     <div className="sr-page hostess-view">
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,500&family=Jost:wght@300;400;500;600&display=swap');`}</style>
       <main className="sr-card hostess-layout">
         <aside className="sr-hostess-sidebar">
-          <div className="sr-sidebar-header"><img src="/logohostessview.jpg" alt="Lindo Michoacán" className="sr-logo-small" /></div>
+          <div className="sr-sidebar-header"><img src="/logo.png" alt="Lindo Michoacán" className="sr-logo-small" /></div>
           <nav className="sr-sidebar-nav">
             <button className={activeTab === 'walkin' ? 'active' : ''} onClick={() => setActiveTab('walkin')}>Walk-in</button>
             <button className={activeTab === 'phoneres' ? 'active' : ''} onClick={() => setActiveTab('phoneres')}>Phone Reservation</button>
-            <button className={activeTab === 'waitlist' ? 'active' : ''} onClick={() => setActiveTab('waitlist')}>Wait List ({waitList.length})</button>
-            <button className={activeTab === 'reservations' ? 'active' : ''} onClick={() => { setActiveTab('reservations'); clearResAlert(); }}>Reservations ({history.length}){newResAlert && <span style={{ display: 'inline-block', background: '#ef4444', color: '#fff', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', fontWeight: '900', lineHeight: '16px', textAlign: 'center', marginLeft: '6px', verticalAlign: 'middle' }}>!</span>}</button>
-            <button className={activeTab === 'seated' ? 'active' : ''} onClick={() => setActiveTab('seated')}>Seated ({seatedList.length})</button>
-            <button className={activeTab === 'canceled' ? 'active' : ''} onClick={() => setActiveTab('canceled')} style={{color: activeTab === 'canceled' ? '#000' : '#ef4444'}}>Canceled ({canceledList.length})</button>
+            <button className={activeTab === 'waitlist' ? 'active' : ''} onClick={() => setActiveTab('waitlist')}>Wait List <span className="sr-nav-badge">{waitList.length}</span></button>
+            <button className={activeTab === 'reservations' ? 'active' : ''} onClick={() => { setActiveTab('reservations'); clearResAlert(); }}>Reservations <span className="sr-nav-badge">{history.length}</span>{newResAlert && <span style={{ display: 'inline-block', background: LM_COLORS.danger, color: '#fff', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', fontWeight: '900', lineHeight: '16px', textAlign: 'center', marginLeft: '6px', verticalAlign: 'middle' }}>!</span>}</button>
+            <button className={activeTab === 'seated' ? 'active' : ''} onClick={() => setActiveTab('seated')}>Seated <span className="sr-nav-badge">{seatedList.length}</span></button>
+            <button className={`${activeTab === 'canceled' ? 'active' : ''} sr-nav-danger`} onClick={() => setActiveTab('canceled')}>Canceled <span className="sr-nav-badge">{canceledList.length}</span></button>
             <button className={activeTab === 'floorplan' ? 'active' : ''} onClick={() => setActiveTab('floorplan')}>Floor Plan</button>
             <button className={activeTab === 'servers' ? 'active' : ''} onClick={() => setActiveTab('servers')}>Servers</button>
-            <button className={activeTab === 'blackout' ? 'active' : ''} onClick={() => setActiveTab('blackout')} style={{marginTop: 'auto', borderTop: '1px solid #eee', color: '#666'}}>Blackout</button>
+            <button className={activeTab === 'blackout' ? 'active' : ''} onClick={() => setActiveTab('blackout')} style={{marginTop: 'auto', borderTop: `1px solid ${LM_COLORS.navyBorder}`}}>Blackout</button>
           </nav>
         </aside>
         <section className="sr-hostess-main" ref={mainRef}>
           <header className="sr-main-header">
             <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
               <h2>{activeTab === 'walkin' ? 'New Walk-in' : activeTab === 'phoneres' ? 'New Phone Reservation' : activeTab === 'waitlist' ? 'Wait List' : activeTab === 'reservations' ? 'Reservations' : activeTab === 'seated' ? 'Seated History' : activeTab === 'canceled' ? 'Canceled' : activeTab === 'blackout' ? 'Manage Blackout' : activeTab === 'servers' ? 'Servers' : 'Floor Plan'}</h2>
-              {isBlackout && <span style={{background: '#ef4444', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.64rem', fontWeight: 'bold'}}>CLOSED TODAY</span>}
-              {isWalkInOnly && <span style={{background: '#f59e0b', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.64rem', fontWeight: 'bold'}}>ONLY WALK-IN</span>}
+              {isBlackout && <span style={{background: LM_COLORS.danger, color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.64rem', fontWeight: 'bold'}}>CLOSED TODAY</span>}
+              {isWalkInOnly && <span style={{background: LM_COLORS.warn, color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.64rem', fontWeight: 'bold'}}>ONLY WALK-IN</span>}
             </div>
             <div className="sr-hostess-date-picker" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button className="sr-btn-mini" onClick={() => stepDate(-1)}>‹</button>
@@ -486,23 +522,23 @@ const HostessView = React.memo(function HostessView({
           <div className="sr-main-content">
             {activeTab === 'walkin' && (
               <div className="sr-walkin-form">
-                {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed.</div>}
-                {dateISO !== dateISOFromDate(new Date()) && <div style={{padding: '10px 14px', background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '8px', marginBottom: '12px', color: '#92400e', fontSize: '0.85rem'}}>Warning: You are viewing <strong>{dateLabel}</strong>, not today. Walk-ins cannot be added for this date.</div>}
-                {isWalkInOnly && <div style={{padding: '12px 15px', background: '#fef3c7', color: '#92400e', borderRadius: '8px', marginBottom: '16px', fontSize: '0.78rem', lineHeight: '1.6'}}>🚶 <strong>Only Walk-In today.</strong> If a customer calls to make a reservation, please tell them: <em>"We are only accepting walk-ins today, but please come by and we will try to seat you as fast as we can."</em></div>}
-                <div style={{display:'flex', gap:'24px', justifyContent:'center', alignItems:'center', flexWrap:'wrap', marginBottom:'20px'}}>
-                  <div style={{textAlign:'center', background:'#fff', border:'1.5px solid #e5e7eb', borderRadius:'14px', padding:'12px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', minWidth:'110px'}}>
-                    <label style={{fontSize:'0.62rem', fontWeight:'800', letterSpacing:'0.08em', color:'#6b7280', display:'block', marginBottom:'6px'}}>PARTY SIZE</label>
-                    <input type="number" min="1" value={guests === null ? "" : guests} onChange={e => setGuests(e.target.value === "" ? null : parseInt(e.target.value))} disabled={isBlackout} style={{width:'60px', textAlign:'center', fontSize:'2rem', fontWeight:'800', border:'none', outline:'none', background:'transparent', color:'#111', display:'block', margin:'0 auto'}} />
+                {isBlackout && <div style={{padding: '15px', background: 'oklch(93% 0.03 25)', color: 'oklch(45% 0.16 25)', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>The restaurant is closed.</div>}
+                {dateISO !== dateISOFromDate(new Date()) && <div style={{padding: '10px 14px', background: 'oklch(93% 0.06 85)', border: `1px solid ${LM_COLORS.warn}`, borderRadius: '8px', marginBottom: '12px', color: 'oklch(45% 0.12 70)', fontSize: '0.85rem'}}>Warning: You are viewing <strong>{dateLabel}</strong>, not today. Walk-ins cannot be added for this date.</div>}
+                {isWalkInOnly && <div style={{padding: '12px 15px', background: 'oklch(93% 0.06 85)', color: 'oklch(45% 0.12 70)', borderRadius: '8px', marginBottom: '16px', fontSize: '0.78rem', lineHeight: '1.6'}}><strong>Only Walk-In today.</strong> If a customer calls to make a reservation, please tell them: <em>"We are only accepting walk-ins today, but please come by and we will try to seat you as fast as we can."</em></div>}
+                <div className="sr-formGrid" style={{marginBottom:'10px'}}>
+                  <div style={{textAlign:'center', background:'#fff', border: `1.5px solid ${LM_COLORS.border}`, borderRadius:'0', padding:'12px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)'}}>
+                    <label style={{fontSize:'0.62rem', fontWeight:'500', letterSpacing:'0.08em', color: LM_COLORS.textMuted, display:'block', marginBottom:'6px', fontFamily:"'Jost',sans-serif"}}>PARTY SIZE</label>
+                    <input type="number" min="1" placeholder="—" value={guests === null ? "" : guests} onChange={e => setGuests(e.target.value === "" ? null : parseInt(e.target.value))} disabled={isBlackout} style={{width:'60px', textAlign:'center', fontSize:'2rem', fontWeight:'800', border:'none', outline:'none', background:'transparent', color: LM_COLORS.textDark, display:'block', margin:'0 auto', fontFamily:"'Playfair Display',serif"}} />
                   </div>
-                  <div style={{textAlign:'center', background:'#fff', border:'1.5px solid #e5e7eb', borderRadius:'14px', padding:'12px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', minWidth:'130px', position:'relative'}}>
-                    <label style={{fontSize:'0.62rem', fontWeight:'800', letterSpacing:'0.08em', color:'#6b7280', display:'block', marginBottom:'6px'}}>ESTIMATED WAIT</label>
-                    <button onClick={() => !isBlackout && setShowWaitPicker(v => !v)} disabled={isBlackout} style={{fontSize:'2rem', fontWeight:'800', border:'none', background:'transparent', color:'#111', cursor:'pointer', padding:0, display:'block', margin:'0 auto', width:'100%'}}>
-                      {estimatedWait}<span style={{fontSize:'1rem', fontWeight:'500', color:'#6b7280'}}> min</span>
+                  <div style={{textAlign:'center', background:'#fff', border: `1.5px solid ${LM_COLORS.border}`, borderRadius:'0', padding:'12px 20px', boxShadow:'0 2px 10px rgba(0,0,0,0.07)', position:'relative'}}>
+                    <label style={{fontSize:'0.62rem', fontWeight:'500', letterSpacing:'0.08em', color: LM_COLORS.textMuted, display:'block', marginBottom:'6px', fontFamily:"'Jost',sans-serif"}}>ESTIMATED WAIT</label>
+                    <button onClick={() => !isBlackout && setShowWaitPicker(v => !v)} disabled={isBlackout} style={{fontSize:'2rem', fontWeight:'800', border:'none', background:'transparent', color: LM_COLORS.textDark, cursor:'pointer', padding:0, display:'block', margin:'0 auto', width:'100%', fontFamily:"'Playfair Display',serif"}}>
+                      {estimatedWait}<span style={{fontSize:'1rem', fontWeight:'500', color: LM_COLORS.textMuted}}> min</span>
                     </button>
                     {showWaitPicker && (
-                      <div style={{position:'absolute', zIndex:50, top:'100%', left:'50%', transform:'translateX(-50%)', marginTop:'4px', background:'#fff', border:'1px solid #e5e7eb', borderRadius:'10px', boxShadow:'0 4px 16px rgba(0,0,0,0.12)', padding:'10px', display:'flex', flexWrap:'wrap', gap:'6px', width:'220px', justifyContent:'center'}}>
+                      <div style={{position:'absolute', zIndex:50, top:'100%', left:'50%', transform:'translateX(-50%)', marginTop:'4px', background:'#fff', border: `1px solid ${LM_COLORS.border}`, borderRadius:'0', boxShadow:'0 4px 16px rgba(0,0,0,0.12)', padding:'10px', display:'flex', flexWrap:'wrap', gap:'6px', width:'220px', justifyContent:'center'}}>
                         {Array.from({length: 24}, (_, i) => (i + 1) * 5).map(m => (
-                          <button key={m} onClick={() => { setEstimatedWait(m); setShowWaitPicker(false); }} style={{padding:'4px 10px', borderRadius:'20px', border:'1px solid #e5e7eb', background: estimatedWait === m ? '#111' : '#f9fafb', color: estimatedWait === m ? '#fff' : '#111', fontSize:'0.78rem', fontWeight:'600', cursor:'pointer'}}>
+                          <button key={m} onClick={() => { setEstimatedWait(m); setShowWaitPicker(false); }} style={{padding:'4px 10px', borderRadius:'20px', border: `1px solid ${LM_COLORS.border}`, background: estimatedWait === m ? LM_COLORS.goldDark : 'oklch(97% 0.006 90)', color: estimatedWait === m ? '#fff' : LM_COLORS.textDark, fontSize:'0.78rem', fontWeight:'600', cursor:'pointer'}}>
                             {m} min
                           </button>
                         ))}
@@ -510,7 +546,7 @@ const HostessView = React.memo(function HostessView({
                     )}
                   </div>
                 </div>
-                <div className="sr-formGrid" style={{marginTop: '20px'}}>
+                <div className="sr-formGrid">
                   <div className="sr-field"><label className="sr-fieldLabel">First Name</label><input className="sr-input" value={walkInForm.firstName} onChange={e => setWalkInForm({...walkInForm, firstName: e.target.value})} disabled={isBlackout}/></div>
                   <div className="sr-field"><label className="sr-fieldLabel">Last Name</label><input className="sr-input" value={walkInForm.lastName} onChange={e => setWalkInForm({...walkInForm, lastName: e.target.value})} disabled={isBlackout}/></div>
                   <div className="sr-field"><label className="sr-fieldLabel">Phone</label><div style={{display:'flex',gap:'6px'}}><select className="sr-input" style={{width:'95px',flexShrink:0}} value={walkInForm.phoneCode} onChange={e => setWalkInForm({...walkInForm, phoneCode: e.target.value})} disabled={isBlackout}>{COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select><input className="sr-input" style={{flex:1}} value={walkInForm.phone} onChange={e => setWalkInForm({...walkInForm, phone: e.target.value})} placeholder="000-000-0000" disabled={isBlackout}/></div></div>
@@ -518,16 +554,16 @@ const HostessView = React.memo(function HostessView({
                   <div className="sr-field"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={walkInForm.dietary} onChange={e => setWalkInForm({...walkInForm, dietary: e.target.value})} disabled={isBlackout}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
                   <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={walkInForm.notes} onChange={e => setWalkInForm({...walkInForm, notes: e.target.value})} disabled={isBlackout}/></div>
                 </div>
-                <p style={{fontSize:'0.72rem',color:'#94a3b8',margin:'16px 0 0',lineHeight:'1.5'}}><strong style={{color:'#ef4444'}}>IMPORTANT NOTE:</strong> By providing their phone number, the guest consents to receive up to 2 SMS notifications (waitlist confirmation + table ready). Msg &amp; data rates may apply. Reply <strong>STOP</strong> to opt out.</p>
+                <p style={{fontSize:'0.72rem',color: LM_COLORS.textFaint,margin:'16px 0 0',lineHeight:'1.5'}}><strong style={{color: LM_COLORS.danger}}>IMPORTANT NOTE:</strong> By providing their phone number, the guest consents to receive up to 2 SMS notifications (waitlist confirmation + table ready). Msg &amp; data rates may apply. Reply <strong>STOP</strong> to opt out.</p>
                 <button className="sr-btn sr-btnPrimary" style={{marginTop: '20px', opacity: (isBlackout || walkinLoading) ? 0.5 : 1}} onClick={async () => { const ok = await onAddWaitlist(); if (ok) setActiveTab("waitlist"); }} disabled={isBlackout || walkinLoading}>{walkinLoading ? 'Adding...' : 'Add to Wait List'}</button>
               </div>
             )}
             {activeTab === 'phoneres' && (
               <div className="sr-walkin-form">
-                {isBlackout && <div style={{padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>⚠️ The restaurant is closed.</div>}
-                {isWalkInOnly && <div style={{padding: '12px 15px', background: '#fef3c7', color: '#92400e', borderRadius: '8px', marginBottom: '16px', fontSize: '0.78rem', lineHeight: '1.6'}}>🚶 <strong>Only Walk-In today.</strong> If a customer calls to make a reservation, please tell them: <em>"We are only accepting walk-ins today, but please come by and we will try to seat you as fast as we can."</em></div>}
+                {isBlackout && <div style={{padding: '15px', background: 'oklch(93% 0.03 25)', color: 'oklch(45% 0.16 25)', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center'}}>The restaurant is closed.</div>}
+                {isWalkInOnly && <div style={{padding: '12px 15px', background: 'oklch(93% 0.06 85)', color: 'oklch(45% 0.12 70)', borderRadius: '8px', marginBottom: '16px', fontSize: '0.78rem', lineHeight: '1.6'}}><strong>Only Walk-In today.</strong> If a customer calls to make a reservation, please tell them: <em>"We are only accepting walk-ins today, but please come by and we will try to seat you as fast as we can."</em></div>}
                 {!isBlackout && range && (
-                  <div style={{padding: '10px 15px', background: '#f0fdf4', color: '#166534', borderRadius: '8px', marginBottom: '16px', fontSize: '0.68rem', textAlign: 'center'}}>
+                  <div style={{padding: '10px 15px', background: 'oklch(93% 0.05 145)', color: 'oklch(40% 0.1 145)', borderRadius: '8px', marginBottom: '16px', fontSize: '0.68rem', textAlign: 'center'}}>
                     Reservations accepted: {formatTimeLabel(range.open)} – {formatTimeLabel(range.lastSlot)}
                   </div>
                 )}
@@ -565,19 +601,21 @@ const HostessView = React.memo(function HostessView({
             )}
             {activeTab === 'waitlist' && (
               <div className="sr-res-list">
-                {waitList.length === 0 ? <p>No guests in wait list.</p> : [...waitList].sort((a, b) => {
+                {waitList.length === 0 ? <div className="sr-empty-state">No guests on the wait list.</div> : [...waitList].sort((a, b) => {
                   const nA = a.notified_at ? 1 : 0, nB = b.notified_at ? 1 : 0;
                   if (nB !== nA) return nB - nA;
                   return new Date(a.created_at) - new Date(b.created_at);
                 }).map(item => (
-                  <div key={item.id} className={`sr-list-item${exitingIds.has(item.id) ? ' sr-item-exit' : ''}`} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', ...(item.notified_at ? {borderLeft: '4px solid rgba(15, 40, 80, 0.85)', borderBottom: 'none', background: 'rgba(15, 40, 80, 0.15)', boxShadow: '0 2px 14px rgba(15, 40, 80, 0.28)', borderRadius: '10px', margin: '4px 8px'} : {})}}>
+                  <div key={item.id} className={`sr-list-item${exitingIds.has(item.id) ? ' sr-item-exit' : ''}`} style={item.notified_at ? {borderLeft: `4px solid ${LM_COLORS.navy}`, borderBottom: 'none', background: 'oklch(15% 0.015 255 / 0.08)', boxShadow: '0 2px 14px oklch(15% 0.015 255 / 0.2)', borderRadius: '0', margin: '4px 8px'} : {}}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <strong>{item.firstName} {item.lastName}</strong>
-                        <span style={{ background: '#111', color: '#fff', borderRadius: '8px', padding: '2px 10px', fontSize: '0.68rem', fontWeight: '800', letterSpacing: '0.3px' }}>👥 {item.guests} guests</span>
+                        <strong style={{ fontSize: '1.1rem', fontWeight: '600', fontFamily: "'Playfair Display',serif" }}>{item.firstName} {item.lastName}</strong>
+                        <span style={{ background: LM_COLORS.textDark, color: '#fff', borderRadius: '0', padding: '4px 10px', fontSize: '0.68rem', fontWeight: '500', letterSpacing: '1.4px', textTransform: 'uppercase', fontFamily: "'Jost',sans-serif", whiteSpace: 'nowrap' }}>{item.guests} guests</span>
+                        {item.celebration && item.celebration !== "None" && <span style={{ fontSize: '0.66rem', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase', color: LM_COLORS.goldText }}>{item.celebration}</span>}
+                        {item.dietary && item.dietary !== "None" && <span style={{ fontSize: '0.66rem', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase', color: LM_COLORS.danger }}>{item.dietary}</span>}
                         {item.created_at && (() => {
                           const mins = Math.floor((now - new Date(item.created_at).getTime()) / 60000);
-                          const color = mins >= 30 ? '#ef4444' : mins >= 15 ? '#f59e0b' : '#22c55e';
+                          const color = mins >= 30 ? LM_COLORS.danger : mins >= 15 ? LM_COLORS.warn : LM_COLORS.success;
                           return (
                             <span style={{ background: color, color: '#fff', borderRadius: '20px', padding: '2px 10px', fontSize: '0.62rem', fontWeight: '700' }}>
                               {mins < 1 ? '< 1 min' : `${mins} min`}
@@ -590,47 +628,44 @@ const HostessView = React.memo(function HostessView({
                           const mins = Math.floor(remaining / 60000);
                           const secs = Math.floor((remaining % 60000) / 1000);
                           const isExpired = remaining === 0;
-                          const color = isExpired ? '#ef4444' : remaining < 2 * 60 * 1000 ? '#f59e0b' : '#3b82f6';
+                          const color = isExpired ? LM_COLORS.danger : remaining < 2 * 60 * 1000 ? LM_COLORS.warn : LM_COLORS.info;
                           return (
                             <span style={{ background: color, color: '#fff', borderRadius: '20px', padding: '2px 10px', fontSize: '0.62rem', fontWeight: '700', fontVariantNumeric: 'tabular-nums' }}>
-                              {isExpired ? '⚠️ Wait exp.' : `⏳ ${mins}:${String(secs).padStart(2, '0')}`}
+                              {isExpired ? 'Wait exp.' : `${mins}:${String(secs).padStart(2, '0')}`}
                             </span>
                           );
                         })()}
                       </div>
-                      <small style={{ color: '#999' }}>In at {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>
-                      {item.celebration && item.celebration !== "None" && <div style={{ fontSize: '0.68rem', color: '#d4ab00', marginTop: '2px' }}>🎉 {item.celebration}</div>}
-                      {item.dietary && item.dietary !== "None" && <div style={{ fontSize: '0.68rem', color: '#ef4444', marginTop: '2px' }}>🥗 {item.dietary}</div>}
-                      {item.notes && <div style={{ fontSize: '0.68rem', fontStyle: 'italic', color: '#666', marginTop: '2px' }}>📝 "{item.notes}"</div>}
-                      {item.phone && <div style={{ fontSize: '0.68rem', color: '#4b5563', marginTop: '2px', fontWeight: '500' }}>📞 {item.phone}</div>}
+                      <small style={{ color: LM_COLORS.textFaint }}>In at {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{item.phone ? ` · ${item.phone}` : ''}</small>
+                      {item.notes && <div style={{ fontSize: '0.68rem', fontStyle: 'italic', color: LM_COLORS.textMuted, marginTop: '2px' }}>"{item.notes}"</div>}
                       {item.notified_at && (() => {
                         const remaining = Math.max(0, 10 * 60 * 1000 - (nowSec - new Date(item.notified_at).getTime()));
                         const mins = Math.floor(remaining / 60000);
                         const secs = Math.floor((remaining % 60000) / 1000);
                         const isExpired = remaining === 0;
-                        const color = isExpired ? '#ef4444' : remaining < 2 * 60 * 1000 ? '#f59e0b' : '#22c55e';
+                        const color = isExpired ? LM_COLORS.danger : remaining < 2 * 60 * 1000 ? LM_COLORS.warn : LM_COLORS.success;
                         return (
-                          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #e5e7eb', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '0.68rem', color: '#6b7280' }}>⏱ Hold time:</span>
+                          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: `1px dashed ${LM_COLORS.border}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '0.68rem', color: LM_COLORS.textMuted }}>Hold time:</span>
                             <span style={{ fontSize: '0.76rem', fontWeight: '800', color, fontVariantNumeric: 'tabular-nums' }}>
-                              {isExpired ? '⚠️ Expired' : `${mins}:${String(secs).padStart(2, '0')}`}
+                              {isExpired ? 'Expired' : `${mins}:${String(secs).padStart(2, '0')}`}
                             </span>
                           </div>
                         );
                       })()}
                     </div>
                     <div style={{ display: "flex", gap: "8px" }}>
-                      <button onClick={() => setEditingWaitItem({...item})} style={{ ...seatButtonStyle, fontSize: '0.75rem', padding: '8px 12px', background: '#f1f5f9', color: '#1e293b', border: '1px solid #cbd5e1' }}>Edit</button>
+                      <button onClick={() => setEditingWaitItem({...item})} style={{ ...seatButtonStyle, background: '#fff', color: LM_COLORS.textDark, border: `1px solid ${LM_COLORS.border}` }}>Edit</button>
                       <button
-                        style={{ ...seatButtonStyle, fontSize: '0.75rem', padding: '8px 12px', border: 'none', background: item.notified_at ? '#16a34a' : '#000', color: '#fff', cursor: item.notified_at ? 'default' : 'pointer' }}
+                        style={{ ...seatButtonStyle, border: 'none', background: item.notified_at ? LM_COLORS.success : LM_COLORS.goldDark, color: '#fff', cursor: item.notified_at ? 'default' : 'pointer' }}
                         onClick={() => !item.notified_at && onNotifyReady(item)}
                       >
-                        {item.notified_at ? '✓ Notified' : '💬 Notify'}
+                        {item.notified_at ? 'Notified' : 'Notify'}
                       </button>
                       <button style={seatButtonStyle} onClick={() => animateThenAct(item.id, () => onSeatParty(item))}>
                         Seat
                       </button>
-                      <button style={{ ...seatButtonStyle, fontSize: '0.75rem', padding: '8px 12px', background: '#fee2e2', color: '#b91c1c' }} onClick={() => animateThenAct(item.id, () => onRemoveFromWaitlist(item))}>
+                      <button style={{ ...seatButtonStyle, background: '#fff', color: LM_COLORS.danger, border: `1px solid ${LM_COLORS.danger}` }} onClick={() => animateThenAct(item.id, () => onRemoveFromWaitlist(item))}>
                         Remove
                       </button>
                     </div>
@@ -640,28 +675,31 @@ const HostessView = React.memo(function HostessView({
             )}
             {activeTab === 'reservations' && (
               <div className="sr-res-list">
-                {history.length === 0 ? <p>No active reservations.</p> : history.map(res => (
-                  <div key={res.id} className={`sr-list-item${exitingIds.has(res.id) ? ' sr-item-exit' : ''}`} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', ...(res.notified_at ? {borderLeft: '4px solid rgba(15, 40, 80, 0.85)', borderBottom: 'none', background: 'rgba(15, 40, 80, 0.15)', boxShadow: '0 2px 14px rgba(15, 40, 80, 0.28)', borderRadius: '10px', margin: '4px 8px'} : {})}}>
+                {history.length === 0 ? <div className="sr-empty-state">No active reservations.</div> : history.map(res => (
+                  <div key={res.id} className={`sr-list-item${exitingIds.has(res.id) ? ' sr-item-exit' : ''}`} style={res.notified_at ? {borderLeft: `4px solid ${LM_COLORS.navy}`, borderBottom: 'none', background: 'oklch(15% 0.015 255 / 0.08)', boxShadow: '0 2px 14px oklch(15% 0.015 255 / 0.2)', borderRadius: '0', margin: '4px 8px'} : {}}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><strong style={{ fontSize: '0.88rem' }}>{res.firstName} {res.lastName}</strong><span style={{ background: '#111', color: '#fff', borderRadius: '10px', padding: '6px 14px', fontSize: '0.85rem', fontWeight: '800', letterSpacing: '0.3px' }}>👥 {res.guests} guests</span></div>
-                        <span style={{ fontWeight: '700' }}>{res.timeHHMM ? formatTimeLabel(res.timeHHMM) : ""}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                          <strong style={{ fontSize: '1.2rem', fontWeight: '600', fontFamily: "'Playfair Display',serif" }}>{res.firstName} {res.lastName}</strong>
+                          <span style={{ background: LM_COLORS.textDark, color: '#fff', borderRadius: '0', padding: '4px 12px', fontSize: '0.72rem', fontWeight: '500', letterSpacing: '1.4px', textTransform: 'uppercase', fontFamily: "'Jost',sans-serif", whiteSpace: 'nowrap' }}>{res.guests} guests</span>
+                          {res.celebration && res.celebration !== "None" && <span style={{ fontSize: '0.7rem', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase', color: LM_COLORS.goldText }}>{res.celebration}</span>}
+                          {res.dietary && res.dietary !== "None" && <span style={{ fontSize: '0.7rem', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase', color: LM_COLORS.danger }}>{res.dietary}</span>}
+                        </div>
+                        <span style={{ fontWeight: '700', fontFamily: "'Playfair Display',serif", fontSize: '1.1rem' }}>{res.timeHHMM ? formatTimeLabel(res.timeHHMM) : ""}</span>
                       </div>
-                      {res.celebration && res.celebration !== "None" && <div style={{ fontSize: '0.68rem', color: '#d4ab00', marginTop: '4px' }}>🎉 {res.celebration}</div>}
-                      {res.dietary && res.dietary !== "None" && <div style={{ fontSize: '0.68rem', color: '#ef4444', marginTop: '2px' }}>🥗 {res.dietary}</div>}
-                      {res.notes && <div style={{ color: '#555', fontSize: '0.68rem', background: '#f8f8f8', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{res.notes}"</div>}
-                      {res.phone && <div style={{ fontSize: '0.68rem', color: '#4b5563', marginTop: '2px', fontWeight: '500' }}>📞 {res.phone}</div>}
+                      {res.phone && <div style={{ fontSize: '0.68rem', color: LM_COLORS.textMuted, marginTop: '6px', fontWeight: '500' }}>{res.phone}</div>}
+                      {res.notes && <div style={{ color: LM_COLORS.textMuted, fontSize: '0.68rem', background: 'oklch(95% 0.006 90)', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{res.notes}"</div>}
                       {res.notified_at && (() => {
                         const remaining = Math.max(0, 10 * 60 * 1000 - (nowSec - new Date(res.notified_at).getTime()));
                         const mins = Math.floor(remaining / 60000);
                         const secs = Math.floor((remaining % 60000) / 1000);
                         const isExpired = remaining === 0;
-                        const color = isExpired ? '#ef4444' : remaining < 2 * 60 * 1000 ? '#f59e0b' : '#22c55e';
+                        const color = isExpired ? LM_COLORS.danger : remaining < 2 * 60 * 1000 ? LM_COLORS.warn : LM_COLORS.success;
                         return (
-                          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #e5e7eb', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '0.68rem', color: '#6b7280' }}>⏱ Hold time:</span>
+                          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: `1px dashed ${LM_COLORS.border}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '0.68rem', color: LM_COLORS.textMuted }}>Hold time:</span>
                             <span style={{ fontSize: '0.76rem', fontWeight: '800', color, fontVariantNumeric: 'tabular-nums' }}>
-                              {isExpired ? '⚠️ Expired' : `${mins}:${String(secs).padStart(2, '0')}`}
+                              {isExpired ? 'Expired' : `${mins}:${String(secs).padStart(2, '0')}`}
                             </span>
                           </div>
                         );
@@ -669,9 +707,9 @@ const HostessView = React.memo(function HostessView({
                     </div>
                     <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                       <button style={seatButtonStyle} onClick={() => animateThenAct(res.id, () => onSeatParty(res))}>Seat</button>
-                      <button style={{ ...seatButtonStyle, fontSize: '0.75rem', padding: '8px 12px', background: res.notified_at ? '#16a34a' : '#000', color: '#fff', cursor: res.notified_at ? 'default' : 'pointer' }} onClick={() => !res.notified_at && onNotifyReady(res)}>{res.notified_at ? '✓ Notified' : '💬 Notify'}</button>
-                      <button style={{ ...seatButtonStyle, background: '#f3f4f6', color: '#374151', boxShadow: 'none', border: '1px solid #d1d5db', fontSize: '0.75rem', padding: '8px 12px' }} onClick={() => setEditingRes({...res})}>Edit</button>
-                      <button style={{ ...seatButtonStyle, background: '#fee2e2', color: '#b91c1c', fontSize: '0.75rem', padding: '8px 12px' }} onClick={() => animateThenAct(res.id, () => onCancelRes(res))}>Cancel</button>
+                      <button style={{ ...seatButtonStyle, background: res.notified_at ? LM_COLORS.success : LM_COLORS.goldDark, color: '#fff', cursor: res.notified_at ? 'default' : 'pointer' }} onClick={() => !res.notified_at && onNotifyReady(res)}>{res.notified_at ? 'Notified' : 'Notify'}</button>
+                      <button style={{ ...seatButtonStyle, background: '#fff', color: LM_COLORS.textDark, boxShadow: 'none', border: `1px solid ${LM_COLORS.border}` }} onClick={() => setEditingRes({...res})}>Edit</button>
+                      <button style={{ ...seatButtonStyle, background: '#fff', color: LM_COLORS.danger, border: `1px solid ${LM_COLORS.danger}` }} onClick={() => animateThenAct(res.id, () => onCancelRes(res))}>Cancel</button>
                     </div>
                   </div>
                 ))}
@@ -679,22 +717,25 @@ const HostessView = React.memo(function HostessView({
             )}
             {activeTab === 'seated' && (
               <div className="sr-res-list">
-                {seatedList.length === 0 ? <p>No seated guests today.</p> : seatedList.map(item => (
-                  <div key={item.id} className="sr-list-item" style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                {seatedList.length === 0 ? <div className="sr-empty-state">No tables currently seated.</div> : seatedList.map(item => (
+                  <div key={item.id} className="sr-list-item">
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
-                        <div><strong style={{ fontSize: '0.88rem' }}>{item.firstName} {item.lastName}</strong><span style={{ color: '#666', marginLeft: '8px' }}>({item.guests} pax)</span></div>
-                        <span style={{ fontWeight: '700', color: '#22c55e' }}>Seated {item.seated_at ? new Date(item.seated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                          <strong style={{ fontSize: '1.2rem', fontWeight: '600', fontFamily: "'Playfair Display',serif" }}>{item.firstName} {item.lastName}</strong>
+                          <span style={{ color: LM_COLORS.textMuted }}>({item.guests} pax)</span>
+                          {item.celebration && item.celebration !== "None" && <span style={{ fontSize: '0.7rem', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase', color: LM_COLORS.goldText }}>{item.celebration}</span>}
+                          {item.dietary && item.dietary !== "None" && <span style={{ fontSize: '0.7rem', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase', color: LM_COLORS.danger }}>{item.dietary}</span>}
+                        </div>
+                        <span style={{ fontWeight: '700', color: LM_COLORS.success }}>Seated {item.seated_at ? new Date(item.seated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}</span>
                       </div>
-                      {item.timeHHMM && <div style={{ fontSize: '0.68rem', color: '#888', marginTop: '2px' }}>Res. time: {formatTimeLabel(item.timeHHMM)}</div>}
-                      {item.celebration && item.celebration !== "None" && <div style={{ fontSize: '0.68rem', color: '#d4ab00', marginTop: '4px' }}>🎉 {item.celebration}</div>}
-                      {item.dietary && item.dietary !== "None" && <div style={{ fontSize: '0.68rem', color: '#ef4444', marginTop: '2px' }}>🥗 {item.dietary}</div>}
-                      {item.notes && <div style={{ color: '#555', fontSize: '0.68rem', background: '#f8f8f8', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{item.notes}"</div>}
-                      {item.phone && <div style={{ fontSize: '0.68rem', color: '#4b5563', marginTop: '2px', fontWeight: '500' }}>📞 {item.phone}</div>}
+                      {item.timeHHMM && <div style={{ fontSize: '0.68rem', color: LM_COLORS.textFaint, marginTop: '2px' }}>Res. time: {formatTimeLabel(item.timeHHMM)}</div>}
+                      {item.phone && <div style={{ fontSize: '0.68rem', color: LM_COLORS.textMuted, marginTop: '2px', fontWeight: '500' }}>{item.phone}</div>}
+                      {item.notes && <div style={{ color: LM_COLORS.textMuted, fontSize: '0.68rem', background: 'oklch(95% 0.006 90)', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{item.notes}"</div>}
                     </div>
                     <button
                       onClick={() => onUnseatParty(item)}
-                      style={{ background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', padding: '8px 16px', borderRadius: '10px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      style={{ ...seatButtonStyle, background: '#fff', color: LM_COLORS.textDark, border: `1px solid ${LM_COLORS.border}` }}
                     >
                       Undo
                     </button>
@@ -704,18 +745,18 @@ const HostessView = React.memo(function HostessView({
             )}
             {activeTab === 'canceled' && (
               <div className="sr-res-list">
-                {canceledList.length === 0 ? <p>No canceled reservations today.</p> : canceledList.map(item => (
-                  <div key={item.id} style={{padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                {canceledList.length === 0 ? <div className="sr-empty-state">Canceled reservations will appear here.</div> : canceledList.map(item => (
+                  <div key={item.id} className="sr-list-item">
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: '20px' }}>
-                        <div><strong style={{ fontSize: '1.1rem', textDecoration: 'line-through', color: '#9ca3af' }}>{item.firstName} {item.lastName}</strong><span style={{ color: '#9ca3af', marginLeft: '8px' }}>({item.guests} pax)</span>{item.notified_at && <span style={{ background: '#ef4444', color: '#fff', borderRadius: '6px', padding: '2px 8px', fontSize: '0.62rem', fontWeight: '800', marginLeft: '8px', verticalAlign: 'middle' }}>Didn't Show</span>}</div>
-                        <span style={{ fontWeight: '700', color: '#9ca3af' }}>{item.timeHHMM ? formatTimeLabel(item.timeHHMM) : ""}</span>
+                        <div><strong style={{ fontSize: '1.2rem', fontWeight: '600', fontFamily: "'Playfair Display',serif", textDecoration: 'line-through', color: LM_COLORS.textFaint }}>{item.firstName} {item.lastName}</strong><span style={{ color: LM_COLORS.textFaint, marginLeft: '8px' }}>({item.guests} pax)</span>{item.notified_at && <span style={{ background: LM_COLORS.danger, color: '#fff', borderRadius: '3px', padding: '3px 9px', fontSize: '0.62rem', fontWeight: '700', marginLeft: '8px', verticalAlign: 'middle' }}>Didn't Show</span>}</div>
+                        <span style={{ fontWeight: '700', color: LM_COLORS.textFaint }}>{item.timeHHMM ? formatTimeLabel(item.timeHHMM) : ""}</span>
                       </div>
-                      {item.phone && <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: '2px' }}>📞 {item.phone}</div>}
-                      {item.notes && <div style={{ color: '#9ca3af', fontSize: '0.68rem', marginTop: '4px', fontStyle: 'italic' }}>"{item.notes}"</div>}
+                      {item.phone && <div style={{ fontSize: '0.68rem', color: LM_COLORS.textFaint, marginTop: '2px' }}>{item.phone}</div>}
+                      {item.notes && <div style={{ color: LM_COLORS.textFaint, fontSize: '0.68rem', marginTop: '4px', fontStyle: 'italic' }}>"{item.notes}"</div>}
                     </div>
                     <div style={{ flexShrink: 0 }}>
-                      <button style={{ ...seatButtonStyle, fontSize: '0.75rem', padding: '8px 12px', background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db' }} onClick={() => onUndoCancel(item)}>
+                      <button style={{ ...seatButtonStyle, background: '#fff', color: LM_COLORS.textDark, border: `1px solid ${LM_COLORS.border}` }} onClick={() => onUndoCancel(item)}>
                         Undo
                       </button>
                     </div>
@@ -741,27 +782,28 @@ const HostessView = React.memo(function HostessView({
                     const allKeys = Object.keys(FLOOR_CONFIG).flatMap(floor =>
                       FLOOR_CONFIG[floor].map(t => `${floor}-${t.id}`)
                     );
-                    await supabase.from('table_status').update({ server_names: [], status: 'av' }).in('id', allKeys);
-                  }} style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.68rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    const { error } = await supabase.from('table_status').upsert(allKeys.map(id => ({ id, server_names: [], status: 'av' })));
+                    if (error) alert('Clear All failed: ' + error.message);
+                  }} style={{ background: '#fff', color: LM_COLORS.danger, border: `1px solid ${LM_COLORS.danger}`, borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.68rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
                     Clear All
                   </button>
                   {!assignMode && !unassignMode ? (
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <div style={{ position: 'relative' }}>
-                        <button onClick={() => setShowAssignServerList(p => !p)} style={{ background: '#f2c300', color: '#000', border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        <button onClick={() => setShowAssignServerList(p => !p)} style={{ background: `linear-gradient(180deg, ${LM_COLORS.gold}, ${LM_COLORS.goldDim})`, color: LM_COLORS.goldDark, border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
                           Assign Tables ▾
                         </button>
                         {showAssignServerList && (
-                          <div style={{ position: 'absolute', top: '110%', right: 0, background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '8px', zIndex: 100, minWidth: '160px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>
+                          <div style={{ position: 'absolute', top: '110%', right: 0, background: LM_COLORS.navyLight, border: `1px solid ${LM_COLORS.navyBorder}`, borderRadius: '10px', padding: '8px', zIndex: 100, minWidth: '160px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>
                             {SERVERS.map(name => (
                               <button key={name} onClick={() => setAssigningServers(prev => { const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s; })}
-                                style={{ display: 'block', width: '100%', textAlign: 'left', background: assigningServers.has(name) ? '#3b82f6' : 'transparent', color: '#f1f5f9', border: 'none', borderRadius: '6px', padding: '6px 10px', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' }}>
+                                style={{ display: 'block', width: '100%', textAlign: 'left', background: assigningServers.has(name) ? LM_COLORS.info : 'transparent', color: 'oklch(90% 0.01 90)', border: 'none', borderRadius: '6px', padding: '6px 10px', fontWeight: '600', fontSize: '0.78rem', cursor: 'pointer', fontFamily: "'Jost',sans-serif" }}>
                                 {name}
                               </button>
                             ))}
-                            <div style={{ borderTop: '1px solid #334155', marginTop: '6px', paddingTop: '6px' }}>
+                            <div style={{ borderTop: `1px solid ${LM_COLORS.navyBorder}`, marginTop: '6px', paddingTop: '6px' }}>
                               <button onClick={() => { if (assigningServers.size > 0) { setAssignMode(true); setShowAssignServerList(false); } }}
-                                style={{ width: '100%', background: assigningServers.size > 0 ? '#22c55e' : '#334155', color: assigningServers.size > 0 ? '#fff' : '#64748b', border: 'none', borderRadius: '6px', padding: '6px', fontWeight: '800', fontSize: '0.75rem', cursor: assigningServers.size > 0 ? 'pointer' : 'default' }}>
+                                style={{ width: '100%', background: assigningServers.size > 0 ? LM_COLORS.success : LM_COLORS.navyBorder, color: assigningServers.size > 0 ? '#fff' : 'oklch(55% 0.01 90)', border: 'none', borderRadius: '6px', padding: '6px', fontWeight: '700', fontSize: '0.75rem', cursor: assigningServers.size > 0 ? 'pointer' : 'default', fontFamily: "'Jost',sans-serif" }}>
                                 Assign {assigningServers.size > 0 ? `(${assigningServers.size}) →` : ''}
                               </button>
                             </div>
@@ -769,39 +811,49 @@ const HostessView = React.memo(function HostessView({
                         )}
                       </div>
                       <button onClick={() => { setUnassignMode(true); setPendingAssignTables(new Set()); }}
-                        style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: '8px', padding: '4px 10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        style={{ background: '#fff', color: LM_COLORS.danger, border: `1px solid ${LM_COLORS.danger}`, borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
                         Unassign
                       </button>
                     </div>
                   ) : assignMode ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.72rem', color: LM_COLORS.textMuted, fontWeight: '600', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
                         {[...assigningServers].map(n => n.split(' ')[0]).join(', ')} — {pendingAssignTables.size}
                       </span>
                       <button onClick={async () => {
-                        await Promise.all([...pendingAssignTables].map(id => assignServersToTable(id, [...assigningServers])));
+                        if (pendingAssignTables.size === 0) { alert('Select at least one table on the floor plan before confirming.'); return; }
+                        const servers = [...assigningServers];
+                        const results = await Promise.all([...pendingAssignTables].map(id => assignServersToTable(id, servers)));
+                        const failed = results.find(r => r?.error);
+                        if (failed) { alert('Assign failed: ' + failed.error.message); return; }
+                        await Promise.all([...pendingAssignTables].map(id => logTableOcc(id, servers, dateISO)));
+                        const { data } = await fetchTableEvents(dateISO);
+                        setTableEvents(data || []);
                         setAssignMode(false); setAssigningServers(new Set()); setPendingAssignTables(new Set());
-                      }} style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      }} style={{ background: LM_COLORS.success, color: '#fff', border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
                         Confirm
                       </button>
                       <button onClick={() => { setAssignMode(false); setAssigningServers(new Set()); setPendingAssignTables(new Set()); }}
-                        style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569', borderRadius: '8px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer' }}>
+                        style={{ background: 'transparent', color: LM_COLORS.textMuted, border: `1px solid ${LM_COLORS.border}`, borderRadius: '8px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer' }}>
                         ✕
                       </button>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.72rem', color: LM_COLORS.textMuted, fontWeight: '600', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
                         Remove: {pendingAssignTables.size} table(s)
                       </span>
                       <button onClick={async () => {
-                        await Promise.all([...pendingAssignTables].map(id => assignServersToTable(id, [])));
+                        if (pendingAssignTables.size === 0) { alert('Select at least one table on the floor plan before confirming.'); return; }
+                        const results = await Promise.all([...pendingAssignTables].map(id => assignServersToTable(id, [])));
+                        const failed = results.find(r => r?.error);
+                        if (failed) { alert('Unassign failed: ' + failed.error.message); return; }
                         setUnassignMode(false); setPendingAssignTables(new Set());
-                      }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      }} style={{ background: LM_COLORS.danger, color: '#fff', border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
                         Confirm
                       </button>
                       <button onClick={() => { setUnassignMode(false); setPendingAssignTables(new Set()); }}
-                        style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569', borderRadius: '8px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer' }}>
+                        style={{ background: 'transparent', color: LM_COLORS.textMuted, border: `1px solid ${LM_COLORS.border}`, borderRadius: '8px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer' }}>
                         ✕
                       </button>
                     </div>
@@ -818,7 +870,7 @@ const HostessView = React.memo(function HostessView({
                         <button
                           key={table.id}
                           className={`sr-table-marker shape-${table.shape || 'square'} ${status === 'occ' ? 'is-occupied' : 'is-available'}`}
-                          style={{ top: table.top, left: table.left, outline: assignMode && pendingAssignTables.has(key) ? '3px solid #22c55e' : unassignMode && pendingAssignTables.has(key) ? '3px solid #ef4444' : undefined, outlineOffset: '2px' }}
+                          style={{ top: table.top, left: table.left, outline: assignMode && pendingAssignTables.has(key) ? `3px solid ${LM_COLORS.success}` : unassignMode && pendingAssignTables.has(key) ? `3px solid ${LM_COLORS.danger}` : undefined, outlineOffset: '2px' }}
                           onClick={() => {
                             if (assignMode || unassignMode) {
                               setPendingAssignTables(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
@@ -830,8 +882,8 @@ const HostessView = React.memo(function HostessView({
                           <span className="table-id">{table.id}</span>
                           <span className="table-cap">{table.cap}p</span>
                           {servers.length > 0 && (
-                            <span style={{ position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)', background: '#1d4ed8', color: '#fff', fontSize: '7px', fontWeight: '800', borderRadius: '4px', padding: '1px 3px', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                              {servers.map(n => n[0]).join(' ')}
+                            <span style={{ position: 'absolute', bottom: '-10px', left: '50%', transform: 'translateX(-50%)', background: LM_COLORS.info, color: '#fff', fontSize: '8px', fontWeight: '800', letterSpacing: '0.5px', borderRadius: '3px', padding: '2px 5px', whiteSpace: 'nowrap', lineHeight: 1.2, zIndex: 6, boxShadow: '0 2px 4px rgba(0,0,0,0.4)' }}>
+                              {servers.map(n => getInitials(n)).join(' · ')}
                             </span>
                           )}
                         </button>
@@ -871,42 +923,42 @@ const HostessView = React.memo(function HostessView({
                   <button
                     className="sr-btn"
                     disabled={!blackoutForm.date}
-                    style={{background: '#ef4444', color: '#fff', flex: 1, opacity: !blackoutForm.date ? 0.5 : 1}}
+                    style={{background: LM_COLORS.danger, color: '#fff', border: 'none', flex: 1, opacity: !blackoutForm.date ? 0.5 : 1}}
                     onClick={async () => {
                       await toggleBlackoutDate(blackoutForm.date, blackoutForm.notes, 'closed');
                       setBlackoutForm({ date: '', notes: '' });
                     }}
                   >
-                    🚫 Closed Today
+                    Closed Today
                   </button>
                   <button
                     className="sr-btn"
                     disabled={!blackoutForm.date}
-                    style={{background: '#f59e0b', color: '#fff', flex: 1, opacity: !blackoutForm.date ? 0.5 : 1}}
+                    style={{background: LM_COLORS.warn, color: '#fff', border: 'none', flex: 1, opacity: !blackoutForm.date ? 0.5 : 1}}
                     onClick={async () => {
                       await toggleBlackoutDate(blackoutForm.date, blackoutForm.notes, 'walkin_only');
                       setBlackoutForm({ date: '', notes: '' });
                     }}
                   >
-                    🚶 Only Walk-In
+                    Only Walk-In
                   </button>
                 </div>
 
                 <div style={{marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                  {blackoutDates.length === 0 && <p style={{color: '#999', fontSize: '0.72rem'}}>No blocked dates.</p>}
+                  {blackoutDates.length === 0 && <p style={{color: LM_COLORS.textFaint, fontSize: '0.72rem'}}>No blocked dates.</p>}
                   {blackoutDates.map(b => (
-                    <div key={b.date_iso} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: b.type === 'walkin_only' ? '#fffbeb' : '#fff5f5', border: `1px solid ${b.type === 'walkin_only' ? '#fcd34d' : '#fecaca'}`, borderRadius: '10px', padding: '12px 16px'}}>
+                    <div key={b.date_iso} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: b.type === 'walkin_only' ? 'oklch(93% 0.06 85)' : 'oklch(93% 0.03 25)', border: `1px solid ${b.type === 'walkin_only' ? 'oklch(80% 0.1 80)' : 'oklch(85% 0.06 25)'}`, borderRadius: '0', padding: '12px 16px'}}>
                       <div>
                         <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                           <span style={{fontWeight: '700', fontSize: '0.76rem'}}>{b.date_iso}</span>
-                          <span style={{fontSize: '0.6rem', fontWeight: '800', padding: '2px 8px', borderRadius: '20px', background: b.type === 'walkin_only' ? '#f59e0b' : '#ef4444', color: '#fff'}}>
+                          <span style={{fontSize: '0.6rem', fontWeight: '800', padding: '2px 8px', borderRadius: '20px', background: b.type === 'walkin_only' ? LM_COLORS.warn : LM_COLORS.danger, color: '#fff'}}>
                             {b.type === 'walkin_only' ? 'WALK-IN' : 'CLOSED'}
                           </span>
                         </div>
-                        {b.notes && <div style={{fontSize: '0.66rem', color: b.type === 'walkin_only' ? '#92400e' : '#b91c1c', marginTop: '2px'}}>{b.notes}</div>}
+                        {b.notes && <div style={{fontSize: '0.66rem', color: b.type === 'walkin_only' ? 'oklch(45% 0.12 70)' : 'oklch(45% 0.16 25)', marginTop: '2px'}}>{b.notes}</div>}
                       </div>
                       <button
-                        style={{background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '1.1rem', fontWeight: '700', padding: '4px 8px'}}
+                        style={{background: 'none', border: 'none', cursor: 'pointer', color: LM_COLORS.danger, fontSize: '1.1rem', fontWeight: '700', padding: '4px 8px'}}
                         onClick={() => toggleBlackoutDate(b.date_iso)}
                       >✕</button>
                     </div>
@@ -919,14 +971,16 @@ const HostessView = React.memo(function HostessView({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {SERVERS.map(name => {
                     const myCount = tableEvents.filter(e => e.server_name === name).length;
+                    const cleanName = name.replace(/[^\p{L}\p{N}\s]/gu, '').trim();
                     return (
-                      <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '12px 16px' }}>
-                        <div>
-                          <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#f1f5f9' }}>{name}</div>
+                      <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: LM_COLORS.navyLight, border: `1px solid ${LM_COLORS.navyBorder}`, borderRadius: '0', padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: LM_COLORS.navyBorder, border: `1px solid ${LM_COLORS.goldText}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', color: LM_COLORS.goldText, fontFamily: "'Jost',sans-serif", flexShrink: 0 }}>{getInitials(name)}</div>
+                          <div style={{ fontWeight: '500', fontSize: '0.88rem', color: 'oklch(90% 0.01 90)', fontFamily: "'Jost',sans-serif", textTransform: 'uppercase', letterSpacing: '1px' }}>{cleanName}</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '1.4rem', fontWeight: '900', color: myCount > 0 ? '#f87171' : '#475569' }}>{myCount}</div>
-                          <div style={{ fontSize: '0.62rem', color: '#64748b', fontWeight: '600' }}>tables today</div>
+                          <div style={{ fontSize: '1.4rem', fontWeight: '700', fontFamily: "'Playfair Display',serif", color: myCount > 0 ? LM_COLORS.goldDim : 'oklch(45% 0.01 90)' }}>{myCount}</div>
+                          <div style={{ fontSize: '0.62rem', color: 'oklch(55% 0.01 90)', fontWeight: '600', fontFamily: "'Jost',sans-serif" }}>tables today</div>
                         </div>
                       </div>
                     );
@@ -940,7 +994,7 @@ const HostessView = React.memo(function HostessView({
       {editingWaitItem && (
         <div className="sr-modal-overlay" onClick={() => setEditingWaitItem(null)}>
           <div className="sr-modal" onClick={e => e.stopPropagation()}>
-            <h3 style={{margin: '0 0 20px', fontSize: '0.96rem', fontWeight: '800'}}>Edit Walk-in</h3>
+            <h3 style={{margin: '0 0 20px', fontSize: '1.4rem'}}>Edit Walk-in</h3>
             <div className="sr-formGrid">
               <div className="sr-field">
                 <label className="sr-fieldLabel">Guests</label>
@@ -964,7 +1018,7 @@ const HostessView = React.memo(function HostessView({
       {editingRes && (
         <div className="sr-modal-overlay" onClick={() => setEditingRes(null)}>
           <div className="sr-modal" onClick={e => e.stopPropagation()}>
-            <h3 style={{margin: '0 0 20px', fontSize: '0.96rem', fontWeight: '800'}}>Edit Reservation</h3>
+            <h3 style={{margin: '0 0 20px', fontSize: '1.4rem'}}>Edit Reservation</h3>
             <div className="sr-formGrid">
               <div className="sr-field"><label className="sr-fieldLabel">First Name</label><input className="sr-input" value={editingRes.firstName} onChange={e => setEditingRes({...editingRes, firstName: e.target.value})} /></div>
               <div className="sr-field"><label className="sr-fieldLabel">Last Name</label><input className="sr-input" value={editingRes.lastName} onChange={e => setEditingRes({...editingRes, lastName: e.target.value})} /></div>
@@ -988,39 +1042,66 @@ const HostessView = React.memo(function HostessView({
   );
 });
 
+const CLIENT_STEP_ORDER = ['search', 'contact', 'preferences'];
+const CLIENT_STEP_LABELS = ['Reservation', 'Guest Details', 'Preferences'];
+
+function ClientStepShell({ step, setStep, dateLabel, timeLabel, guests, children }) {
+  const idx = CLIENT_STEP_ORDER.indexOf(step);
+  return (
+    <div className={`sr-page${idx > 0 ? ' sr-form-step' : ''}`}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,500&family=Jost:wght@300;400;500;600&display=swap');`}</style>
+      <div className="sr-client-col">
+        <img src="/logo.png" alt="Lindo Michoacán" className="sr-logo" />
+        <div className="sr-client-divider" />
+        {idx >= 0 && (
+          <div className="sr-step-tracker">
+            {CLIENT_STEP_ORDER.map((s, i) => (
+              <button
+                key={s}
+                type="button"
+                className={`sr-step-item${i === idx ? ' current' : ''}${i <= idx ? ' done' : ''}`}
+                onClick={() => i <= idx && setStep(s)}
+              >
+                <span className="sr-step-dot" />
+                <span className="sr-step-text">{CLIENT_STEP_LABELS[i]}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {idx > 0 && (
+          <div className="sr-summary"><div className="sr-summaryTitle">{dateLabel} · {timeLabel} · {guests} guests</div></div>
+        )}
+        {children}
+        <div style={{ marginTop: 28, fontSize: 12, letterSpacing: '0.5px', color: 'oklch(45% 0.015 90)', textAlign: 'center' }}>© 2026 Software developed by joner1166 all rights reserved</div>
+      </div>
+    </div>
+  );
+}
+
 // --- COMPONENTE CLIENT CONFIRMATION (Paso 3) ---
 const ClientConfirmationView = React.memo(function ClientConfirmationView({ firstName, setStep, setClientForm }) {
   return (
-    <div className="sr-page">
-      <main style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        minHeight: '100vh', textAlign: 'center', padding: '40px 20px', gap: '32px'
-      }}>
-        <img src="/logo.png" alt="Logo" style={{ width: '220px', filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.9))' }} />
-        <div style={{ color: '#f2c300', fontSize: '1.1rem', fontWeight: '700', letterSpacing: '4px', textTransform: 'uppercase' }}>
-          Reservation Confirmed
-        </div>
-        <div style={{ color: '#fff', fontSize: '2.6rem', fontWeight: '900', lineHeight: '1.2', maxWidth: '600px' }}>
-          Thank you for your reservation,<br />
-          <span style={{ color: '#f2c300' }}>{firstName}</span>!
-        </div>
-        <div style={{ color: '#ccc', fontSize: '1.4rem', fontWeight: '400', letterSpacing: '1px' }}>
-          We look forward to seeing you soon.
-        </div>
-        <button
-          onClick={() => {
-            setClientForm({ firstName: '', lastName: '', phone: '', phoneCode: '+1', email: '', celebration: 'None', dietary: 'None', notes: '', smsOptIn: false });
-            setStep('search');
-          }}
-          style={{
-            marginTop: '20px', background: '#f2c300', color: '#000', border: 'none',
-            padding: '14px 40px', borderRadius: '14px', fontSize: '1rem', fontWeight: '800',
-            cursor: 'pointer', letterSpacing: '1px', textTransform: 'uppercase'
-          }}
-        >
-          Make Another Reservation
-        </button>
-      </main>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px', padding: '8px 0 24px' }}>
+      <div style={{ fontSize: '12px', letterSpacing: '5px', color: 'oklch(78% 0.13 85)', textTransform: 'uppercase', marginBottom: '20px', fontFamily: "'Jost',sans-serif" }}>
+        Reservation Confirmed
+      </div>
+      <div style={{ fontFamily: "'Playfair Display',serif", fontWeight: '600', fontSize: '2.4rem', lineHeight: '1.25', color: 'oklch(97% 0.01 90)', maxWidth: '480px' }}>
+        Thank you for your reservation, {firstName}!
+      </div>
+      <div style={{ fontSize: '15px', color: 'oklch(70% 0.02 90)', marginTop: '14px', fontFamily: "'Jost',sans-serif" }}>
+        We look forward to seeing you soon.
+      </div>
+      <div className="sr-client-divider" />
+      <button
+        className="sr-btn sr-btnPrimary"
+        onClick={() => {
+          setClientForm({ firstName: '', lastName: '', phone: '', phoneCode: '+1', email: '', celebration: 'None', dietary: 'None', notes: '', smsOptIn: false });
+          setStep('search');
+        }}
+        style={{ width: '100%', maxWidth: '340px', marginTop: '4px' }}
+      >
+        Make Another Reservation
+      </button>
     </div>
   );
 });
@@ -1053,100 +1134,119 @@ const ClientSearchView = React.memo(function ClientSearchView({
   }, [dateISO, tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="sr-page">
       <main className="sr-card">
-        <header className="sr-header"><img className="sr-logo" src="/logo.png" alt="Logo" /></header>
-        <div className="sr-rows">
-          <div className="sr-row">
-            <button className="sr-arrow" style={{ position: 'relative', zIndex: 3 }} onClick={(e) => { e.stopPropagation(); setSearchError(''); stepDate(-1); }}>‹</button>
-            <div className="sr-center" style={{ position: 'relative' }}>
-              <div className="sr-value">{dateLabel}</div>
-              <div className="sr-label">Date</div>
-              <input type="date" value={dateISO} min={dateISOFromDate(new Date())} onChange={(e) => { setSearchError(''); onDateChange(e.target.value); }}
-                style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 2 }} />
+        <section className="sr-form">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '26px' }}>
+            <div>
+              <label className="sr-fieldLabel" style={{ display: 'block', marginBottom: '10px' }}>Date</label>
+              <input
+                type="date"
+                className="sr-input"
+                value={dateISO}
+                min={dateISOFromDate(new Date())}
+                onChange={(e) => { setSearchError(''); onDateChange(e.target.value); }}
+                style={{ colorScheme: 'dark', cursor: 'pointer' }}
+              />
             </div>
-            <button className="sr-arrow" style={{ position: 'relative', zIndex: 3 }} onClick={(e) => { e.stopPropagation(); setSearchError(''); stepDate(1); }}>›</button>
-          </div>
-          <div className="sr-row" style={{cursor: 'default'}}>
-            <div className="sr-center" style={{gridColumn: '1 / -1'}}>
-              <div style={{ position: 'relative', display: 'inline-block' }}>
-                <input
-                  type="number"
-                  min="1"
-                  max={MAX_CLIENT_GUESTS}
-                  inputMode="numeric"
-                  value={guests === null ? '' : guests}
-                  onChange={e => setGuests(e.target.value === '' ? null : Math.min(parseInt(e.target.value) || 1, MAX_CLIENT_GUESTS))}
-                  style={{
-                    width: '90px', textAlign: 'center', fontSize: '1.8rem', fontWeight: '800',
-                    border: 'none', outline: 'none', background: 'transparent', color: '#111',
-                    display: 'block', margin: '0 auto',
-                    MozAppearance: 'textfield', WebkitAppearance: 'none',
-                  }}
-                />
-                {guests === null && <div className="sr-guest-hint"></div>}
-              </div>
-              <div className="sr-label" style={{marginTop: '4px'}}>Guests</div>
-            </div>
-          </div>
-          <div className="sr-row" style={{cursor: 'default'}}>
-            <div className="sr-center" style={{gridColumn: '1 / -1'}}>
+            <div>
+              <label className="sr-fieldLabel" style={{ display: 'block', marginBottom: '10px' }}>Time</label>
               {availableSlots.length > 0 ? (
-                <select className="sr-time-select" value={timeHHMM} onChange={e => setTimeHHMM(e.target.value)}>
+                <select className="sr-input" value={timeHHMM} onChange={e => setTimeHHMM(e.target.value)} style={{ cursor: 'pointer' }}>
                   {availableSlots.map(slot => (
                     <option key={slot} value={slot}>{formatTimeLabel(slot)}</option>
                   ))}
                 </select>
               ) : (
-                <div style={{fontSize: '1rem', fontWeight: '700', color: '#b91c1c'}}>No availability</div>
+                <div className="sr-input" style={{ display: 'flex', alignItems: 'center', color: 'oklch(70% 0.16 28)' }}>No availability</div>
               )}
-              <div className="sr-label" style={{marginTop: '6px'}}>Time</div>
+            </div>
+            <div>
+              <label className="sr-fieldLabel" style={{ display: 'block', marginBottom: '10px' }}>Guests</label>
+              <div className="sr-guest-box">
+                <input
+                  type="number"
+                  min="1"
+                  max={MAX_CLIENT_GUESTS}
+                  inputMode="numeric"
+                  className="sr-guest-box-value"
+                  placeholder="Guest Number"
+                  value={guests ?? ''}
+                  onChange={e => { setSearchError(''); setGuests(e.target.value === '' ? null : Math.min(Math.max(parseInt(e.target.value) || 1, 1), MAX_CLIENT_GUESTS)); }}
+                />
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button type="button" className="sr-stepper-btn" onClick={() => { setSearchError(''); setGuests(g => Math.max((g ?? 0) - 1, 1)); }}>−</button>
+                  <button type="button" className="sr-stepper-btn" onClick={() => { setSearchError(''); setGuests(g => Math.min((g ?? 0) + 1, MAX_CLIENT_GUESTS)); }}>+</button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        {isBlackout ? (
-          <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px'}}>We are closed today, but please visit us on any other date! We will be more than happy to host your party.</div>
-        ) : isWalkInOnly ? (
-          <div style={{marginTop: '20px', textAlign: 'center', color: '#92400e', background: '#fef3c7', padding: '15px', borderRadius: '8px', fontWeight: '600'}}>Today we are only accepting walk-ins, but please come by and we will do our best to seat you as quickly as possible!</div>
-        ) : availableSlots.length === 0 ? (
-          <div style={{marginTop: '20px', textAlign: 'center', color: '#b91c1c', background: '#fee2e2', padding: '15px', borderRadius: '8px'}}>No availability for this date. Please try another day.</div>
-        ) : (
-          <>
-            {searchError && (
-              <div style={{ margin: '16px 0 8px', padding: '12px 16px', background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '12px', color: '#92400e', fontSize: '0.88rem', textAlign: 'center', fontWeight: '500' }}>
-                {searchError}
-              </div>
-            )}
-            <button className="sr-search" onClick={() => {
-              setSearchError('');
-              if (dateISO < dateISOFromDate(new Date())) {
-                setSearchError('Please select another date, bookings in past dates are not allowed.');
-                return;
-              }
-              if (!guests || guests < 1) return alert("Please enter the number of guests.");
-              setStep("details");
-            }}>Search</button>
-          </>
-        )}
-        <div className="sr-foot">
-          If your party is over 25 people please{' '}
-          <a href="tel:7027356828" style={{color: '#222', fontWeight: '700', textDecoration: 'underline'}}>
-            call us at (702) 735-6828
-          </a>
-          {' '}so we can properly accommodate you.
-        </div>
+          {isBlackout ? (
+            <div style={{marginTop: '20px', textAlign: 'center', color: 'oklch(78% 0.13 28)', background: 'oklch(30% 0.08 28 / 0.3)', border: '1px solid oklch(60% 0.14 28 / 0.4)', padding: '15px', borderRadius: '8px'}}>We are closed today, but please visit us on any other date! We will be more than happy to host your party.</div>
+          ) : isWalkInOnly ? (
+            <div style={{marginTop: '20px', textAlign: 'center', color: 'oklch(82% 0.1 80)', background: 'oklch(30% 0.06 80 / 0.3)', border: '1px solid oklch(65% 0.12 80 / 0.4)', padding: '15px', borderRadius: '8px', fontWeight: '600'}}>Today we are only accepting walk-ins, but please come by and we will do our best to seat you as quickly as possible!</div>
+          ) : availableSlots.length === 0 ? (
+            <div style={{marginTop: '20px', textAlign: 'center', color: 'oklch(78% 0.13 28)', background: 'oklch(30% 0.08 28 / 0.3)', border: '1px solid oklch(60% 0.14 28 / 0.4)', padding: '15px', borderRadius: '8px'}}>No availability for this date. Please try another day.</div>
+          ) : (
+            <>
+              {searchError && (
+                <div style={{ margin: '16px 0 8px', padding: '12px 16px', background: 'oklch(30% 0.06 80 / 0.3)', border: '1px solid oklch(65% 0.12 80 / 0.4)', borderRadius: '12px', color: 'oklch(82% 0.1 80)', fontSize: '0.88rem', textAlign: 'center', fontWeight: '500' }}>
+                  {searchError}
+                </div>
+              )}
+              <button className="sr-search" onClick={() => {
+                setSearchError('');
+                if (dateISO < dateISOFromDate(new Date())) {
+                  setSearchError('Please select another date, bookings in past dates are not allowed.');
+                  return;
+                }
+                if (!guests || guests < 1) return alert("Please enter the number of guests.");
+                setStep("contact");
+              }}>Search</button>
+            </>
+          )}
+          <div className="sr-foot">
+            If your party is over 25 people please{' '}
+            <a href="tel:7027356828">
+              call us at (702) 735-6828
+            </a>
+            {' '}so we can properly accommodate you.
+          </div>
+        </section>
       </main>
-    </div>
   );
 });
 
-// --- COMPONENTE CLIENT DETAILS (Paso 2) ---
-const ClientDetailsView = React.memo(function ClientDetailsView({
-  dateLabel, timeLabel, guests,
+// --- COMPONENTE CLIENT CONTACT (Paso 2) ---
+const ClientContactView = React.memo(function ClientContactView({
+  formState, setFormState, setStep
+}) {
+  const { firstName, lastName, phone, phoneCode, email } = formState;
+  const updateForm = (key, val) => setFormState(prev => ({ ...prev, [key]: val }));
+
+  return (
+      <main className="sr-card">
+        <section className="sr-form">
+          <div className="sr-formGrid">
+            <div className="sr-field"><label className="sr-fieldLabel">First name</label><input className="sr-input" placeholder="Jane" value={firstName} onChange={e => updateForm('firstName', e.target.value)} /></div>
+            <div className="sr-field"><label className="sr-fieldLabel">Last name</label><input className="sr-input" placeholder="Doe" value={lastName} onChange={e => updateForm('lastName', e.target.value)} /></div>
+            <div className="sr-field sr-span2"><label className="sr-fieldLabel">Telephone</label><div style={{display:'flex',gap:'10px'}}><select className="sr-input" style={{width:'110px',flexShrink:0}} value={phoneCode} onChange={e => updateForm('phoneCode', e.target.value)}>{COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select><input className="sr-input" style={{flex:1}} value={phone} onChange={e => updateForm('phone', e.target.value)} placeholder="000-000-0000"/></div></div>
+            <div className="sr-field sr-span2"><label className="sr-fieldLabel">Email</label><input className="sr-input" placeholder="jane@doe.com" value={email} onChange={e => updateForm('email', e.target.value)} /></div>
+          </div>
+          <div className="sr-actions">
+            <button className="sr-btn" onClick={() => setStep("search")}>Back</button>
+            <button className="sr-btn sr-btnPrimary" onClick={() => setStep("preferences")}>Continue</button>
+          </div>
+        </section>
+      </main>
+  );
+});
+
+// --- COMPONENTE CLIENT PREFERENCES (Paso 3) ---
+const ClientPreferencesView = React.memo(function ClientPreferencesView({
   formState, setFormState,
   setStep, onSubmitClientRes, submitting
 }) {
-  const { firstName, lastName, phone, phoneCode, email, celebration, dietary, notes, smsOptIn } = formState;
+  const { celebration, dietary, notes, smsOptIn } = formState;
   const updateForm = (key, val) => setFormState(prev => ({ ...prev, [key]: val }));
   const [smsReminderShown, setSmsReminderShown] = useState(false);
 
@@ -1159,42 +1259,34 @@ const ClientDetailsView = React.memo(function ClientDetailsView({
   };
 
   return (
-    <div className="sr-page sr-form-step">
       <main className="sr-card">
-        <header className="sr-header"><img className="sr-logo" src="/logo.png" alt="Logo" /></header>
-        <div className="sr-summary"><div className="sr-summaryTitle">{dateLabel} · {timeLabel} · {guests} guests</div></div>
         <section className="sr-form">
           <div className="sr-formGrid">
-            <div className="sr-field"><label className="sr-fieldLabel">First name</label><input className="sr-input" value={firstName} onChange={e => updateForm('firstName', e.target.value)} /></div>
-            <div className="sr-field"><label className="sr-fieldLabel">Last name</label><input className="sr-input" value={lastName} onChange={e => updateForm('lastName', e.target.value)} /></div>
-            <div className="sr-field"><label className="sr-fieldLabel">Telephone</label><div style={{display:'flex',gap:'6px'}}><select className="sr-input" style={{width:'95px',flexShrink:0}} value={phoneCode} onChange={e => updateForm('phoneCode', e.target.value)}>{COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}</select><input className="sr-input" style={{flex:1}} value={phone} onChange={e => updateForm('phone', e.target.value)} placeholder="000-000-0000"/></div></div>
-            <div className="sr-field"><label className="sr-fieldLabel">Email</label><input className="sr-input" value={email} onChange={e => updateForm('email', e.target.value)} /></div>
             <div className="sr-field sr-span2"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={celebration} onChange={e => updateForm('celebration', e.target.value)}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Wedding</option><option>Graduation</option><option>Other</option></select></div>
-            <div className="sr-field"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={dietary} onChange={e => updateForm('dietary', e.target.value)}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
-            <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" value={notes} onChange={e => updateForm('notes', e.target.value)} /></div>
+            <div className="sr-field sr-span2"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={dietary} onChange={e => updateForm('dietary', e.target.value)}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
+            <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" placeholder="Anything we should know?" value={notes} onChange={e => updateForm('notes', e.target.value)} /></div>
           </div>
           {smsReminderShown && !smsOptIn && (
-            <div style={{margin:'12px 0 0',padding:'10px 14px',background:'#fef9c3',border:'1px solid #fbbf24',borderRadius:'10px',fontSize:'0.78rem',color:'#92400e',display:'flex',alignItems:'center',gap:'8px'}}>
+            <div style={{margin:'12px 0 0',padding:'10px 14px',background:'oklch(93% 0.06 85)',border:'1px solid oklch(80% 0.1 80)',borderRadius:'10px',fontSize:'0.78rem',color:'oklch(45% 0.12 70)',display:'flex',alignItems:'center',gap:'8px'}}>
               <span style={{fontSize:'1.1rem'}}>📱</span>
               <span>Don't miss reservation updates! Check the box below to receive SMS notifications. You can still proceed without it.</span>
             </div>
           )}
-          <label style={{display:'flex',alignItems:'flex-start',gap:'10px',margin:'12px 0 4px',cursor:'pointer',fontSize:'0.78rem',color:'#374151',lineHeight:'1.5',outline: smsReminderShown && !smsOptIn ? '2px solid #fbbf24' : 'none',borderRadius:'8px',padding: smsReminderShown && !smsOptIn ? '6px 8px' : '0'}}>
-            <input type="checkbox" checked={smsOptIn} onChange={e => updateForm('smsOptIn', e.target.checked)} style={{marginTop:'3px',flexShrink:0,width:'16px',height:'16px',accentColor:'#1d4ed8'}} />
+          <label style={{display:'flex',alignItems:'flex-start',gap:'10px',margin:'12px 0 4px',cursor:'pointer',fontSize:'0.78rem',color:'oklch(62% 0.02 90)',lineHeight:'1.7',outline: smsReminderShown && !smsOptIn ? '2px solid oklch(80% 0.1 80)' : 'none',borderRadius:'8px',padding: smsReminderShown && !smsOptIn ? '6px 8px' : '0'}}>
+            <input type="checkbox" checked={smsOptIn} onChange={e => updateForm('smsOptIn', e.target.checked)} style={{marginTop:'3px',flexShrink:0,width:'16px',height:'16px',accentColor:'oklch(78% 0.13 85)'}} />
             <span>
               I agree to receive SMS notifications about my reservation from Lindo Michoacan (up to 2 messages per reservation). Msg &amp; data rates may apply. Reply <strong>STOP</strong> to cancel, <strong>HELP</strong> for help. Consent is not required to complete your reservation.{' '}
-              <a href="/privacy.html" target="_blank" rel="noopener" style={{color:'#1d4ed8'}}>Privacy Policy</a>
+              <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
               {' | '}
-              <a href="/terms.html" target="_blank" rel="noopener" style={{color:'#1d4ed8'}}>Terms &amp; Conditions</a>
+              <a href="/terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a>
             </span>
           </label>
           <div className="sr-actions">
-            <button className="sr-btn" onClick={() => setStep("search")}>Back</button>
+            <button className="sr-btn" onClick={() => setStep("contact")}>Back</button>
             <button className="sr-btn sr-btnPrimary" onClick={handleSubmit} disabled={submitting}>{submitting ? 'Enviando...' : 'Submit'}</button>
           </div>
         </section>
       </main>
-    </div>
   );
 });
 
@@ -1221,7 +1313,7 @@ function ManagerPinView({ onSuccess }) {
           Access
         </button>
       </div>
-      <div style={{ position: 'relative', fontSize: 12, color: '#6B5F52' }}>Enter your access number to open the dashboard</div>
+      <div style={{ position: 'relative', fontSize: 12, color: '#6B5F52' }}>© 2026 Software developed by joner1166 all rights reserved</div>
     </div>
   );
 }
@@ -1229,23 +1321,25 @@ function ManagerPinView({ onSuccess }) {
 function HostessPinView({ onSuccess }) {
   const [pin, setPin] = useState('');
   const check = () => { if (pin === HOSTESS_PASSWORD) onSuccess(); else alert('Incorrect PIN'); };
+  const hasCode = pin.trim().length > 0;
   return (
-    <div style={{ minHeight: '100vh', background: '#F2E4C6', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 26, padding: '24px 20px', fontFamily: "'Space Grotesk',system-ui,sans-serif", position: 'relative', overflow: 'hidden' }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap'); @keyframes lmPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}} .sr-hostess-pin::placeholder{font-size:0.95rem;letter-spacing:1px;}`}</style>
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(1300px 640px at 50% -12%,rgba(227,169,74,0.10),transparent 62%),radial-gradient(900px 500px at 100% 110%,rgba(226,123,92,0.06),transparent 60%)' }} />
-      <img src="/logo.png" alt="Logo" style={{ height: 103, position: 'relative', filter: 'drop-shadow(0 8px 26px rgba(0,0,0,.15))' }} />
-      <div style={{ position: 'relative', width: '100%', maxWidth: 380, background: '#FFFFFF', border: '1px solid rgba(227,169,74,0.25)', borderRadius: 22, padding: '34px 30px 30px', boxShadow: '0 34px 90px -34px rgba(0,0,0,.18)', animation: 'lmPop .5s ease both' }}>
-        <div style={{ textAlign: 'center', marginBottom: 26 }}>
-          <div style={{ textTransform: 'uppercase', letterSpacing: '.3em', fontSize: 11, color: '#9A8C7B' }}>Restaurant Hostess</div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 600, fontSize: 32, color: '#241505', marginTop: 4 }}>Hostess Access</div>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 24px', fontFamily: "'Jost',sans-serif", position: 'relative', overflow: 'hidden' }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,500&family=Jost:wght@300;400;500;600&display=swap'); .sr-hostess-pin::placeholder{color:oklch(55% 0.02 90);}`}</style>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(1100px 700px at 15% -10%, oklch(30% 0.03 250 / 0.5), transparent 60%), radial-gradient(900px 600px at 100% 100%, oklch(38% 0.07 45 / 0.35), transparent 55%), linear-gradient(180deg, oklch(15% 0.015 255) 0%, oklch(11% 0.012 255) 100%)' }} />
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 480, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <img src="/logo.png" alt="Logo" style={{ width: '100%', maxWidth: 380, height: 'auto', display: 'block', marginBottom: 40 }} />
+        <div style={{ width: '100%', padding: '44px 40px', borderRadius: 4, background: 'oklch(14% 0.015 255 / 0.55)', border: '1px solid oklch(70% 0.11 85 / 0.28)', backdropFilter: 'blur(10px)', boxShadow: '0 30px 60px -20px oklch(5% 0 0 / 0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+          <div style={{ fontSize: 12, letterSpacing: 4, color: 'oklch(70% 0.11 85)', textTransform: 'uppercase' }}>Restaurant Hostess</div>
+          <div style={{ marginTop: 12, fontFamily: "'Playfair Display',serif", fontWeight: 600, fontSize: 32, color: 'oklch(96% 0.01 90)' }}>Hostess Access</div>
+          <div style={{ width: 40, height: 1, background: 'oklch(70% 0.11 85 / 0.5)', margin: '24px 0 32px' }} />
+          <input type="password" className="sr-hostess-pin" value={pin} onChange={e => setPin(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} placeholder="Enter access number"
+            style={{ width: '100%', height: 56, padding: '0 20px', textAlign: 'center', border: '1px solid oklch(70% 0.11 85 / 0.28)', background: 'oklch(18% 0.01 255 / 0.6)', color: 'oklch(94% 0.01 90)', fontSize: 16, letterSpacing: '2px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', borderRadius: 0 }} autoFocus />
+          <button onClick={check} style={{ width: '100%', marginTop: 24, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, letterSpacing: '3px', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 500, border: 'none', borderRadius: 0, transition: 'background 0.15s ease, color 0.15s ease', ...(hasCode ? { background: 'linear-gradient(180deg, oklch(80% 0.14 85), oklch(72% 0.14 82))', color: 'oklch(18% 0.02 85)' } : { background: 'oklch(30% 0.01 260)', color: 'oklch(60% 0.01 90)' }) }}>
+            Access
+          </button>
         </div>
-        <input type="password" className="sr-hostess-pin" value={pin} onChange={e => setPin(e.target.value)} onKeyDown={e => e.key === 'Enter' && check()} placeholder="Enter access number"
-          style={{ width: '100%', padding: '17px 18px', borderRadius: 13, border: '1px solid rgba(227,169,74,0.3)', background: '#FBF7F0', color: '#241505', fontSize: '1.6rem', textAlign: 'center', letterSpacing: '6px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} autoFocus />
-        <button onClick={check} style={{ width: '100%', marginTop: 18, padding: 15, borderRadius: 13, border: 'none', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.9rem', letterSpacing: '.14em', textTransform: 'uppercase', cursor: pin ? 'pointer' : 'not-allowed', ...(pin ? { background: 'linear-gradient(90deg,#E9B65C,#E27B5C)', color: '#241505', boxShadow: '0 14px 32px -14px rgba(227,169,74,.5)' } : { background: 'rgba(0,0,0,0.05)', color: '#B3A594' }) }}>
-          Access
-        </button>
+        <div style={{ marginTop: 28, fontSize: 12, letterSpacing: '0.5px', color: 'oklch(45% 0.015 90)', textAlign: 'center' }}>© 2026 Software developed by joner1166 all rights reserved</div>
       </div>
-      <div style={{ position: 'relative', fontSize: 12, color: '#9A8C7B' }}>Enter your access number to open the dashboard</div>
     </div>
   );
 }
@@ -1696,6 +1790,7 @@ export default function App() {
   const [rows, setRows] = useState([]);
   const [tableStatuses, setTableStatuses] = useState({});
   const [tableServerNames, setTableServerNames] = useState({});
+  const [newReservationTick, setNewReservationTick] = useState(0);
   const [walkInForm, setWalkInForm] = useState({
     firstName: "",
     lastName: "",
@@ -1772,7 +1867,7 @@ export default function App() {
     return counts;
   }, [rows]);
 
-  useReservationsRealtime({ supabase, dateISO, setRows, onInsert: viewMode === 'server' ? () => setNewResAlert(true) : undefined });
+  useReservationsRealtime({ supabase, dateISO, setRows, onInsert: () => setNewReservationTick(t => t + 1) });
 
   useEffect(() => {
     document.addEventListener('click', unlockAudio);
@@ -1782,21 +1877,6 @@ export default function App() {
       document.removeEventListener('touchstart', unlockAudio);
     };
   }, []);
-
-  useEffect(() => {
-    if (viewMode !== 'server') return;
-    const ch = supabase
-      .channel('hostess-notifications')
-      .on('broadcast', { event: 'reservations_seen' }, () => setNewResAlert(false))
-      .subscribe();
-    notifChannelRef.current = ch;
-    return () => supabase.removeChannel(ch);
-  }, [viewMode]);
-
-  const clearResAlert = () => {
-    setNewResAlert(false);
-    notifChannelRef.current?.send({ type: 'broadcast', event: 'reservations_seen', payload: {} });
-  };
 
   // Cargar y sincronizar table_status en tiempo real
   useEffect(() => {
@@ -2260,6 +2340,7 @@ export default function App() {
         onAddPhoneRes={handleAddPhoneReservation}
         walkinLoading={walkinLoading}
         phoneResLoading={phoneResLoading}
+        newReservationTick={newReservationTick}
         onSeatParty={handleSeatParty}
         onUnseatParty={handleUnseatParty}
         onCancelRes={handleCancelReservation}
@@ -2306,48 +2387,63 @@ export default function App() {
 
   if (step === "search") {
     return (
-      <ClientSearchView
-        dateISO={dateISO}
-        setDateISO={setDateISO}
-        onDateChange={handleDateChange}
-        dateLabel={dateLabel}
-        stepDate={stepDate}
-        guests={guests}
-        setGuests={setGuests}
-        stepGuests={stepGuests}
-        timeHHMM={timeHHMM}
-        setTimeHHMM={setTimeHHMM}
-        timeLabel={timeLabel}
-        stepTime={stepTime}
-        isBlackout={isBlackout}
-        isWalkInOnly={isWalkInOnly}
-        setStep={setStep}
-        bookedHourCounts={bookedHourCounts}
-        bookedHourGuests={bookedHourGuests}
-      />
+      <ClientStepShell step={step} setStep={setStep} dateLabel={dateLabel} timeLabel={timeLabel} guests={guests}>
+        <ClientSearchView
+          dateISO={dateISO}
+          setDateISO={setDateISO}
+          onDateChange={handleDateChange}
+          dateLabel={dateLabel}
+          stepDate={stepDate}
+          guests={guests}
+          setGuests={setGuests}
+          stepGuests={stepGuests}
+          timeHHMM={timeHHMM}
+          setTimeHHMM={setTimeHHMM}
+          timeLabel={timeLabel}
+          stepTime={stepTime}
+          isBlackout={isBlackout}
+          isWalkInOnly={isWalkInOnly}
+          setStep={setStep}
+          bookedHourCounts={bookedHourCounts}
+          bookedHourGuests={bookedHourGuests}
+        />
+      </ClientStepShell>
+    );
+  }
+
+  if (step === "contact") {
+    return (
+      <ClientStepShell step={step} setStep={setStep} dateLabel={dateLabel} timeLabel={timeLabel} guests={guests}>
+        <ClientContactView
+          formState={clientForm}
+          setFormState={setClientForm}
+          setStep={setStep}
+        />
+      </ClientStepShell>
     );
   }
 
   if (step === "confirmation") {
     return (
-      <ClientConfirmationView
-        firstName={clientForm.firstName || "Guest"}
-        setStep={setStep}
-        setClientForm={setClientForm}
-      />
+      <ClientStepShell step={step} setStep={setStep} dateLabel={dateLabel} timeLabel={timeLabel} guests={guests}>
+        <ClientConfirmationView
+          firstName={clientForm.firstName || "Guest"}
+          setStep={setStep}
+          setClientForm={setClientForm}
+        />
+      </ClientStepShell>
     );
   }
 
   return (
-    <ClientDetailsView
-      dateLabel={dateLabel}
-      timeLabel={timeLabel}
-      guests={guests}
-      formState={clientForm}
-      setFormState={setClientForm}
-      setStep={setStep}
-      onSubmitClientRes={handleClientSubmit}
-      submitting={submitting}
-    />
+    <ClientStepShell step={step} setStep={setStep} dateLabel={dateLabel} timeLabel={timeLabel} guests={guests}>
+      <ClientPreferencesView
+        formState={clientForm}
+        setFormState={setClientForm}
+        setStep={setStep}
+        onSubmitClientRes={handleClientSubmit}
+        submitting={submitting}
+      />
+    </ClientStepShell>
   );
 }
