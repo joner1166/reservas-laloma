@@ -38,7 +38,7 @@ body {
   background:
     radial-gradient(1100px 700px at 15% -10%, oklch(30% 0.03 250 / 0.35), transparent 60%),
     radial-gradient(900px 600px at 100% 100%, oklch(38% 0.07 45 / 0.25), transparent 55%),
-    linear-gradient(180deg, oklch(8% 0.012 255 / 0.75) 0%, oklch(7% 0.01 255 / 0.55) 45%, oklch(7% 0.01 255 / 0.7) 100%);
+    linear-gradient(180deg, oklch(8% 0.012 255 / 0.675) 0%, oklch(7% 0.01 255 / 0.495) 45%, oklch(7% 0.01 255 / 0.63) 100%);
   z-index: -1;
 }
 
@@ -342,7 +342,7 @@ body {
 
 /* --- ESTILOS VISTA CLIENTE --- */
 .sr-header { padding: 30px 20px; display: flex; justify-content: center; }
-.sr-logo { width: 100%; max-width: 420px; height: auto; display: block; }
+.sr-logo { width: 100%; max-width: 504px; height: auto; display: block; }
 
 .sr-summary { padding: 0; text-align: center; margin-bottom: 36px; }
 .sr-summaryTitle { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 600; color: oklch(92% 0.01 90); margin-bottom: 5px; }
@@ -514,7 +514,7 @@ select.sr-input { appearance: none; -webkit-appearance: none; }
   .sr-page:not(.hostess-view) { padding: 24px 16px; min-height: 100vh; height: auto; overflow: visible; align-items: center; }
   .sr-page.hostess-view { padding: 0; height: 100vh; overflow: hidden; }
   .sr-page.hostess-view .sr-card { height: 100%; width: 100%; border-radius: 0; box-shadow: none; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 20px; }
-  .sr-logo { max-width: 260px; }
+  .sr-logo { max-width: 312px; }
   .sr-client-col { max-width: 100%; }
   .sr-card:not(.hostess-layout) { width: 100%; }
   .sr-form { flex: 1; padding: 28px 24px; }
