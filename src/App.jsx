@@ -129,6 +129,12 @@ function formatTimeLabel(hhmm) {
   const dt = new Date(2000, 0, 1, h, m, 0);
   return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).format(dt);
 }
+function formatBookedAt(iso) {
+  if (!iso) return "";
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return "";
+  return `${pad2(dt.getMonth() + 1)}/${pad2(dt.getDate())} ${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+}
 function clampGuests(n) {
   const x = Number(n);
   return Math.min(Math.max(Number.isFinite(x) ? x : 1, 1), MAX_GUESTS);
@@ -689,6 +695,7 @@ const HostessView = React.memo(function HostessView({
                       </div>
                       {res.phone && <div style={{ fontSize: '0.68rem', color: LM_COLORS.textMuted, marginTop: '6px', fontWeight: '500' }}>{res.phone}</div>}
                       {res.notes && <div style={{ color: LM_COLORS.textMuted, fontSize: '0.68rem', background: 'oklch(95% 0.006 90)', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{res.notes}"</div>}
+                      <div style={{ fontSize: '0.68rem', color: LM_COLORS.textMuted, marginTop: '6px', fontWeight: '500' }}>Booked by {res.source === 'online' ? 'Client View' : 'Hostess'} · {formatBookedAt(res.created_at)}</div>
                       {res.notified_at && (() => {
                         const remaining = Math.max(0, 10 * 60 * 1000 - (nowSec - new Date(res.notified_at).getTime()));
                         const mins = Math.floor(remaining / 60000);
@@ -1462,7 +1469,7 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
     try {
       const cancelToken = mkToken();
       const phone = addForm.phone || null;
-      const { error } = await insertReservationRecord({ firstName: addForm.firstName.trim().toUpperCase(), lastName: addForm.lastName.trim().toUpperCase(), guests: Number(addForm.guests) || 1, dateISO, timeHHMM: addForm.timeHHMM, phone, celebration: addForm.celebration, dietary: addForm.dietary, notes: addForm.notes || null, status: 'reserved', source: 'reservation', cancel_token: cancelToken });
+      const { error } = await insertReservationRecord({ firstName: addForm.firstName.trim().toUpperCase(), lastName: addForm.lastName.trim().toUpperCase(), guests: Number(addForm.guests) || 1, dateISO, timeHHMM: addForm.timeHHMM, phone, celebration: addForm.celebration, dietary: addForm.dietary, notes: addForm.notes || null, status: 'reserved', source: 'phone', cancel_token: cancelToken });
       if (error) throw error;
       if (phone) {
         try { await fetch('/.netlify/functions/send-sms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'confirm', phone, firstName: addForm.firstName, dateLabel, timeLabel: formatTimeLabel(addForm.timeHHMM), guests: Number(addForm.guests) || 1, cancel_token: cancelToken }) }); } catch(e) { console.error('SMS fail', e); }
@@ -2101,7 +2108,7 @@ export default function App() {
       dietary: phoneResForm.dietary || "None",
       notes: phoneResForm.notes || null,
       status: "reserved",
-      source: "reservation",
+      source: "phone",
       cancel_token: cancelToken,
     };
 
@@ -2267,7 +2274,7 @@ export default function App() {
       dietary: clientForm.dietary,
       notes: clientForm.notes,
       status: "reserved",
-      source: "reservation",
+      source: "online",
       cancel_token: cancelToken,
       sms_opt_in: clientForm.smsOptIn,
     };

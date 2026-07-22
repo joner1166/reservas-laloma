@@ -60,7 +60,7 @@ where status is null or btrim(status) = ''
 
 update public.reservations set source = 'reservation'
 where source is null or btrim(source) = ''
-   or lower(btrim(source)) not in ('reservation','walkin');
+   or lower(btrim(source)) not in ('reservation','walkin','online','phone');
 
 update public.reservations set status = lower(btrim(status)) where status is not null;
 update public.reservations set source = lower(btrim(source)) where source is not null;
@@ -75,11 +75,12 @@ begin
       check (status in ('reserved','waitlist','seated','cancelled','no_show')) not valid $c$;
     execute 'alter table public.reservations validate constraint reservations_status_check';
   end if;
-  if not exists (select 1 from pg_constraint where conname = 'reservations_source_check') then
-    execute $c$ alter table public.reservations add constraint reservations_source_check
-      check (source in ('reservation','walkin')) not valid $c$;
-    execute 'alter table public.reservations validate constraint reservations_source_check';
+  if exists (select 1 from pg_constraint where conname = 'reservations_source_check') then
+    execute 'alter table public.reservations drop constraint reservations_source_check';
   end if;
+  execute $c$ alter table public.reservations add constraint reservations_source_check
+    check (source in ('reservation','walkin','online','phone')) not valid $c$;
+  execute 'alter table public.reservations validate constraint reservations_source_check';
 end $$;
 
 /* =========================================================
