@@ -49,7 +49,8 @@ alter table public.reservations
   add column if not exists "reminder_sent_at" timestamptz null,
   add column if not exists "confirmed_at"     timestamptz default null,
   add column if not exists notified_at        timestamptz null,
-  add column if not exists estimated_wait     integer null;
+  add column if not exists estimated_wait     integer null,
+  add column if not exists checked_in_at      timestamptz null;
 
 /* =========================================================
    3) Limpieza de datos

@@ -213,6 +213,11 @@ async function fetchRowsForDay(supabaseClient, dateISO) {
     .order("id", { ascending: false });
 }
 
+async function fetchTableStatuses() {
+  const { data } = await supabase.from('table_status').select('id, status, server_names');
+  return data;
+}
+
 async function insertWaitlistRecord(entry) {
   return supabase.from("reservations").insert([entry]);
 }
@@ -282,6 +287,13 @@ async function markPartyNotified(id) {
   return supabase
     .from("reservations")
     .update({ notified_at: new Date().toISOString() })
+    .eq("id", id);
+}
+
+async function checkInReservation(id) {
+  return supabase
+    .from("reservations")
+    .update({ status: "waitlist", checked_in_at: new Date().toISOString() })
     .eq("id", id);
 }
 
@@ -377,7 +389,7 @@ const LM_COLORS = {
 
 const HostessView = React.memo(function HostessView({
   // Acciones
-  onAddWaitlist, onAddPhoneRes, onSeatParty, onUnseatParty, onCancelRes, onSaveEdit, onNotifyReady, onRemoveFromWaitlist, onUndoCancel, toggleBlackoutDate,
+  onAddWaitlist, onAddPhoneRes, onSeatParty, onUnseatParty, onCancelRes, onSaveEdit, onNotifyReady, onCheckIn, onRemoveFromWaitlist, onUndoCancel, toggleBlackoutDate,
   handleTableSelection, onRefresh,
 
   // Estado y UI
@@ -608,19 +620,21 @@ const HostessView = React.memo(function HostessView({
             {activeTab === 'waitlist' && (
               <div className="sr-res-list">
                 {waitList.length === 0 ? <div className="sr-empty-state">No guests on the wait list.</div> : [...waitList].sort((a, b) => {
+                  const cA = a.checked_in_at ? 1 : 0, cB = b.checked_in_at ? 1 : 0;
+                  if (cB !== cA) return cB - cA;
                   const nA = a.notified_at ? 1 : 0, nB = b.notified_at ? 1 : 0;
                   if (nB !== nA) return nB - nA;
-                  return new Date(a.created_at) - new Date(b.created_at);
+                  return new Date(a.checked_in_at || a.created_at) - new Date(b.checked_in_at || b.created_at);
                 }).map(item => (
-                  <div key={item.id} className={`sr-list-item${exitingIds.has(item.id) ? ' sr-item-exit' : ''}`} style={item.notified_at ? {borderLeft: `4px solid ${LM_COLORS.navy}`, borderBottom: 'none', background: 'oklch(15% 0.015 255 / 0.08)', boxShadow: '0 2px 14px oklch(15% 0.015 255 / 0.2)', borderRadius: '0', margin: '4px 8px'} : {}}>
+                  <div key={item.id} className={`sr-list-item${exitingIds.has(item.id) ? ' sr-item-exit' : ''}`} style={item.notified_at ? {borderLeft: `4px solid ${LM_COLORS.navy}`, borderBottom: 'none', background: 'oklch(15% 0.015 255 / 0.08)', boxShadow: '0 2px 14px oklch(15% 0.015 255 / 0.2)', borderRadius: '0', margin: '4px 8px'} : item.checked_in_at ? {borderLeft: '4px solid oklch(75% 0.09 230)', borderBottom: 'none', background: 'oklch(94% 0.025 230)', borderRadius: '0', margin: '4px 8px'} : {}}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                         <strong style={{ fontSize: '1.1rem', fontWeight: '600', fontFamily: "'Playfair Display',serif" }}>{item.firstName} {item.lastName}</strong>
                         <span style={{ background: LM_COLORS.textDark, color: '#fff', borderRadius: '0', padding: '4px 10px', fontSize: '0.68rem', fontWeight: '500', letterSpacing: '1.4px', textTransform: 'uppercase', fontFamily: "'Jost',sans-serif", whiteSpace: 'nowrap' }}>{item.guests} guests</span>
                         {item.celebration && item.celebration !== "None" && <span style={{ fontSize: '0.66rem', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase', color: LM_COLORS.goldText }}>{item.celebration}</span>}
                         {item.dietary && item.dietary !== "None" && <span style={{ fontSize: '0.66rem', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase', color: LM_COLORS.danger }}>{item.dietary}</span>}
-                        {item.created_at && (() => {
-                          const mins = Math.floor((now - new Date(item.created_at).getTime()) / 60000);
+                        {(item.checked_in_at || item.created_at) && (() => {
+                          const mins = Math.floor((now - new Date(item.checked_in_at || item.created_at).getTime()) / 60000);
                           const color = mins >= 30 ? LM_COLORS.danger : mins >= 15 ? LM_COLORS.warn : LM_COLORS.success;
                           return (
                             <span style={{ background: color, color: '#fff', borderRadius: '20px', padding: '2px 10px', fontSize: '0.62rem', fontWeight: '700' }}>
@@ -642,7 +656,7 @@ const HostessView = React.memo(function HostessView({
                           );
                         })()}
                       </div>
-                      <small style={{ color: LM_COLORS.textFaint }}>In at {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{item.phone ? ` · ${item.phone}` : ''}</small>
+                      <small style={{ color: LM_COLORS.textFaint }}>{item.checked_in_at ? 'Checked in at' : 'In at'} {new Date(item.checked_in_at || item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{item.phone ? ` · ${item.phone}` : ''}</small>
                       {item.notes && <div style={{ fontSize: '0.68rem', fontStyle: 'italic', color: LM_COLORS.textMuted, marginTop: '2px' }}>"{item.notes}"</div>}
                       {item.notified_at && (() => {
                         const remaining = Math.max(0, 10 * 60 * 1000 - (nowSec - new Date(item.notified_at).getTime()));
@@ -714,7 +728,7 @@ const HostessView = React.memo(function HostessView({
                     </div>
                     <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                       <button style={seatButtonStyle} onClick={() => animateThenAct(res.id, () => onSeatParty(res))}>Seat</button>
-                      <button style={{ ...seatButtonStyle, background: res.notified_at ? LM_COLORS.success : LM_COLORS.goldDark, color: '#fff', cursor: res.notified_at ? 'default' : 'pointer' }} onClick={() => !res.notified_at && onNotifyReady(res)}>{res.notified_at ? 'Notified' : 'Notify'}</button>
+                      <button style={{ ...seatButtonStyle, background: LM_COLORS.goldDark, color: '#fff' }} onClick={() => animateThenAct(res.id, () => onCheckIn(res))}>Check In</button>
                       <button style={{ ...seatButtonStyle, background: '#fff', color: LM_COLORS.textDark, boxShadow: 'none', border: `1px solid ${LM_COLORS.border}` }} onClick={() => setEditingRes({...res})}>Edit</button>
                       <button style={{ ...seatButtonStyle, background: '#fff', color: LM_COLORS.danger, border: `1px solid ${LM_COLORS.danger}` }} onClick={() => animateThenAct(res.id, () => onCancelRes(res))}>Cancel</button>
                     </div>
@@ -977,7 +991,7 @@ const HostessView = React.memo(function HostessView({
               <div className="sr-walkin-form">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {SERVERS.map(name => {
-                    const myCount = tableEvents.filter(e => e.server_name === name).length;
+                    const myCount = Object.keys(tableStatuses).filter(k => tableStatuses[k] === 'occ' && (tableServerNames[k] || []).includes(name)).length;
                     const cleanName = name.replace(/[^\p{L}\p{N}\s]/gu, '').trim();
                     return (
                       <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: LM_COLORS.navyLight, border: `1px solid ${LM_COLORS.navyBorder}`, borderRadius: '0', padding: '12px 16px' }}>
@@ -1887,7 +1901,7 @@ export default function App() {
 
   // Cargar y sincronizar table_status en tiempo real
   useEffect(() => {
-    supabase.from('table_status').select('id, status, server_names').then(({ data }) => {
+    fetchTableStatuses().then(data => {
       if (data) {
         const statusMap = {};
         const serverMap = {};
@@ -2172,6 +2186,16 @@ export default function App() {
     }
   }, []);
 
+  const handleCheckIn = useCallback(async (res) => {
+    const checkedInAt = new Date().toISOString();
+    setRows(prev => prev.map(r => r.id === res.id ? { ...r, status: 'waitlist', checked_in_at: checkedInAt } : r));
+    const { error } = await checkInReservation(res.id);
+    if (error) {
+      setRows(prev => prev.map(r => r.id === res.id ? res : r));
+      alert("Error checking in guest.");
+    }
+  }, []);
+
   const handleSaveEdit = useCallback(async (id, data) => {
     const { error } = await updateReservationRecord(id, data);
     if (error) alert("Error updating reservation: " + error.message);
@@ -2323,8 +2347,17 @@ export default function App() {
   };
 
   const handleRefreshRows = async () => {
-    const { data } = await fetchRowsForDay(supabase, dateISO);
+    const { data, error } = await fetchRowsForDay(supabase, dateISO);
+    if (error) { console.error(error); alert("Error refreshing data."); return; }
     setRows(data || []);
+    const tsData = await fetchTableStatuses();
+    if (tsData) {
+      const statusMap = {};
+      const serverMap = {};
+      tsData.forEach(r => { statusMap[r.id] = r.status; serverMap[r.id] = r.server_names || []; });
+      setTableStatuses(statusMap);
+      setTableServerNames(serverMap);
+    }
   };
 
   // --- RENDER ---
@@ -2355,6 +2388,7 @@ export default function App() {
         onUndoCancel={handleUndoCancel}
         onSaveEdit={handleSaveEdit}
         onNotifyReady={handleNotifyReady}
+        onCheckIn={handleCheckIn}
         toggleBlackoutDate={toggleBlackoutDate}
         handleTableSelection={handleTableSelection}
         onRefresh={handleRefreshRows}
