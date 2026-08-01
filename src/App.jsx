@@ -847,7 +847,8 @@ const HostessView = React.memo(function HostessView({
                         const results = await Promise.all([...pendingAssignTables].map(id => assignServersToTable(id, servers)));
                         const failed = results.find(r => r?.error);
                         if (failed) { alert('Assign failed: ' + failed.error.message); return; }
-                        await Promise.all([...pendingAssignTables].map(id => logTableOcc(id, servers, dateISO)));
+                        const occupiedNow = [...pendingAssignTables].filter(id => tableStatuses[id] === 'occ');
+                        await Promise.all(occupiedNow.map(id => logTableOcc(id, servers, dateISO)));
                         const { data } = await fetchTableEvents(dateISO);
                         setTableEvents(data || []);
                         setAssignMode(false); setAssigningServers(new Set()); setPendingAssignTables(new Set());
@@ -991,7 +992,7 @@ const HostessView = React.memo(function HostessView({
               <div className="sr-walkin-form">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {SERVERS.map(name => {
-                    const myCount = Object.keys(tableStatuses).filter(k => tableStatuses[k] === 'occ' && (tableServerNames[k] || []).includes(name)).length;
+                    const myCount = tableEvents.filter(e => e.server_name === name).length;
                     const cleanName = name.replace(/[^\p{L}\p{N}\s]/gu, '').trim();
                     return (
                       <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: LM_COLORS.navyLight, border: `1px solid ${LM_COLORS.navyBorder}`, borderRadius: '0', padding: '12px 16px' }}>
