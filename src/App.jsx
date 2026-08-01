@@ -214,8 +214,7 @@ async function fetchRowsForDay(supabaseClient, dateISO) {
 }
 
 async function fetchTableStatuses() {
-  const { data } = await supabase.from('table_status').select('id, status, server_names');
-  return data;
+  return supabase.from('table_status').select('id, status, server_names');
 }
 
 async function insertWaitlistRecord(entry) {
@@ -314,7 +313,7 @@ async function fetchTableEvents(dateISO) {
 /*******************************************************
  * BLOQUE 4 — REALTIME (HOOK INTERNO)
  *******************************************************/
-function useReservationsRealtime({ supabase, dateISO, setRows, onInsert }) {
+function useReservationsRealtime({ supabase, dateISO, setRows, onInsert, onStatus }) {
   useEffect(() => {
     let isMounted = true;
 
@@ -356,7 +355,7 @@ function useReservationsRealtime({ supabase, dateISO, setRows, onInsert }) {
           });
         }
       )
-      .subscribe();
+      .subscribe((status, err) => onStatus?.('reservations', status, err));
 
     return () => {
       isMounted = false;
@@ -402,7 +401,7 @@ const HostessView = React.memo(function HostessView({
   // Datos
   walkInForm, setWalkInForm, phoneResForm, setPhoneResForm,
   waitList, history, seatedList, canceledList, blackoutDates, tableStatuses, tableServerNames,
-  walkinLoading, phoneResLoading, newReservationTick
+  walkinLoading, phoneResLoading, newReservationTick, realtimeConnected
 }) {
   const blackoutInputRef = useRef(null);
   const bookingDateRef = useRef(null);
@@ -530,11 +529,27 @@ const HostessView = React.memo(function HostessView({
               <button className="sr-btn-mini" onClick={() => stepDate(1)}>›</button>
               <button
                 className="sr-btn-mini"
-                onClick={async () => { setRefreshing(true); try { await onRefresh(); } finally { setRefreshing(false); } }}
+                onClick={async () => {
+                  setRefreshing(true);
+                  try {
+                    await onRefresh();
+                    const { data: teData, error: teError } = await fetchTableEvents(dateISO);
+                    if (teError) { alert("Error refreshing server table counts."); }
+                    else { setTableEvents(teData || []); }
+                  } finally { setRefreshing(false); }
+                }}
                 title="Refresh"
                 style={{ fontSize: '16px', opacity: refreshing ? 0.6 : 1 }}
                 disabled={refreshing}
               >↺</button>
+              <span
+                title={realtimeConnected ? 'Live sync connected' : 'Sync offline — use Refresh to see the latest'}
+                style={{
+                  display: 'inline-block', width: '9px', height: '9px', borderRadius: '50%', flexShrink: 0,
+                  background: realtimeConnected ? LM_COLORS.success : LM_COLORS.danger,
+                  boxShadow: realtimeConnected ? `0 0 0 3px ${LM_COLORS.success}22` : `0 0 0 3px ${LM_COLORS.danger}22`,
+                }}
+              />
             </div>
           </header>
           <div className="sr-main-content">
@@ -1889,7 +1904,18 @@ export default function App() {
     return counts;
   }, [rows]);
 
-  useReservationsRealtime({ supabase, dateISO, setRows, onInsert: () => setNewReservationTick(t => t + 1) });
+  const [channelIssues, setChannelIssues] = useState({});
+  const reportChannelStatus = useCallback((name, status, err) => {
+    if (status === 'SUBSCRIBED') {
+      setChannelIssues(prev => (prev[name] ? (() => { const next = { ...prev }; delete next[name]; return next; })() : prev));
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      console.warn(`[realtime] channel "${name}" status: ${status}`, err || '');
+      setChannelIssues(prev => (prev[name] ? prev : { ...prev, [name]: true }));
+    }
+  }, []);
+  const realtimeConnected = Object.keys(channelIssues).length === 0;
+
+  useReservationsRealtime({ supabase, dateISO, setRows, onInsert: () => setNewReservationTick(t => t + 1), onStatus: reportChannelStatus });
 
   useEffect(() => {
     document.addEventListener('click', unlockAudio);
@@ -1902,7 +1928,7 @@ export default function App() {
 
   // Cargar y sincronizar table_status en tiempo real
   useEffect(() => {
-    fetchTableStatuses().then(data => {
+    fetchTableStatuses().then(({ data }) => {
       if (data) {
         const statusMap = {};
         const serverMap = {};
@@ -1919,7 +1945,7 @@ export default function App() {
           setTableServerNames(prev => ({ ...prev, [row.id]: row.server_names || [] }));
         }
       })
-      .subscribe();
+      .subscribe((status, err) => reportChannelStatus('table_status_rt', status, err));
     return () => supabase.removeChannel(channel);
   }, []);
 
@@ -1933,7 +1959,7 @@ export default function App() {
     const channel = supabase
       .channel('blackout_dates_rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'blackout_dates' }, load)
-      .subscribe();
+      .subscribe((status, err) => reportChannelStatus('blackout_dates_rt', status, err));
     return () => supabase.removeChannel(channel);
   }, []);
 
@@ -2351,7 +2377,9 @@ export default function App() {
     const { data, error } = await fetchRowsForDay(supabase, dateISO);
     if (error) { console.error(error); alert("Error refreshing data."); return; }
     setRows(data || []);
-    const tsData = await fetchTableStatuses();
+
+    const { data: tsData, error: tsError } = await fetchTableStatuses();
+    if (tsError) { console.error(tsError); alert("Error refreshing floor plan."); return; }
     if (tsData) {
       const statusMap = {};
       const serverMap = {};
@@ -2382,6 +2410,7 @@ export default function App() {
         walkinLoading={walkinLoading}
         phoneResLoading={phoneResLoading}
         newReservationTick={newReservationTick}
+        realtimeConnected={realtimeConnected}
         onSeatParty={handleSeatParty}
         onUnseatParty={handleUnseatParty}
         onCancelRes={handleCancelReservation}
