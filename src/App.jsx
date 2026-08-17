@@ -12,7 +12,6 @@ import logo from "/logo.png"; // Logo principal para la interfaz
  *******************************************************/
 const MAX_GUESTS = 12;
 const MAX_CLIENT_GUESTS = 25;
-const SERVERS = ['Server 1','Server 2','Server 3','Server 4','Server 5','Server 6'];
 function getInitials(name) {
   const clean = String(name || '').replace(/[^\p{L}\p{N}\s]/gu, '').trim();
   const parts = clean.split(/\s+/).filter(Boolean);
@@ -310,6 +309,36 @@ async function fetchTableEvents(dateISO) {
   return supabase.from("table_events").select("*").eq("date_iso", dateISO);
 }
 
+async function fetchServers() {
+  return supabase.from("servers").select("id, name").order("name");
+}
+async function insertServer(name) {
+  return supabase.from("servers").insert({ name });
+}
+async function updateServerName(id, name) {
+  return supabase.from("servers").update({ name }).eq("id", id);
+}
+async function deleteServer(id) {
+  return supabase.from("servers").delete().eq("id", id);
+}
+
+async function handleAddServer(name) {
+  const clean = name.trim();
+  if (!clean) return;
+  const { error } = await insertServer(clean.toUpperCase());
+  if (error) alert('Error adding server: ' + error.message);
+}
+async function handleUpdateServer(id, name) {
+  const clean = name.trim();
+  if (!clean) return;
+  const { error } = await updateServerName(id, clean.toUpperCase());
+  if (error) alert('Error renaming server: ' + error.message);
+}
+async function handleDeleteServer(id) {
+  const { error } = await deleteServer(id);
+  if (error) alert('Error removing server: ' + error.message);
+}
+
 /*******************************************************
  * BLOQUE 4 — REALTIME (HOOK INTERNO)
  *******************************************************/
@@ -389,7 +418,7 @@ const HostessView = React.memo(function HostessView({
 
   // Datos
   walkInForm, setWalkInForm, phoneResForm, setPhoneResForm,
-  waitList, history, seatedList, canceledList, blackoutDates, tableStatuses, tableServerNames,
+  waitList, history, seatedList, canceledList, blackoutDates, tableStatuses, tableServerNames, serverRoster,
   walkinLoading, phoneResLoading, newReservationTick, realtimeConnected
 }) {
   const blackoutInputRef = useRef(null);
@@ -434,6 +463,10 @@ const HostessView = React.memo(function HostessView({
   const [pendingAssignTables, setPendingAssignTables] = useState(new Set());
   const [showAssignServerList, setShowAssignServerList] = useState(false);
   const [tableEvents, setTableEvents] = useState([]);
+  const [showServerMenu, setShowServerMenu] = useState(false);
+  const [serverMode, setServerMode] = useState(null); // null | 'add' | 'edit' | 'delete'
+  const [newServerName, setNewServerName] = useState('');
+  const [editingServer, setEditingServer] = useState(null); // { id, name }
   useEffect(() => {
     fetchTableEvents(dateISO).then(({ data }) => setTableEvents(data || [])).catch(() => setTableEvents([]));
   }, [dateISO]);
@@ -820,10 +853,10 @@ const HostessView = React.memo(function HostessView({
                         </button>
                         {showAssignServerList && (
                           <div style={{ position: 'absolute', top: '110%', right: 0, background: LM_COLORS.navyLight, border: `1px solid ${LM_COLORS.navyBorder}`, borderRadius: '10px', padding: '8px', zIndex: 100, minWidth: '160px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>
-                            {SERVERS.map(name => (
-                              <button key={name} onClick={() => setAssigningServers(prev => { const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s; })}
-                                style={{ display: 'block', width: '100%', textAlign: 'left', background: assigningServers.has(name) ? LM_COLORS.info : 'transparent', color: 'oklch(90% 0.01 90)', border: 'none', borderRadius: '6px', padding: '6px 10px', fontWeight: '600', fontSize: '0.78rem', cursor: 'pointer', fontFamily: "'Jost',sans-serif" }}>
-                                {name}
+                            {serverRoster.map(s => (
+                              <button key={s.id} onClick={() => setAssigningServers(prev => { const next = new Set(prev); next.has(s.name) ? next.delete(s.name) : next.add(s.name); return next; })}
+                                style={{ display: 'block', width: '100%', textAlign: 'left', background: assigningServers.has(s.name) ? LM_COLORS.info : 'transparent', color: 'oklch(90% 0.01 90)', border: 'none', borderRadius: '6px', padding: '6px 10px', fontWeight: '600', fontSize: '0.78rem', cursor: 'pointer', fontFamily: "'Jost',sans-serif" }}>
+                                {s.name}
                               </button>
                             ))}
                             <div style={{ borderTop: `1px solid ${LM_COLORS.navyBorder}`, marginTop: '6px', paddingTop: '6px' }}>
@@ -994,20 +1027,77 @@ const HostessView = React.memo(function HostessView({
             )}
             {activeTab === 'servers' && (
               <div className="sr-walkin-form">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginBottom: '14px' }}>
+                  {serverMode && serverMode !== 'add' && (
+                    <span style={{ fontSize: '0.72rem', color: LM_COLORS.textMuted, fontWeight: '600', fontFamily: "'Jost',sans-serif", display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {serverMode === 'edit' ? 'Tap a server to edit' : 'Tap a server to remove'}
+                      <button onClick={() => setServerMode(null)} style={{ background: 'transparent', border: `1px solid ${LM_COLORS.navyBorder}`, color: LM_COLORS.textMuted, borderRadius: '8px', padding: '2px 8px', fontSize: '0.72rem', cursor: 'pointer' }}>✕</button>
+                    </span>
+                  )}
+                  <div style={{ position: 'relative' }}>
+                    <button onClick={() => setShowServerMenu(p => !p)} style={{ background: `linear-gradient(180deg, ${LM_COLORS.gold}, ${LM_COLORS.goldDim})`, color: LM_COLORS.goldDark, border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
+                      Manage Servers ▾
+                    </button>
+                    {showServerMenu && (
+                      <div style={{ position: 'absolute', top: '110%', right: 0, background: LM_COLORS.navyLight, border: `1px solid ${LM_COLORS.navyBorder}`, borderRadius: '10px', padding: '6px', zIndex: 100, minWidth: '170px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>
+                        <button onClick={() => { setServerMode('add'); setShowServerMenu(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', color: 'oklch(90% 0.01 90)', border: 'none', borderRadius: '6px', padding: '8px 10px', fontWeight: '600', fontSize: '0.78rem', cursor: 'pointer', fontFamily: "'Jost',sans-serif" }}>+ Add Server</button>
+                        <button onClick={() => { setServerMode('edit'); setShowServerMenu(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', color: 'oklch(90% 0.01 90)', border: 'none', borderRadius: '6px', padding: '8px 10px', fontWeight: '600', fontSize: '0.78rem', cursor: 'pointer', fontFamily: "'Jost',sans-serif" }}>✎ Edit Server</button>
+                        <button onClick={() => { setServerMode('delete'); setShowServerMenu(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', color: LM_COLORS.danger, border: 'none', borderRadius: '6px', padding: '8px 10px', fontWeight: '600', fontSize: '0.78rem', cursor: 'pointer', fontFamily: "'Jost',sans-serif" }}>✕ Delete Server</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {serverMode === 'add' && (
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+                    <input
+                      className="sr-input"
+                      placeholder="Server name"
+                      autoFocus
+                      value={newServerName}
+                      onChange={e => setNewServerName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && newServerName.trim()) { handleAddServer(newServerName); setNewServerName(''); } }}
+                      style={{ flex: 1 }}
+                    />
+                    <button className="sr-btn sr-btnPrimary" onClick={() => { if (newServerName.trim()) { handleAddServer(newServerName); setNewServerName(''); } }}>Add</button>
+                    <button className="sr-btn" onClick={() => { setServerMode(null); setNewServerName(''); }}>Done</button>
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {SERVERS.map(name => {
-                    const myCount = tableEvents.filter(e => e.server_name === name).length;
-                    const cleanName = name.replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+                  {serverRoster.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '24px', color: LM_COLORS.textMuted, fontSize: '0.85rem', fontFamily: "'Jost',sans-serif" }}>
+                      No servers yet — use "Manage Servers ▾" to add one.
+                    </div>
+                  )}
+                  {serverRoster.map(s => {
+                    const myCount = tableEvents.filter(e => e.server_name === s.name).length;
+                    const cleanName = s.name.replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+                    const clickable = serverMode === 'edit' || serverMode === 'delete';
                     return (
-                      <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: LM_COLORS.navyLight, border: `1px solid ${LM_COLORS.navyBorder}`, borderRadius: '0', padding: '12px 16px' }}>
+                      <div
+                        key={s.id}
+                        onClick={() => {
+                          if (serverMode === 'edit') setEditingServer({ id: s.id, name: s.name });
+                          else if (serverMode === 'delete') {
+                            if (window.confirm(`Remove ${cleanName}?`)) { handleDeleteServer(s.id); setServerMode(null); }
+                          }
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: LM_COLORS.navyLight, border: `1px solid ${serverMode === 'delete' ? LM_COLORS.danger : LM_COLORS.navyBorder}`, borderRadius: '0', padding: '12px 16px', cursor: clickable ? 'pointer' : 'default' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                          <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: LM_COLORS.navyBorder, border: `1px solid ${LM_COLORS.goldText}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', color: LM_COLORS.goldText, fontFamily: "'Jost',sans-serif", flexShrink: 0 }}>{getInitials(name)}</div>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: LM_COLORS.navyBorder, border: `1px solid ${LM_COLORS.goldText}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', color: LM_COLORS.goldText, fontFamily: "'Jost',sans-serif", flexShrink: 0 }}>{getInitials(s.name)}</div>
                           <div style={{ fontWeight: '500', fontSize: '0.88rem', color: 'oklch(90% 0.01 90)', fontFamily: "'Jost',sans-serif", textTransform: 'uppercase', letterSpacing: '1px' }}>{cleanName}</div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '1.4rem', fontWeight: '700', fontFamily: "'Playfair Display',serif", color: myCount > 0 ? LM_COLORS.goldDim : 'oklch(45% 0.01 90)' }}>{myCount}</div>
-                          <div style={{ fontSize: '0.62rem', color: 'oklch(55% 0.01 90)', fontWeight: '600', fontFamily: "'Jost',sans-serif" }}>tables today</div>
-                        </div>
+                        {serverMode === 'edit' ? (
+                          <span style={{ color: LM_COLORS.goldText, fontSize: '0.9rem' }}>✎</span>
+                        ) : serverMode === 'delete' ? (
+                          <span style={{ color: LM_COLORS.danger, fontSize: '0.9rem' }}>✕</span>
+                        ) : (
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '1.4rem', fontWeight: '700', fontFamily: "'Playfair Display',serif", color: myCount > 0 ? LM_COLORS.goldDim : 'oklch(45% 0.01 90)' }}>{myCount}</div>
+                            <div style={{ fontSize: '0.62rem', color: 'oklch(55% 0.01 90)', fontWeight: '600', fontFamily: "'Jost',sans-serif" }}>tables today</div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1060,6 +1150,23 @@ const HostessView = React.memo(function HostessView({
             <div className="sr-actions" style={{marginTop: '20px'}}>
               <button className="sr-btn" onClick={() => setEditingRes(null)}>Cancel</button>
               <button className="sr-btn sr-btnPrimary" onClick={async () => { await onSaveEdit(editingRes.id, { firstName: editingRes.firstName, lastName: editingRes.lastName, phone: editingRes.phone, email: editingRes.email, guests: editingRes.guests, dateISO: editingRes.dateISO, timeHHMM: editingRes.timeHHMM, celebration: editingRes.celebration, dietary: editingRes.dietary, notes: editingRes.notes }); setEditingRes(null); }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {editingServer && (
+        <div className="sr-modal-overlay" onClick={() => setEditingServer(null)}>
+          <div className="sr-modal" onClick={e => e.stopPropagation()}>
+            <h3 style={{margin: '0 0 20px', fontSize: '1.4rem'}}>Edit Server</h3>
+            <div className="sr-formGrid">
+              <div className="sr-field sr-span2">
+                <label className="sr-fieldLabel">Name</label>
+                <input className="sr-input" autoFocus value={editingServer.name} onChange={e => setEditingServer({...editingServer, name: e.target.value})} />
+              </div>
+            </div>
+            <div className="sr-actions" style={{marginTop: '20px'}}>
+              <button className="sr-btn" onClick={() => setEditingServer(null)}>Cancel</button>
+              <button className="sr-btn sr-btnPrimary" onClick={async () => { await handleUpdateServer(editingServer.id, editingServer.name); setEditingServer(null); setServerMode(null); }}>Save</button>
             </div>
           </div>
         </div>
@@ -1328,7 +1435,7 @@ function ManagerPinView({ onSuccess }) {
     <div style={{ minHeight: '100vh', background: '#120D08', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 26, padding: '24px 20px', fontFamily: "'Space Grotesk',system-ui,sans-serif", position: 'relative', overflow: 'hidden' }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap'); @keyframes lmPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}} .sr-manager-pin::placeholder{font-size:0.95rem;letter-spacing:1px;}`}</style>
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(1300px 640px at 50% -12%,rgba(227,169,74,0.12),transparent 62%),radial-gradient(900px 500px at 100% 110%,rgba(226,123,92,0.07),transparent 60%)' }} />
-      <img src="/logo.png" alt="Logo" style={{ height: 72, position: 'relative', filter: 'drop-shadow(0 8px 26px rgba(0,0,0,.6))' }} />
+      <img src="/logo.png" alt="Logo" style={{ width: '100%', maxWidth: 380, height: 'auto', position: 'relative', filter: 'drop-shadow(0 8px 26px rgba(0,0,0,.6))' }} />
       <div style={{ position: 'relative', fontFamily: "'Cormorant Garamond',serif", fontWeight: 600, fontSize: '1.5rem', letterSpacing: '0.32em', textTransform: 'uppercase', color: '#E9B65C', marginTop: '-14px' }}>La Loma</div>
       <div style={{ position: 'relative', width: '100%', maxWidth: 380, background: 'linear-gradient(180deg,#201911,#17110A)', border: '1px solid rgba(227,169,74,0.16)', borderRadius: 22, padding: '34px 30px 30px', boxShadow: '0 34px 90px -34px rgba(0,0,0,.85)', animation: 'lmPop .5s ease both' }}>
         <div style={{ textAlign: 'center', marginBottom: 26 }}>
@@ -1815,6 +1922,7 @@ export default function App() {
   const [estimatedWait, setEstimatedWait] = useState(15);
   const [timeHHMM, setTimeHHMM] = useState("19:00");
   const [blackoutDates, setBlackoutDates] = useState([]);
+  const [servers, setServers] = useState([]);
   const [activeFloor, setActiveFloor] = useState("BAR");
   const [rows, setRows] = useState([]);
   const [tableStatuses, setTableStatuses] = useState({});
@@ -1952,6 +2060,17 @@ export default function App() {
       .channel('blackout_dates_rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'blackout_dates' }, load)
       .subscribe((status, err) => reportChannelStatus('blackout_dates_rt', status, err));
+    return () => supabase.removeChannel(channel);
+  }, []);
+
+  // Cargar y sincronizar servers en tiempo real
+  useEffect(() => {
+    const load = () => fetchServers().then(({ data }) => { if (data) setServers(data); });
+    load();
+    const channel = supabase
+      .channel('servers_rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'servers' }, load)
+      .subscribe((status, err) => reportChannelStatus('servers_rt', status, err));
     return () => supabase.removeChannel(channel);
   }, []);
 
@@ -2426,6 +2545,7 @@ export default function App() {
         blackoutDates={blackoutDates}
         tableStatuses={tableStatuses}
         tableServerNames={tableServerNames}
+        serverRoster={servers}
       />
     );
   }
