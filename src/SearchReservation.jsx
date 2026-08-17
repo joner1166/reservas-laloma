@@ -153,7 +153,7 @@ export default function SearchReservation() {
       <div style={styles.card}>
         <div style={{ ...styles.cardSection, ...styles.header }}>
           {/* ✅ logo desde /public/logo.png */}
-          <img src="/logo.png" alt="Lindo Michoacan" style={styles.logo} />
+          <img src="/logo.png" alt="Lindo La Loma" style={styles.logo} />
         </div>
 
         {/* ✅ DATE ROW (connected) */}

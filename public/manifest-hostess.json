@@ -1,6 +1,6 @@
 {
-  "name": "LM Hostess",
-  "short_name": "LM Hostess",
+  "name": "LLL Hostess",
+  "short_name": "LLL Hostess",
   "start_url": "/hostessview",
   "display": "standalone",
   "background_color": "#F2E4C6",

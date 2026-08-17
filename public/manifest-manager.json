@@ -1,6 +1,6 @@
 {
-  "name": "LM Manager",
-  "short_name": "LM Manager",
+  "name": "LLL Manager",
+  "short_name": "LLL Manager",
   "start_url": "/managerview",
   "display": "standalone",
   "background_color": "#120D08",

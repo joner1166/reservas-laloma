@@ -24,7 +24,7 @@ body {
   content: '';
   position: fixed;
   inset: 0;
-  background: url('/lindofondo.jpg') center / cover no-repeat;
+  background: url('/fondo.jpg') center / cover no-repeat;
   filter: blur(2px) brightness(0.75) saturate(1.1);
   transform: scale(1.03);
   z-index: -1;

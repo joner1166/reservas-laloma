@@ -20,7 +20,7 @@ exports.handler = async (event) => {
 
   // ✅ Link robusto a function real (recomendado)
   const manageLink = cancel_token
-    ? `https://bookingtheoriginallindomichoacan.com/.netlify/functions/cancel?token=${encodeURIComponent(cancel_token)}`
+    ? `https://lindolaloma.netlify.app/.netlify/functions/cancel?token=${encodeURIComponent(cancel_token)}`
     : null;
 
   const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -30,7 +30,7 @@ exports.handler = async (event) => {
   switch (type) {
     case "waitlist":
       messageBody =
-        `Lindo Michoacan\n\n` +
+        `Lindo La Loma\n\n` +
         `Hi ${name}, you're on our waitlist.\n\n` +
         `Party of ${guests ?? ""}.\n\n` +
         `We'll text you when your table is ready. Thanks for your patience!\n\n` +
@@ -39,7 +39,7 @@ exports.handler = async (event) => {
 
     case "table_ready":
       messageBody =
-        `Lindo Michoacan\n\n` +
+        `Lindo La Loma\n\n` +
         `Your table is ready, ${name}!\n\n` +
         `Please check in with the hostess within 10 minutes to hold your table.\n\n` +
         `See you soon! Reply STOP to opt-out.`;
@@ -48,7 +48,7 @@ exports.handler = async (event) => {
     case "confirm":
     default:
       messageBody =
-        `Lindo Michoacan\n\n` +
+        `Lindo La Loma\n\n` +
         `Reservation Confirmed!\n\n` +
         `Hi ${name}, we look forward to hosting you.\n\n` +
         `Date: ${dateLabel || ""}\n` +

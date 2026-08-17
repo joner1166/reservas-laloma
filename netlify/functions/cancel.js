@@ -36,7 +36,7 @@ exports.handler = async (event) => {
       "<!DOCTYPE html><html lang=\"en\"><head>" +
       "<meta charset=\"UTF-8\"/>" +
       "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\"/>" +
-      "<title>Reservation Cancelled – Lindo Michoacan</title>" +
+      "<title>Reservation Cancelled – Lindo La Loma</title>" +
       "<style>" +
       "body{font-family:Georgia,serif;max-width:720px;margin:40px auto;padding:0 24px;text-align:center;line-height:1.7;color:#1a1a1a}" +
       "h1{font-size:1.6rem;border-bottom:2px solid #b91c1c;padding-bottom:8px;display:inline-block}" +
@@ -50,10 +50,10 @@ exports.handler = async (event) => {
       "<h1>Reservation Cancelled</h1>" +
       "<p>" + message + "</p>" +
       "<p style=\"font-size:.88rem;color:#666\">If you change your mind, we’d love to have you — make a new reservation below.</p>" +
-      "<a href=\"https://bookingtheoriginallindomichoacan.com/\" class=\"btn\">Make a new reservation</a>" +
-      "<footer>&copy; 2025 Lindo Michoacan Restaurant. All rights reserved. | " +
-      "<a href=\"https://bookingtheoriginallindomichoacan.com/privacy.html\">Privacy Policy</a> | " +
-      "<a href=\"https://bookingtheoriginallindomichoacan.com/terms.html\">Terms &amp; Conditions</a></footer>" +
+      "<a href=\"https://lindolaloma.netlify.app/\" class=\"btn\">Make a new reservation</a>" +
+      "<footer>&copy; 2026 Lindo La Loma Restaurant. All rights reserved. | " +
+      "<a href=\"https://lindolaloma.netlify.app/privacy.html\">Privacy Policy</a> | " +
+      "<a href=\"https://lindolaloma.netlify.app/terms.html\">Terms &amp; Conditions</a></footer>" +
       "</body></html>";
 
     return {
