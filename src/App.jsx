@@ -5,7 +5,6 @@
 import React, { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
-import logo from "/logo.png"; // Logo principal para la interfaz
 
 /*******************************************************
  * BLOQUE 1 — CONFIG / CONSTANTES
@@ -521,7 +520,7 @@ const HostessView = React.memo(function HostessView({
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,500&family=Jost:wght@300;400;500;600&display=swap');`}</style>
       <main className="sr-card hostess-layout">
         <aside className="sr-hostess-sidebar">
-          <div className="sr-sidebar-header"><img src="/logo.png" alt="Lindo La Loma" className="sr-logo-small" /></div>
+          <div className="sr-sidebar-header"><img src="/logo.svg" alt="Lindo La Loma" className="sr-logo-small" /></div>
           <nav className="sr-sidebar-nav">
             <button className={activeTab === 'walkin' ? 'active' : ''} onClick={() => setActiveTab('walkin')}>Walk-in</button>
             <button className={activeTab === 'phoneres' ? 'active' : ''} onClick={() => setActiveTab('phoneres')}>Phone Reservation</button>
@@ -1184,8 +1183,8 @@ function ClientStepShell({ step, setStep, dateLabel, timeLabel, guests, children
     <div className={`sr-page${idx > 0 ? ' sr-form-step' : ''}`}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,500&family=Jost:wght@300;400;500;600&display=swap');`}</style>
       <div className="sr-client-col">
-        <img src="/logo.png" alt="Lindo La Loma" className="sr-logo" />
-        <div style={{ fontFamily: "'Playfair Display',serif", fontWeight: 600, fontSize: '1.43rem', letterSpacing: '0.32em', textTransform: 'uppercase', color: 'oklch(78% 0.13 85)', marginTop: '-6px' }}>La Loma</div>
+        <img src="/logo.svg" alt="Lindo La Loma" className="sr-logo" />
+        <div style={{ width: '100%', textAlign: 'center', fontFamily: "'Playfair Display',serif", fontWeight: 700, fontSize: '1.72rem', letterSpacing: '0.32em', textTransform: 'uppercase', color: 'oklch(78% 0.13 85)', marginTop: '6px' }}>La Loma</div>
         <div className="sr-client-divider" />
         {idx >= 0 && (
           <div className="sr-step-tracker">
@@ -1435,8 +1434,8 @@ function ManagerPinView({ onSuccess }) {
     <div style={{ minHeight: '100vh', background: '#120D08', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 26, padding: '24px 20px', fontFamily: "'Space Grotesk',system-ui,sans-serif", position: 'relative', overflow: 'hidden' }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap'); @keyframes lmPop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}} .sr-manager-pin::placeholder{font-size:0.95rem;letter-spacing:1px;}`}</style>
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(1300px 640px at 50% -12%,rgba(227,169,74,0.12),transparent 62%),radial-gradient(900px 500px at 100% 110%,rgba(226,123,92,0.07),transparent 60%)' }} />
-      <img src="/logo.png" alt="Logo" style={{ width: '100%', maxWidth: 380, height: 'auto', position: 'relative', filter: 'drop-shadow(0 8px 26px rgba(0,0,0,.6))' }} />
-      <div style={{ position: 'relative', fontFamily: "'Cormorant Garamond',serif", fontWeight: 600, fontSize: '1.5rem', letterSpacing: '0.32em', textTransform: 'uppercase', color: '#E9B65C', marginTop: '-14px' }}>La Loma</div>
+      <img src="/logo.svg" alt="Logo" style={{ width: '100%', maxWidth: 380, height: 'auto', position: 'relative', filter: 'drop-shadow(0 8px 26px rgba(0,0,0,.6))' }} />
+      <div style={{ position: 'relative', width: '100%', textAlign: 'center', fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: '1.8rem', letterSpacing: '0.32em', textTransform: 'uppercase', color: '#E9B65C', marginTop: '-2px' }}>La Loma</div>
       <div style={{ position: 'relative', width: '100%', maxWidth: 380, background: 'linear-gradient(180deg,#201911,#17110A)', border: '1px solid rgba(227,169,74,0.16)', borderRadius: 22, padding: '34px 30px 30px', boxShadow: '0 34px 90px -34px rgba(0,0,0,.85)', animation: 'lmPop .5s ease both' }}>
         <div style={{ textAlign: 'center', marginBottom: 26 }}>
           <div style={{ textTransform: 'uppercase', letterSpacing: '.3em', fontSize: 11, color: '#8A7C6B' }}>Restaurant Manager</div>
@@ -1462,8 +1461,8 @@ function HostessPinView({ onSuccess }) {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,500&family=Jost:wght@300;400;500;600&display=swap'); .sr-hostess-pin::placeholder{color:oklch(55% 0.02 90);}`}</style>
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(1100px 700px at 15% -10%, oklch(30% 0.03 250 / 0.5), transparent 60%), radial-gradient(900px 600px at 100% 100%, oklch(38% 0.07 45 / 0.35), transparent 55%), linear-gradient(180deg, oklch(15% 0.015 255) 0%, oklch(11% 0.012 255) 100%)' }} />
       <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 480, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <img src="/logo.png" alt="Logo" style={{ width: '100%', maxWidth: 380, height: 'auto', display: 'block' }} />
-        <div style={{ fontFamily: "'Playfair Display',serif", fontWeight: 600, fontSize: '1.5rem', letterSpacing: '0.32em', textTransform: 'uppercase', color: 'oklch(70% 0.11 85)', marginTop: '-10px', marginBottom: 40 }}>La Loma</div>
+        <img src="/logo.svg" alt="Logo" style={{ width: '100%', maxWidth: 380, height: 'auto', display: 'block' }} />
+        <div style={{ width: '100%', textAlign: 'center', fontFamily: "'Playfair Display',serif", fontWeight: 700, fontSize: '1.8rem', letterSpacing: '0.32em', textTransform: 'uppercase', color: 'oklch(70% 0.11 85)', marginTop: '2px', marginBottom: 40 }}>La Loma</div>
         <div style={{ width: '100%', padding: '44px 40px', borderRadius: 4, background: 'oklch(14% 0.015 255 / 0.55)', border: '1px solid oklch(70% 0.11 85 / 0.28)', backdropFilter: 'blur(10px)', boxShadow: '0 30px 60px -20px oklch(5% 0 0 / 0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
           <div style={{ fontSize: 12, letterSpacing: 4, color: 'oklch(70% 0.11 85)', textTransform: 'uppercase' }}>Restaurant Hostess</div>
           <div style={{ marginTop: 12, fontFamily: "'Playfair Display',serif", fontWeight: 600, fontSize: 32, color: 'oklch(96% 0.01 90)' }}>Hostess Access</div>
@@ -1662,7 +1661,7 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
         {/* Row 1: logo + clock + sign out — only on dashboard */}
         {!activeSection && !editingRecord && !addMode && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0', maxWidth: 480, margin: '0 auto' }}>
-            <img src="/logo.png" alt="Lindo La Loma" style={{ height: 30, filter: 'brightness(0.9)' }} />
+            <img src="/logo.svg" alt="Lindo La Loma" style={{ height: 30, filter: 'brightness(0.9)' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 12px', borderRadius: 99, border: '1px solid rgba(123,174,126,0.25)', background: 'rgba(123,174,126,0.08)' }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#8CC98F', animation: 'lmPulse 2s infinite', flexShrink: 0 }} />
