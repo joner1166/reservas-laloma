@@ -155,22 +155,25 @@ begin
 end $$;
 
 insert into public.table_status (id, status) values
-  ('BAR-B1','av'),('BAR-B2','av'),('BAR-B3','av'),('BAR-B4','av'),('BAR-B5','av'),
-  ('BAR-B6','av'),('BAR-B7','av'),('BAR-B8','av'),('BAR-B9','av'),
-  ('BAR-B10','av'),('BAR-B11','av'),('BAR-B12','av'),
-  ('BAR-B13','av'),('BAR-B14','av'),('BAR-B15','av'),('BAR-B16','av'),('BAR-B17','av'),
-  ('ROOM1-1','av'),('ROOM1-2','av'),('ROOM1-3','av'),('ROOM1-4','av'),
-  ('ROOM1-5','av'),('ROOM1-6','av'),('ROOM1-7','av'),('ROOM1-8','av'),
-  ('ROOM1-9','av'),('ROOM1-10','av'),('ROOM1-11','av'),
-  ('ROOM1-12','av'),('ROOM1-14','av'),('ROOM1-16','av'),
-  ('ROOM2-21','av'),('ROOM2-22','av'),('ROOM2-23','av'),('ROOM2-24','av'),
-  ('ROOM2-25','av'),('ROOM2-26','av'),('ROOM2-27','av'),('ROOM2-28','av'),
-  ('ROOM2-29','av'),('ROOM2-30','av'),('ROOM2-31','av'),('ROOM2-32','av'),
-  ('ROOM3-43','av'),('ROOM3-44','av'),('ROOM3-45','av'),('ROOM3-46','av'),
-  ('ROOM3-47','av'),('ROOM3-48','av'),('ROOM3-49','av'),('ROOM3-50','av'),
-  ('ROOM3-51','av'),('ROOM3-52','av'),('ROOM3-53','av'),('ROOM3-54','av'),
-  ('ROOM3-55','av'),('ROOM3-56','av'),
-  ('ROOM3-57','av'),('ROOM3-58','av'),('ROOM3-59','av'),('ROOM3-60','av'),('ROOM3-61','av')
+  ('VIEW-60','av'),('VIEW-61','av'),('VIEW-62','av'),('VIEW-63','av'),('VIEW-64','av'),
+  ('VIEW-65','av'),('VIEW-66','av'),('VIEW-67','av'),('VIEW-68','av'),('VIEW-69','av'),
+  ('VIEW-70','av'),('VIEW-71','av'),('VIEW-72','av'),('VIEW-73','av'),('VIEW-74','av'),
+  ('VIEW-75','av'),('VIEW-76','av'),('VIEW-77','av'),('VIEW-78','av'),
+  ('THIRTIES-30','av'),('THIRTIES-31','av'),('THIRTIES-32','av'),('THIRTIES-33','av'),
+  ('THIRTIES-34','av'),('THIRTIES-35','av'),('THIRTIES-36','av'),('THIRTIES-37','av'),
+  ('BAR-1','av'),('BAR-2','av'),('BAR-3','av'),('BAR-4','av'),('BAR-5','av'),
+  ('BAR-6','av'),('BAR-7','av'),('BAR-8','av'),('BAR-9','av'),('BAR-10','av'),
+  ('BAR-11','av'),('BAR-12','av'),('BAR-13','av'),('BAR-14','av'),('BAR-15','av'),
+  ('BAR-16','av'),('BAR-17','av'),
+  ('FIFTIES-50','av'),('FIFTIES-51','av'),('FIFTIES-52','av'),('FIFTIES-53','av'),
+  ('EIGHTIES-80','av'),('EIGHTIES-81','av'),('EIGHTIES-82','av'),('EIGHTIES-83','av'),('EIGHTIES-84','av'),
+  ('TWENTIES-20','av'),('TWENTIES-21','av'),('TWENTIES-22','av'),('TWENTIES-23','av'),
+  ('TWENTIES-24','av'),('TWENTIES-25','av'),('TWENTIES-26','av'),('TWENTIES-27','av'),
+  ('TWENTIES-28','av'),('TWENTIES-44','av'),('TWENTIES-45','av'),('TWENTIES-46','av'),('TWENTIES-47','av'),
+  ('TENS-1','av'),('TENS-2','av'),('TENS-3','av'),('TENS-4','av'),('TENS-5','av'),
+  ('TENS-6','av'),('TENS-7','av'),('TENS-8','av'),('TENS-10','av'),('TENS-11','av'),
+  ('TENS-12','av'),('TENS-13','av'),('TENS-14','av'),('TENS-15','av'),('TENS-16','av'),
+  ('TENS-17','av'),('TENS-40','av'),('TENS-41','av'),('TENS-42','av'),('TENS-43','av')
 on conflict (id) do nothing;
 
 /* =========================================================

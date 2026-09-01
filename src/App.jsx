@@ -73,29 +73,51 @@ const responsiveStyles = `
   }
 `;
 
+const FLOOR_LABELS = { VIEW: 'VIEW', THIRTIES: "30'S", BAR: 'BAR', FIFTIES: "50'S", EIGHTIES: "80'S", TWENTIES: "20'S", TENS: "10'S" };
+
 const FLOOR_CONFIG = {
-  BAR: [
-    ...Array.from({ length: 9 }, (_, i) => ({ id: `B${i + 1}`, cap: 1, top: '22%', left: `${11.5 + (i * 9.5)}%`, shape: 'circle' })),
-    { id: 'B12', cap: 2, top: '53%', left: '54%', shape: 'circle' }, { id: 'B11', cap: 2, top: '53%', left: '64.5%', shape: 'circle' }, { id: 'B10', cap: 2, top: '53%', left: '75%', shape: 'circle' },
-    { id: 'B16', cap: 2, top: '86%', left: '7%', shape: 'square' }, { id: 'B15', cap: 2, top: '86%', left: '17%', shape: 'square' }, { id: 'B14', cap: 2, top: '86%', left: '27%', shape: 'square' }, { id: 'B13', cap: 2, top: '86%', left: '37%', shape: 'square' },
-    { id: 'B17', cap: 5, top: '42%', left: '6%', shape: 'square' }
+  VIEW: [
+    ...[78, 77, 76, 75, 74, 73, 72, 71, 70].map((id, i) => ({ id: `${id}`, cap: 4, top: '25%', left: `${6 + i * 11}%`, shape: 'square' })),
+    ...[69, 68, 67, 66, 65, 64, 63, 62, 61, 60].map((id, i) => ({ id: `${id}`, cap: 4, top: '65%', left: `${5 + i * 10}%`, shape: 'square' })),
   ],
-  ROOM1: [
-    { id: '1', cap: 4, top: '82%', left: '12%', shape: 'square' }, { id: '2', cap: 4, top: '82%', left: '32%', shape: 'square' }, { id: '3', cap: 4, top: '82%', left: '52%', shape: 'square' }, { id: '4', cap: 4, top: '82%', left: '72%', shape: 'square' },
-    { id: '5', cap: 4, top: '65%', left: '88%', shape: 'square' }, { id: '6', cap: 4, top: '48%', left: '88%', shape: 'square' }, { id: '7', cap: 4, top: '31%', left: '88%', shape: 'square' },
-    { id: '8', cap: 4, top: '15%', left: '72%', shape: 'square' }, { id: '9', cap: 4, top: '15%', left: '52%', shape: 'square' }, { id: '10', cap: 4, top: '15%', left: '32%', shape: 'square' }, { id: '11', cap: 4, top: '15%', left: '12%', shape: 'square' },
-    { id: '12', cap: 8, top: '48%', left: '22%', shape: 'rect' }, { id: '14', cap: 8, top: '48%', left: '42%', shape: 'rect' }, { id: '16', cap: 8, top: '48%', left: '62%', shape: 'rect' }
+  // Cluster junto al Exit izquierdo: 33/34/35/36 en columna, 32/31 arriba al centro, 37/30 (mesas largas) abajo
+  THIRTIES: [
+    { id: '33', cap: 4, top: '20%', left: '18%', shape: 'square' },
+    { id: '34', cap: 4, top: '40%', left: '18%', shape: 'square' },
+    { id: '35', cap: 4, top: '60%', left: '18%', shape: 'square' },
+    { id: '36', cap: 4, top: '80%', left: '18%', shape: 'square' },
+    { id: '32', cap: 4, top: '12%', left: '55%', shape: 'square' },
+    { id: '31', cap: 4, top: '12%', left: '80%', shape: 'square' },
+    { id: '37', cap: 10, top: '48%', left: '68%', shape: 'rect' },
+    { id: '30', cap: 10, top: '80%', left: '68%', shape: 'rect' },
   ],
-  ROOM2: [
-    { id: '21', cap: 4, top: '78%', left: '18%', shape: 'square' }, { id: '22', cap: 4, top: '78%', left: '39%', shape: 'square' }, { id: '23', cap: 4, top: '78%', left: '61%', shape: 'square' }, { id: '24', cap: 4, top: '78%', left: '82%', shape: 'square' },
-    { id: '31', cap: 10, top: '48%', left: '32%', shape: 'rect' }, { id: '32', cap: 10, top: '48%', left: '68%', shape: 'rect' },
-    { id: '30', cap: 4, top: '18%', left: '10%', shape: 'square' }, { id: '29', cap: 4, top: '18%', left: '26%', shape: 'square' }, { id: '28', cap: 4, top: '18%', left: '42%', shape: 'square' }, { id: '27', cap: 4, top: '18%', left: '58%', shape: 'square' }, { id: '26', cap: 4, top: '18%', left: '74%', shape: 'square' }, { id: '25', cap: 4, top: '18%', left: '90%', shape: 'square' }
+  BAR: Array.from({ length: 17 }, (_, i) => ({ id: `${i + 1}`, cap: 1, top: '50%', left: `${3 + i * 5.875}%`, shape: 'circle' })),
+  // L invertida: 53 sola arriba-izquierda, 52/51/50 en columna a la derecha
+  FIFTIES: [
+    { id: '53', cap: 4, top: '15%', left: '25%', shape: 'square' },
+    { id: '52', cap: 4, top: '15%', left: '70%', shape: 'square' },
+    { id: '51', cap: 4, top: '48%', left: '70%', shape: 'square' },
+    { id: '50', cap: 4, top: '81%', left: '70%', shape: 'square' },
   ],
-  ROOM3: [
-    ...Array.from({ length: 7 }, (_, i) => ({ id: `${56 - i}`, cap: 4, top: '82%', left: `${91 - (i * 13.5)}%`, shape: 'square' })),
-    { id: '57', cap: 8, top: '52%', left: '82%', shape: 'rect' }, { id: '58', cap: 8, top: '52%', left: '66%', shape: 'rect' }, { id: '59', cap: 8, top: '52%', left: '50%', shape: 'rect' }, { id: '60', cap: 8, top: '52%', left: '34%', shape: 'rect' }, { id: '61', cap: 8, top: '52%', left: '18%', shape: 'rect' },
-    ...Array.from({ length: 7 }, (_, i) => ({ id: `${43 + i}`, cap: 4, top: '22%', left: `${91 - (i * 13.5)}%`, shape: 'square' }))
-  ]
+  EIGHTIES: [80, 81, 82, 83, 84].map((id, i) => ({ id: `${id}`, cap: 4, top: `${10 + i * 18}%`, left: '50%', shape: 'circle' })),
+  TWENTIES: [
+    ...[44, 45, 46, 47].map((id, i) => ({ id: `${id}`, cap: 4, top: '12%', left: `${15 + i * 23}%`, shape: 'booth' })),
+    ...[23, 24, 25].map((id, i) => ({ id: `${id}`, cap: 4, top: '38%', left: `${25 + i * 25}%`, shape: 'booth' })),
+    { id: '28', cap: 4, top: '64%', left: '25%', shape: 'circle' },
+    { id: '27', cap: 10, top: '64%', left: '52%', shape: 'rect' },
+    { id: '26', cap: 10, top: '64%', left: '80%', shape: 'rect' },
+    ...[20, 21, 22].map((id, i) => ({ id: `${id}`, cap: 4, top: '90%', left: `${25 + i * 25}%`, shape: 'booth' })),
+  ],
+  TENS: [
+    ...[40, 41, 42, 43, 13, 14].map((id, i) => ({ id: `${id}`, cap: 4, top: '10%', left: `${8 + i * 17}%`, shape: 'booth' })),
+    ...[15, 16, 17].map((id, i) => ({ id: `${id}`, cap: 10, top: '32%', left: `${25 + i * 25}%`, shape: 'rect' })),
+    ...[10, 11, 12].map((id, i) => ({ id: `${id}`, cap: 4, top: '54%', left: `${25 + i * 25}%`, shape: 'booth' })),
+    ...[1, 2, 3, 4].map((id, i) => ({ id: `${id}`, cap: 4, top: '74%', left: `${15 + i * 23}%`, shape: 'square' })),
+    { id: '5', cap: 4, top: '94%', left: '15%', shape: 'square' },
+    { id: '6', cap: 4, top: '94%', left: '38%', shape: 'square' },
+    { id: '7', cap: 10, top: '94%', left: '65%', shape: 'rect' },
+    { id: '8', cap: 10, top: '94%', left: '90%', shape: 'rect' },
+  ],
 };
 
 /*******************************************************
@@ -839,7 +861,7 @@ const HostessView = React.memo(function HostessView({
                 <div className="sr-floor-header">
                   <div className="sr-zone-selector">
                     {Object.keys(FLOOR_CONFIG).map(f => (
-                      <button key={f} className={activeFloor === f ? 'active' : ''} onClick={() => setActiveFloor(f)}>{f}</button>
+                      <button key={f} className={activeFloor === f ? 'active' : ''} onClick={() => setActiveFloor(f)}>{FLOOR_LABELS[f] || f}</button>
                     ))}
                   </div>
                   <div className="sr-floor-legend">
@@ -961,7 +983,6 @@ const HostessView = React.memo(function HostessView({
                 </div>
                 <div className="sr-map-canvas">
                   <div className="sr-image-wrapper">
-                    <img src={activeFloor === 'BAR' ? '/BAR.png' : activeFloor === 'ROOM1' ? '/FLOOR 1.jpg' : activeFloor === 'ROOM2' ? '/ROOM 2.jpg' : '/ROOM 3.jpg'} alt={activeFloor} className="sr-floor-img" onError={e => { e.target.style.display = 'none'; }} />
                     {FLOOR_CONFIG[activeFloor].map(table => {
                       const key = `${activeFloor}-${table.id}`;
                       const status = tableStatuses[key] ?? 'av';
