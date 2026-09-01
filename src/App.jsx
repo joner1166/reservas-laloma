@@ -10,7 +10,7 @@ import "./App.css";
  * BLOQUE 1 — CONFIG / CONSTANTES
  *******************************************************/
 const MAX_GUESTS = 12;
-const MAX_CLIENT_GUESTS = 25;
+const MAX_CLIENT_GUESTS = 12;
 function getInitials(name) {
   const clean = String(name || '').replace(/[^\p{L}\p{N}\s]/gu, '').trim();
   const parts = clean.split(/\s+/).filter(Boolean);
@@ -31,6 +31,7 @@ const MAX_RESERVATIONS_PER_HOUR = 5;
 const RESTAURANT_CAPACITY = 200;
 const HOSTESS_PASSWORD = "1234";
 const MANAGER_PASSWORD = "1234";
+const VIEW_AREA_WARNING = "View tables are limited and subject to availability. Please be aware you may have to wait longer, or be seated in another area if none are open.";
 
 // Horarios por día (0=Dom, 1=Lun, ..., 6=Sáb)
 const RESTAURANT_HOURS = {
@@ -1185,6 +1186,9 @@ function ClientStepShell({ step, setStep, dateLabel, timeLabel, guests, children
       <div className="sr-client-col">
         <img src="/logo.svg" alt="Lindo La Loma" className="sr-logo" />
         <div style={{ width: '100%', textAlign: 'center', fontFamily: "'Playfair Display',serif", fontWeight: 700, fontSize: '1.72rem', letterSpacing: '0.32em', textTransform: 'uppercase', color: 'oklch(78% 0.13 85)', marginTop: '6px' }}>La Loma</div>
+        <div style={{ width: '100%', textAlign: 'center', fontFamily: "'Jost',sans-serif", fontSize: '0.78rem', letterSpacing: '0.06em', color: 'oklch(70% 0.02 90)', marginTop: '10px', lineHeight: '1.6' }}>
+          645 Carnegie Street.<br />Henderson, NV 89052
+        </div>
         <div className="sr-client-divider" />
         {idx >= 0 && (
           <div className="sr-step-tracker">
@@ -1228,7 +1232,7 @@ const ClientConfirmationView = React.memo(function ClientConfirmationView({ firs
       <button
         className="sr-btn sr-btnPrimary"
         onClick={() => {
-          setClientForm({ firstName: '', lastName: '', phone: '', phoneCode: '+1', email: '', celebration: 'None', dietary: 'None', notes: '', smsOptIn: false });
+          setClientForm({ firstName: '', lastName: '', phone: '', phoneCode: '+1', email: '', celebration: 'None', dietary: 'None', notes: '', smsOptIn: false, viewAreaRequest: false });
           setStep('search');
         }}
         style={{ width: '100%', maxWidth: '340px', marginTop: '4px' }}
@@ -1338,7 +1342,7 @@ const ClientSearchView = React.memo(function ClientSearchView({
             </>
           )}
           <div className="sr-foot">
-            If your party is over 25 people please{' '}
+            If your party is over 12 people please{' '}
             <a href="tel:+17028376828">
               call us at (702) 837-6828
             </a>
@@ -1379,9 +1383,17 @@ const ClientPreferencesView = React.memo(function ClientPreferencesView({
   formState, setFormState,
   setStep, onSubmitClientRes, submitting
 }) {
-  const { celebration, dietary, notes, smsOptIn } = formState;
+  const { celebration, dietary, notes, smsOptIn, viewAreaRequest } = formState;
   const updateForm = (key, val) => setFormState(prev => ({ ...prev, [key]: val }));
   const [smsReminderShown, setSmsReminderShown] = useState(false);
+
+  const handleViewAreaChange = (checked) => {
+    if (checked) {
+      if (window.confirm(VIEW_AREA_WARNING)) updateForm('viewAreaRequest', true);
+    } else {
+      updateForm('viewAreaRequest', false);
+    }
+  };
 
   const handleSubmit = () => {
     if (!smsOptIn && !smsReminderShown) {
@@ -1399,6 +1411,10 @@ const ClientPreferencesView = React.memo(function ClientPreferencesView({
             <div className="sr-field sr-span2"><label className="sr-fieldLabel">Dietary Restrictions</label><select className="sr-input" value={dietary} onChange={e => updateForm('dietary', e.target.value)}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
             <div className="sr-field sr-span2"><label className="sr-fieldLabel">Notes</label><textarea className="sr-textarea" placeholder="Anything we should know?" value={notes} onChange={e => updateForm('notes', e.target.value)} /></div>
           </div>
+          <label style={{display:'flex',alignItems:'flex-start',gap:'10px',margin:'16px 0 4px',cursor:'pointer',fontSize:'0.78rem',color:'oklch(62% 0.02 90)',lineHeight:'1.7'}}>
+            <input type="checkbox" checked={!!viewAreaRequest} onChange={e => handleViewAreaChange(e.target.checked)} style={{marginTop:'3px',flexShrink:0,width:'16px',height:'16px',accentColor:'oklch(78% 0.13 85)'}} />
+            <span>I would like to be seated in the <strong>View Area</strong> (subject to availability).</span>
+          </label>
           {smsReminderShown && !smsOptIn && (
             <div style={{margin:'12px 0 0',padding:'10px 14px',background:'oklch(93% 0.06 85)',border:'1px solid oklch(80% 0.1 80)',borderRadius:'10px',fontSize:'0.78rem',color:'oklch(45% 0.12 70)',display:'flex',alignItems:'center',gap:'8px'}}>
               <span style={{fontSize:'1.1rem'}}>📱</span>
@@ -1956,6 +1972,7 @@ export default function App() {
     dietary: "None",
     notes: "",
     smsOptIn: false,
+    viewAreaRequest: false,
   });
 
   const dateLabel = useMemo(() => formatDateLabel(dateISO), [dateISO]);
@@ -2414,6 +2431,11 @@ export default function App() {
 
     const cancelToken = generateToken();
 
+    const finalNotes = [
+      clientForm.viewAreaRequest ? 'VIEW AREA REQUESTED' : null,
+      clientForm.notes || null,
+    ].filter(Boolean).join(' — ') || null;
+
     const newRes = {
       firstName: clientForm.firstName.toUpperCase(),
       lastName: clientForm.lastName.toUpperCase(),
@@ -2424,7 +2446,7 @@ export default function App() {
       email: clientForm.email,
       celebration: clientForm.celebration,
       dietary: clientForm.dietary,
-      notes: clientForm.notes,
+      notes: finalNotes,
       status: "reserved",
       source: "online",
       cancel_token: cancelToken,
