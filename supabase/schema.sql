@@ -197,6 +197,15 @@ end $$;
 alter table public.blackout_dates add column if not exists notes text;
 alter table public.blackout_dates add column if not exists type text default 'closed';
 alter table public.table_status  add column if not exists server_names text[] default '{}';
+alter table public.table_status  add column if not exists reserved_name text default null;
+do $$
+begin
+  if exists (select 1 from pg_constraint where conname = 'table_status_status_check') then
+    execute 'alter table public.table_status drop constraint table_status_status_check';
+  end if;
+  execute $c$ alter table public.table_status add constraint table_status_status_check
+    check (status in ('av','occ','reserved')) $c$;
+end $$;
 
 /* =========================================================
    11) Tabla table_events

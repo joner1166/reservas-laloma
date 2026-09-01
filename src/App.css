@@ -207,6 +207,7 @@ body {
 }
 .sr-legend-dot.available { background: oklch(65% 0.15 145); }
 .sr-legend-dot.occupied  { background: oklch(62% 0.16 28); }
+.sr-legend-dot.reserved  { background: oklch(80% 0.14 85); }
 
 .sr-map-canvas {
   position: relative;
@@ -274,6 +275,16 @@ body {
 .sr-table-marker.is-occupied:hover {
   background: oklch(62% 0.16 28);
   box-shadow: 0 0 0 3px oklch(62% 0.16 28 / 0.5), 0 6px 16px rgba(0,0,0,0.4);
+}
+
+.sr-table-marker.is-reserved {
+  background: oklch(80% 0.14 85 / 0.9);
+  color: oklch(20% 0.02 85);
+  box-shadow: 0 0 0 2px oklch(80% 0.14 85 / 0.3), 0 4px 12px rgba(0,0,0,0.35);
+}
+.sr-table-marker.is-reserved:hover {
+  background: oklch(80% 0.14 85);
+  box-shadow: 0 0 0 3px oklch(80% 0.14 85 / 0.5), 0 6px 16px rgba(0,0,0,0.4);
 }
 
 .table-id  { font-size: 10px; line-height: 1; font-family: 'Playfair Display', serif; }

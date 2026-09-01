@@ -75,26 +75,26 @@ const responsiveStyles = `
 
 const FLOOR_CONFIG = {
   BAR: [
-    ...Array.from({ length: 9 }, (_, i) => ({ id: `B${i + 1}`, cap: 1, top: '22%', left: `${11.5 + (i * 9.5)}%`, status: [3, 5].includes(i + 1) ? 'occ' : 'av', shape: 'circle' })),
-    { id: 'B12', cap: 2, top: '53%', left: '54%', status: 'av', shape: 'circle' }, { id: 'B11', cap: 2, top: '53%', left: '64.5%', status: 'av', shape: 'circle' }, { id: 'B10', cap: 2, top: '53%', left: '75%', status: 'av', shape: 'circle' },
-    { id: 'B16', cap: 2, top: '86%', left: '7%', status: 'av', shape: 'square' }, { id: 'B15', cap: 2, top: '86%', left: '17%', status: 'av', shape: 'square' }, { id: 'B14', cap: 2, top: '86%', left: '27%', status: 'av', shape: 'square' }, { id: 'B13', cap: 2, top: '86%', left: '37%', status: 'av', shape: 'square' },
-    { id: 'B17', cap: 5, top: '42%', left: '6%', status: 'av', shape: 'square' }
+    ...Array.from({ length: 9 }, (_, i) => ({ id: `B${i + 1}`, cap: 1, top: '22%', left: `${11.5 + (i * 9.5)}%`, shape: 'circle' })),
+    { id: 'B12', cap: 2, top: '53%', left: '54%', shape: 'circle' }, { id: 'B11', cap: 2, top: '53%', left: '64.5%', shape: 'circle' }, { id: 'B10', cap: 2, top: '53%', left: '75%', shape: 'circle' },
+    { id: 'B16', cap: 2, top: '86%', left: '7%', shape: 'square' }, { id: 'B15', cap: 2, top: '86%', left: '17%', shape: 'square' }, { id: 'B14', cap: 2, top: '86%', left: '27%', shape: 'square' }, { id: 'B13', cap: 2, top: '86%', left: '37%', shape: 'square' },
+    { id: 'B17', cap: 5, top: '42%', left: '6%', shape: 'square' }
   ],
   ROOM1: [
-    { id: '1', cap: 4, top: '82%', left: '12%', status: 'occ', shape: 'square' }, { id: '2', cap: 4, top: '82%', left: '32%', status: 'occ', shape: 'square' }, { id: '3', cap: 4, top: '82%', left: '52%', status: 'occ', shape: 'square' }, { id: '4', cap: 4, top: '82%', left: '72%', status: 'occ', shape: 'square' },
-    { id: '5', cap: 4, top: '65%', left: '88%', status: 'occ', shape: 'square' }, { id: '6', cap: 4, top: '48%', left: '88%', status: 'av', shape: 'square' }, { id: '7', cap: 4, top: '31%', left: '88%', status: 'occ', shape: 'square' },
-    { id: '8', cap: 4, top: '15%', left: '72%', status: 'occ', shape: 'square' }, { id: '9', cap: 4, top: '15%', left: '52%', status: 'occ', shape: 'square' }, { id: '10', cap: 4, top: '15%', left: '32%', status: 'av', shape: 'square' }, { id: '11', cap: 4, top: '15%', left: '12%', status: 'av', shape: 'square' },
-    { id: '12', cap: 8, top: '48%', left: '22%', status: 'av', shape: 'rect' }, { id: '14', cap: 8, top: '48%', left: '42%', status: 'occ', shape: 'rect' }, { id: '16', cap: 8, top: '48%', left: '62%', status: 'av', shape: 'rect' }
+    { id: '1', cap: 4, top: '82%', left: '12%', shape: 'square' }, { id: '2', cap: 4, top: '82%', left: '32%', shape: 'square' }, { id: '3', cap: 4, top: '82%', left: '52%', shape: 'square' }, { id: '4', cap: 4, top: '82%', left: '72%', shape: 'square' },
+    { id: '5', cap: 4, top: '65%', left: '88%', shape: 'square' }, { id: '6', cap: 4, top: '48%', left: '88%', shape: 'square' }, { id: '7', cap: 4, top: '31%', left: '88%', shape: 'square' },
+    { id: '8', cap: 4, top: '15%', left: '72%', shape: 'square' }, { id: '9', cap: 4, top: '15%', left: '52%', shape: 'square' }, { id: '10', cap: 4, top: '15%', left: '32%', shape: 'square' }, { id: '11', cap: 4, top: '15%', left: '12%', shape: 'square' },
+    { id: '12', cap: 8, top: '48%', left: '22%', shape: 'rect' }, { id: '14', cap: 8, top: '48%', left: '42%', shape: 'rect' }, { id: '16', cap: 8, top: '48%', left: '62%', shape: 'rect' }
   ],
   ROOM2: [
-    { id: '21', cap: 4, top: '78%', left: '18%', status: 'occ', shape: 'square' }, { id: '22', cap: 4, top: '78%', left: '39%', status: 'av', shape: 'square' }, { id: '23', cap: 4, top: '78%', left: '61%', status: 'occ', shape: 'square' }, { id: '24', cap: 4, top: '78%', left: '82%', status: 'av', shape: 'square' },
-    { id: '31', cap: 10, top: '48%', left: '32%', status: 'occ', shape: 'rect' }, { id: '32', cap: 10, top: '48%', left: '68%', status: 'occ', shape: 'rect' },
-    { id: '30', cap: 4, top: '18%', left: '10%', status: 'av', shape: 'square' }, { id: '29', cap: 4, top: '18%', left: '26%', status: 'occ', shape: 'square' }, { id: '28', cap: 4, top: '18%', left: '42%', status: 'av', shape: 'square' }, { id: '27', cap: 4, top: '18%', left: '58%', status: 'occ', shape: 'square' }, { id: '26', cap: 4, top: '18%', left: '74%', status: 'av', shape: 'square' }, { id: '25', cap: 4, top: '18%', left: '90%', status: 'av', shape: 'square' }
+    { id: '21', cap: 4, top: '78%', left: '18%', shape: 'square' }, { id: '22', cap: 4, top: '78%', left: '39%', shape: 'square' }, { id: '23', cap: 4, top: '78%', left: '61%', shape: 'square' }, { id: '24', cap: 4, top: '78%', left: '82%', shape: 'square' },
+    { id: '31', cap: 10, top: '48%', left: '32%', shape: 'rect' }, { id: '32', cap: 10, top: '48%', left: '68%', shape: 'rect' },
+    { id: '30', cap: 4, top: '18%', left: '10%', shape: 'square' }, { id: '29', cap: 4, top: '18%', left: '26%', shape: 'square' }, { id: '28', cap: 4, top: '18%', left: '42%', shape: 'square' }, { id: '27', cap: 4, top: '18%', left: '58%', shape: 'square' }, { id: '26', cap: 4, top: '18%', left: '74%', shape: 'square' }, { id: '25', cap: 4, top: '18%', left: '90%', shape: 'square' }
   ],
   ROOM3: [
-    ...Array.from({ length: 7 }, (_, i) => ({ id: `${56 - i}`, cap: 4, top: '82%', left: `${91 - (i * 13.5)}%`, status: i % 3 === 0 ? 'occ' : 'av', shape: 'square' })),
-    { id: '57', cap: 8, top: '52%', left: '82%', status: 'occ', shape: 'rect' }, { id: '58', cap: 8, top: '52%', left: '66%', status: 'av', shape: 'rect' }, { id: '59', cap: 8, top: '52%', left: '50%', status: 'occ', shape: 'rect' }, { id: '60', cap: 8, top: '52%', left: '34%', status: 'av', shape: 'rect' }, { id: '61', cap: 8, top: '52%', left: '18%', status: 'occ', shape: 'rect' },
-    ...Array.from({ length: 7 }, (_, i) => ({ id: `${43 + i}`, cap: 4, top: '22%', left: `${91 - (i * 13.5)}%`, status: i % 2 === 0 ? 'av' : 'occ', shape: 'square' }))
+    ...Array.from({ length: 7 }, (_, i) => ({ id: `${56 - i}`, cap: 4, top: '82%', left: `${91 - (i * 13.5)}%`, shape: 'square' })),
+    { id: '57', cap: 8, top: '52%', left: '82%', shape: 'rect' }, { id: '58', cap: 8, top: '52%', left: '66%', shape: 'rect' }, { id: '59', cap: 8, top: '52%', left: '50%', shape: 'rect' }, { id: '60', cap: 8, top: '52%', left: '34%', shape: 'rect' }, { id: '61', cap: 8, top: '52%', left: '18%', shape: 'rect' },
+    ...Array.from({ length: 7 }, (_, i) => ({ id: `${43 + i}`, cap: 4, top: '22%', left: `${91 - (i * 13.5)}%`, shape: 'square' }))
   ]
 };
 
@@ -213,7 +213,7 @@ async function fetchRowsForDay(supabaseClient, dateISO) {
 }
 
 async function fetchTableStatuses() {
-  return supabase.from('table_status').select('id, status, server_names');
+  return supabase.from('table_status').select('id, status, server_names, reserved_name');
 }
 
 async function insertWaitlistRecord(entry) {
@@ -297,6 +297,14 @@ async function checkInReservation(id) {
 
 async function assignServersToTable(tableId, serverNames) {
   return supabase.from("table_status").upsert({ id: tableId, server_names: serverNames });
+}
+
+async function reserveTables(tableIds, name) {
+  return supabase.from("table_status").upsert(tableIds.map(id => ({ id, status: "reserved", reserved_name: name })));
+}
+
+async function clearTableReservation(tableId) {
+  return supabase.from("table_status").upsert({ id: tableId, status: "av", server_names: [], reserved_name: null });
 }
 
 async function logTableOcc(tableId, serverNames, dateISO) {
@@ -418,7 +426,7 @@ const HostessView = React.memo(function HostessView({
 
   // Datos
   walkInForm, setWalkInForm, phoneResForm, setPhoneResForm,
-  waitList, history, seatedList, canceledList, blackoutDates, tableStatuses, tableServerNames, serverRoster,
+  waitList, history, seatedList, canceledList, blackoutDates, tableStatuses, tableServerNames, tableReservedNames, serverRoster,
   walkinLoading, phoneResLoading, newReservationTick, realtimeConnected
 }) {
   const blackoutInputRef = useRef(null);
@@ -459,6 +467,9 @@ const HostessView = React.memo(function HostessView({
   const [exitingIds, setExitingIds] = useState(new Set());
   const [assignMode, setAssignMode] = useState(false);
   const [unassignMode, setUnassignMode] = useState(false);
+  const [reserveMode, setReserveMode] = useState(false);
+  const [pendingReserveTables, setPendingReserveTables] = useState(new Set());
+  const [reserveGuestName, setReserveGuestName] = useState('');
   const [assigningServers, setAssigningServers] = useState(new Set());
   const [pendingAssignTables, setPendingAssignTables] = useState(new Set());
   const [showAssignServerList, setShowAssignServerList] = useState(false);
@@ -834,6 +845,7 @@ const HostessView = React.memo(function HostessView({
                   <div className="sr-floor-legend">
                     <span className="sr-legend-dot available" /><span>Available</span>
                     <span className="sr-legend-dot occupied" /><span>Occupied</span>
+                    <span className="sr-legend-dot reserved" /><span>Reserved</span>
                   </div>
                   <button onClick={async () => {
                     if (!window.confirm('Clear ALL server assignments for all floors?')) return;
@@ -845,7 +857,7 @@ const HostessView = React.memo(function HostessView({
                   }} style={{ background: '#fff', color: LM_COLORS.danger, border: `1px solid ${LM_COLORS.danger}`, borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.68rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
                     Clear All
                   </button>
-                  {!assignMode && !unassignMode ? (
+                  {!assignMode && !unassignMode && !reserveMode ? (
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <div style={{ position: 'relative' }}>
                         <button onClick={() => setShowAssignServerList(p => !p)} style={{ background: `linear-gradient(180deg, ${LM_COLORS.gold}, ${LM_COLORS.goldDim})`, color: LM_COLORS.goldDark, border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
@@ -872,6 +884,15 @@ const HostessView = React.memo(function HostessView({
                         style={{ background: '#fff', color: LM_COLORS.danger, border: `1px solid ${LM_COLORS.danger}`, borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
                         Unassign
                       </button>
+                      <button onClick={() => {
+                        const name = window.prompt('Guest name for this reservation:');
+                        if (!name?.trim()) return;
+                        setReserveGuestName(name.trim());
+                        setPendingReserveTables(new Set());
+                        setReserveMode(true);
+                      }} style={{ background: `linear-gradient(180deg, ${LM_COLORS.gold}, ${LM_COLORS.goldDim})`, color: LM_COLORS.goldDark, border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
+                        Table Reserved
+                      </button>
                     </div>
                   ) : assignMode ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -897,14 +918,16 @@ const HostessView = React.memo(function HostessView({
                         ✕
                       </button>
                     </div>
-                  ) : (
+                  ) : unassignMode ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontSize: '0.72rem', color: LM_COLORS.textMuted, fontWeight: '600', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
                         Remove: {pendingAssignTables.size} table(s)
                       </span>
                       <button onClick={async () => {
                         if (pendingAssignTables.size === 0) { alert('Select at least one table on the floor plan before confirming.'); return; }
-                        const results = await Promise.all([...pendingAssignTables].map(id => assignServersToTable(id, [])));
+                        const results = await Promise.all([...pendingAssignTables].map(id =>
+                          tableStatuses[id] === 'reserved' ? clearTableReservation(id) : assignServersToTable(id, [])
+                        ));
                         const failed = results.find(r => r?.error);
                         if (failed) { alert('Unassign failed: ' + failed.error.message); return; }
                         setUnassignMode(false); setPendingAssignTables(new Set());
@@ -912,6 +935,24 @@ const HostessView = React.memo(function HostessView({
                         Confirm
                       </button>
                       <button onClick={() => { setUnassignMode(false); setPendingAssignTables(new Set()); }}
+                        style={{ background: 'transparent', color: LM_COLORS.textMuted, border: `1px solid ${LM_COLORS.border}`, borderRadius: '8px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer' }}>
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.72rem', color: LM_COLORS.textMuted, fontWeight: '600', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
+                        Reserving for {reserveGuestName} — {pendingReserveTables.size}
+                      </span>
+                      <button onClick={async () => {
+                        if (pendingReserveTables.size === 0) { alert('Select at least one table on the floor plan before confirming.'); return; }
+                        const { error } = await reserveTables([...pendingReserveTables], reserveGuestName);
+                        if (error) { alert('Reserve failed: ' + error.message); return; }
+                        setReserveMode(false); setPendingReserveTables(new Set()); setReserveGuestName('');
+                      }} style={{ background: LM_COLORS.success, color: '#fff', border: 'none', borderRadius: '8px', padding: '4px 10px', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif" }}>
+                        Confirm
+                      </button>
+                      <button onClick={() => { setReserveMode(false); setPendingReserveTables(new Set()); setReserveGuestName(''); }}
                         style={{ background: 'transparent', color: LM_COLORS.textMuted, border: `1px solid ${LM_COLORS.border}`, borderRadius: '8px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer' }}>
                         ✕
                       </button>
@@ -925,14 +966,17 @@ const HostessView = React.memo(function HostessView({
                       const key = `${activeFloor}-${table.id}`;
                       const status = tableStatuses[key] ?? 'av';
                       const servers = tableServerNames?.[key] ?? [];
+                      const reservedName = tableReservedNames?.[key] ?? null;
                       return (
                         <button
                           key={table.id}
-                          className={`sr-table-marker shape-${table.shape || 'square'} ${status === 'occ' ? 'is-occupied' : 'is-available'}`}
-                          style={{ top: table.top, left: table.left, outline: assignMode && pendingAssignTables.has(key) ? `3px solid ${LM_COLORS.success}` : unassignMode && pendingAssignTables.has(key) ? `3px solid ${LM_COLORS.danger}` : undefined, outlineOffset: '2px' }}
+                          className={`sr-table-marker shape-${table.shape || 'square'} ${status === 'occ' ? 'is-occupied' : status === 'reserved' ? 'is-reserved' : 'is-available'}`}
+                          style={{ top: table.top, left: table.left, outline: assignMode && pendingAssignTables.has(key) ? `3px solid ${LM_COLORS.success}` : unassignMode && pendingAssignTables.has(key) ? `3px solid ${LM_COLORS.danger}` : reserveMode && pendingReserveTables.has(key) ? `3px solid ${LM_COLORS.gold}` : undefined, outlineOffset: '2px' }}
                           onClick={() => {
                             if (assignMode || unassignMode) {
                               setPendingAssignTables(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
+                            } else if (reserveMode) {
+                              setPendingReserveTables(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
                             } else {
                               handleTableSelection(table);
                             }
@@ -940,7 +984,11 @@ const HostessView = React.memo(function HostessView({
                         >
                           <span className="table-id">{table.id}</span>
                           <span className="table-cap">{table.cap}p</span>
-                          {servers.length > 0 && (
+                          {status === 'reserved' && reservedName ? (
+                            <span style={{ position: 'absolute', bottom: '-10px', left: '50%', transform: 'translateX(-50%)', background: LM_COLORS.gold, color: LM_COLORS.goldDark, fontSize: '8px', fontWeight: '800', letterSpacing: '0.5px', borderRadius: '3px', padding: '2px 5px', whiteSpace: 'nowrap', lineHeight: 1.2, zIndex: 6, boxShadow: '0 2px 4px rgba(0,0,0,0.4)' }}>
+                              {reservedName}
+                            </span>
+                          ) : servers.length > 0 && (
                             <span style={{ position: 'absolute', bottom: '-10px', left: '50%', transform: 'translateX(-50%)', background: LM_COLORS.info, color: '#fff', fontSize: '8px', fontWeight: '800', letterSpacing: '0.5px', borderRadius: '3px', padding: '2px 5px', whiteSpace: 'nowrap', lineHeight: 1.2, zIndex: 6, boxShadow: '0 2px 4px rgba(0,0,0,0.4)' }}>
                               {servers.map(n => getInitials(n)).join(' · ')}
                             </span>
@@ -1942,6 +1990,7 @@ export default function App() {
   const [rows, setRows] = useState([]);
   const [tableStatuses, setTableStatuses] = useState({});
   const [tableServerNames, setTableServerNames] = useState({});
+  const [tableReservedNames, setTableReservedNames] = useState({});
   const [newReservationTick, setNewReservationTick] = useState(0);
   const [walkInForm, setWalkInForm] = useState({
     firstName: "",
@@ -2048,9 +2097,11 @@ export default function App() {
       if (data) {
         const statusMap = {};
         const serverMap = {};
-        data.forEach(r => { statusMap[r.id] = r.status; serverMap[r.id] = r.server_names || []; });
+        const reservedMap = {};
+        data.forEach(r => { statusMap[r.id] = r.status; serverMap[r.id] = r.server_names || []; reservedMap[r.id] = r.reserved_name || null; });
         setTableStatuses(statusMap);
         setTableServerNames(serverMap);
+        setTableReservedNames(reservedMap);
       }
     });
     const channel = supabase
@@ -2059,6 +2110,7 @@ export default function App() {
         if (row?.id) {
           setTableStatuses(prev => ({ ...prev, [row.id]: row.status }));
           setTableServerNames(prev => ({ ...prev, [row.id]: row.server_names || [] }));
+          setTableReservedNames(prev => ({ ...prev, [row.id]: row.reserved_name || null }));
         }
       })
       .subscribe((status, err) => reportChannelStatus('table_status_rt', status, err));
@@ -2134,9 +2186,11 @@ export default function App() {
   const handleTableSelection = async (table) => {
     const key = `${activeFloor}-${table.id}`;
     const current = tableStatuses[key] ?? 'av';
-    const next = current === 'av' ? 'occ' : 'av';
+    const next = current === 'av' ? 'occ' : current === 'reserved' ? 'occ' : 'av';
+    const clearingReservation = current === 'reserved';
     setTableStatuses(prev => ({ ...prev, [key]: next }));
-    await supabase.from('table_status').upsert({ id: key, status: next });
+    if (clearingReservation) setTableReservedNames(prev => ({ ...prev, [key]: null }));
+    await supabase.from('table_status').upsert({ id: key, status: next, ...(clearingReservation ? { reserved_name: null } : {}) });
     if (next === 'occ') {
       const servers = tableServerNames[key] ?? [];
       await logTableOcc(key, servers, dateISO);
@@ -2566,6 +2620,7 @@ export default function App() {
         blackoutDates={blackoutDates}
         tableStatuses={tableStatuses}
         tableServerNames={tableServerNames}
+        tableReservedNames={tableReservedNames}
         serverRoster={servers}
       />
     );
