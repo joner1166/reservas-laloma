@@ -1,0 +1,149 @@
+/* src/FloorPlanMap.css — blueprint-style floor plan */
+
+.fp-canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1800 / 1010;
+  background: #FBF8F1;
+  border: 1px solid oklch(78% 0.012 85);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 18px 44px -22px rgba(0, 0, 0, 0.45), inset 0 0 90px rgba(140, 120, 80, 0.07);
+  font-family: 'Jost', sans-serif;
+}
+
+.fp-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(oklch(72% 0.02 85 / 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(72% 0.02 85 / 0.14) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.fp-fit,
+.fp-zoom {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.fp-zoom { transition: transform 620ms cubic-bezier(0.22, 0.9, 0.24, 1); }
+
+.fp-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1D2733;
+  font-weight: 500;
+}
+
+.fp-bar-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #1D2733;
+}
+
+.fp-exit {
+  position: absolute;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #1D2733;
+}
+
+.fp-mark {
+  position: absolute;
+  font-family: 'Playfair Display', serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  transition: color 300ms;
+  pointer-events: none;
+}
+
+/* — tables — */
+
+.fp-table {
+  position: absolute;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: opacity 300ms;
+  font-family: inherit;
+}
+
+.fp-chair {
+  position: absolute;
+  border: 1.5px solid;
+  border-radius: 2px;
+  background: #FBF8F1;
+}
+
+.fp-surface {
+  position: absolute;
+  inset: 0;
+  border: 2px solid;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fp-divider { position: absolute; }
+
+.fp-num,
+.fp-booth-seat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  color: #16202B;
+}
+
+.fp-num b,
+.fp-booth-seat b { font-weight: 700; letter-spacing: -0.2px; }
+
+.fp-num i,
+.fp-booth-seat i { font-style: normal; font-size: 8px; font-weight: 600; letter-spacing: 0.3px; opacity: 0.55; }
+
+.fp-booth-seat {
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  border: 2px solid;
+  background: #FBF8F1;
+  font-size: 14px;
+}
+
+.fp-badge {
+  position: absolute;
+  bottom: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  border-radius: 3px;
+  padding: 2px 5px;
+  white-space: nowrap;
+  line-height: 1.2;
+  z-index: 6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.fp-badge-gold { background: oklch(80% 0.14 85); color: oklch(20% 0.02 85); }
+.fp-badge-info { background: oklch(55% 0.13 250); color: #fff; }
+
+@media (max-width: 900px) {
+  .fp-canvas { border-radius: 10px; }
+}

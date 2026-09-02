@@ -5,6 +5,8 @@
 import React, { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
+import FloorPlanMap from "./FloorPlanMap";
+import { FLOOR_CONFIG, FLOOR_LABELS, ZONE_ORDER } from "./floorPlanData";
 
 /*******************************************************
  * BLOQUE 1 — CONFIG / CONSTANTES
@@ -60,8 +62,6 @@ const responsiveStyles = `
     .sr-sidebar-footer { display: none; }
     .sr-hostess-main { padding: 10px; height: 100%; overflow-y: auto; }
     .sr-floor-manager { height: 60vh; }
-    .sr-map-canvas { overflow: auto; }
-    .sr-image-wrapper { min-width: 600px; }
   }
   @media (max-width: 600px) {
     .sr-page { padding: 0; height: 100vh; overflow: hidden; }
@@ -72,53 +72,6 @@ const responsiveStyles = `
     .sr-view-toggle { border-radius: 0; padding: 15px; margin-top: 0; width: 100%; flex-shrink: 0; }
   }
 `;
-
-const FLOOR_LABELS = { VIEW: 'VIEW', THIRTIES: "30'S", BAR: 'BAR', FIFTIES: "50'S", EIGHTIES: "80'S", TWENTIES: "20'S", TENS: "10'S" };
-
-const FLOOR_CONFIG = {
-  VIEW: [
-    ...[78, 77, 76, 75, 74, 73, 72, 71, 70].map((id, i) => ({ id: `${id}`, cap: 4, top: '25%', left: `${6 + i * 11}%`, shape: 'square' })),
-    ...[69, 68, 67, 66, 65, 64, 63, 62, 61, 60].map((id, i) => ({ id: `${id}`, cap: 4, top: '65%', left: `${5 + i * 10}%`, shape: 'square' })),
-  ],
-  // Cluster junto al Exit izquierdo: 33/34/35/36 en columna, 32/31 arriba al centro, 37/30 (mesas largas) abajo
-  THIRTIES: [
-    { id: '33', cap: 4, top: '20%', left: '18%', shape: 'square' },
-    { id: '34', cap: 4, top: '40%', left: '18%', shape: 'square' },
-    { id: '35', cap: 4, top: '60%', left: '18%', shape: 'square' },
-    { id: '36', cap: 4, top: '80%', left: '18%', shape: 'square' },
-    { id: '32', cap: 4, top: '12%', left: '55%', shape: 'square' },
-    { id: '31', cap: 4, top: '12%', left: '80%', shape: 'square' },
-    { id: '37', cap: 10, top: '48%', left: '68%', shape: 'rect' },
-    { id: '30', cap: 10, top: '80%', left: '68%', shape: 'rect' },
-  ],
-  BAR: Array.from({ length: 17 }, (_, i) => ({ id: `${i + 1}`, cap: 1, top: '50%', left: `${3 + i * 5.875}%`, shape: 'circle' })),
-  // L invertida: 53 sola arriba-izquierda, 52/51/50 en columna a la derecha
-  FIFTIES: [
-    { id: '53', cap: 4, top: '15%', left: '25%', shape: 'square' },
-    { id: '52', cap: 4, top: '15%', left: '70%', shape: 'square' },
-    { id: '51', cap: 4, top: '48%', left: '70%', shape: 'square' },
-    { id: '50', cap: 4, top: '81%', left: '70%', shape: 'square' },
-  ],
-  EIGHTIES: [80, 81, 82, 83, 84].map((id, i) => ({ id: `${id}`, cap: 4, top: `${10 + i * 18}%`, left: '50%', shape: 'circle' })),
-  TWENTIES: [
-    ...[44, 45, 46, 47].map((id, i) => ({ id: `${id}`, cap: 4, top: '12%', left: `${15 + i * 23}%`, shape: 'booth' })),
-    ...[23, 24, 25].map((id, i) => ({ id: `${id}`, cap: 4, top: '38%', left: `${25 + i * 25}%`, shape: 'booth' })),
-    { id: '28', cap: 4, top: '64%', left: '25%', shape: 'circle' },
-    { id: '27', cap: 10, top: '64%', left: '52%', shape: 'rect' },
-    { id: '26', cap: 10, top: '64%', left: '80%', shape: 'rect' },
-    ...[20, 21, 22].map((id, i) => ({ id: `${id}`, cap: 4, top: '90%', left: `${25 + i * 25}%`, shape: 'booth' })),
-  ],
-  TENS: [
-    ...[40, 41, 42, 43, 13, 14].map((id, i) => ({ id: `${id}`, cap: 4, top: '10%', left: `${8 + i * 17}%`, shape: 'booth' })),
-    ...[15, 16, 17].map((id, i) => ({ id: `${id}`, cap: 10, top: '32%', left: `${25 + i * 25}%`, shape: 'rect' })),
-    ...[10, 11, 12].map((id, i) => ({ id: `${id}`, cap: 4, top: '54%', left: `${25 + i * 25}%`, shape: 'booth' })),
-    ...[1, 2, 3, 4].map((id, i) => ({ id: `${id}`, cap: 4, top: '74%', left: `${15 + i * 23}%`, shape: 'square' })),
-    { id: '5', cap: 4, top: '94%', left: '15%', shape: 'square' },
-    { id: '6', cap: 4, top: '94%', left: '38%', shape: 'square' },
-    { id: '7', cap: 10, top: '94%', left: '65%', shape: 'rect' },
-    { id: '8', cap: 10, top: '94%', left: '90%', shape: 'rect' },
-  ],
-};
 
 /*******************************************************
  * BLOQUE 2 — HELPERS (PUROS)
@@ -860,7 +813,7 @@ const HostessView = React.memo(function HostessView({
               <div className="sr-floor-manager">
                 <div className="sr-floor-header">
                   <div className="sr-zone-selector">
-                    {Object.keys(FLOOR_CONFIG).map(f => (
+                    {ZONE_ORDER.map(f => (
                       <button key={f} className={activeFloor === f ? 'active' : ''} onClick={() => setActiveFloor(f)}>{FLOOR_LABELS[f] || f}</button>
                     ))}
                   </div>
@@ -981,44 +934,21 @@ const HostessView = React.memo(function HostessView({
                     </div>
                   )}
                 </div>
-                <div className="sr-map-canvas">
-                  <div className="sr-image-wrapper">
-                    {FLOOR_CONFIG[activeFloor].map(table => {
-                      const key = `${activeFloor}-${table.id}`;
-                      const status = tableStatuses[key] ?? 'av';
-                      const servers = tableServerNames?.[key] ?? [];
-                      const reservedName = tableReservedNames?.[key] ?? null;
-                      return (
-                        <button
-                          key={table.id}
-                          className={`sr-table-marker shape-${table.shape || 'square'} ${status === 'occ' ? 'is-occupied' : status === 'reserved' ? 'is-reserved' : 'is-available'}`}
-                          style={{ top: table.top, left: table.left, outline: assignMode && pendingAssignTables.has(key) ? `3px solid ${LM_COLORS.success}` : unassignMode && pendingAssignTables.has(key) ? `3px solid ${LM_COLORS.danger}` : reserveMode && pendingReserveTables.has(key) ? `3px solid ${LM_COLORS.gold}` : undefined, outlineOffset: '2px' }}
-                          onClick={() => {
-                            if (assignMode || unassignMode) {
-                              setPendingAssignTables(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
-                            } else if (reserveMode) {
-                              setPendingReserveTables(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
-                            } else {
-                              handleTableSelection(table);
-                            }
-                          }}
-                        >
-                          <span className="table-id">{table.id}</span>
-                          <span className="table-cap">{table.cap}p</span>
-                          {status === 'reserved' && reservedName ? (
-                            <span style={{ position: 'absolute', bottom: '-10px', left: '50%', transform: 'translateX(-50%)', background: LM_COLORS.gold, color: LM_COLORS.goldDark, fontSize: '8px', fontWeight: '800', letterSpacing: '0.5px', borderRadius: '3px', padding: '2px 5px', whiteSpace: 'nowrap', lineHeight: 1.2, zIndex: 6, boxShadow: '0 2px 4px rgba(0,0,0,0.4)' }}>
-                              {reservedName}
-                            </span>
-                          ) : servers.length > 0 && (
-                            <span style={{ position: 'absolute', bottom: '-10px', left: '50%', transform: 'translateX(-50%)', background: LM_COLORS.info, color: '#fff', fontSize: '8px', fontWeight: '800', letterSpacing: '0.5px', borderRadius: '3px', padding: '2px 5px', whiteSpace: 'nowrap', lineHeight: 1.2, zIndex: 6, boxShadow: '0 2px 4px rgba(0,0,0,0.4)' }}>
-                              {servers.map(n => getInitials(n)).join(' · ')}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <FloorPlanMap
+                  activeFloor={activeFloor}
+                  tableStatuses={tableStatuses}
+                  tableServerNames={tableServerNames}
+                  tableReservedNames={tableReservedNames}
+                  assignMode={assignMode}
+                  unassignMode={unassignMode}
+                  reserveMode={reserveMode}
+                  pendingAssignTables={pendingAssignTables}
+                  pendingReserveTables={pendingReserveTables}
+                  setPendingAssignTables={setPendingAssignTables}
+                  setPendingReserveTables={setPendingReserveTables}
+                  handleTableSelection={handleTableSelection}
+                  getInitials={getInitials}
+                />
               </div>
               </>
             )}
@@ -2007,7 +1937,7 @@ export default function App() {
   const [timeHHMM, setTimeHHMM] = useState("19:00");
   const [blackoutDates, setBlackoutDates] = useState([]);
   const [servers, setServers] = useState([]);
-  const [activeFloor, setActiveFloor] = useState("BAR");
+  const [activeFloor, setActiveFloor] = useState("ALL");
   const [rows, setRows] = useState([]);
   const [tableStatuses, setTableStatuses] = useState({});
   const [tableServerNames, setTableServerNames] = useState({});
@@ -2205,7 +2135,7 @@ export default function App() {
   };
 
   const handleTableSelection = async (table) => {
-    const key = `${activeFloor}-${table.id}`;
+    const key = `${table.zone || activeFloor}-${table.id}`;
     const current = tableStatuses[key] ?? 'av';
     const next = current === 'av' ? 'occ' : current === 'reserved' ? 'occ' : 'av';
     const clearingReservation = current === 'reserved';

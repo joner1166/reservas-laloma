@@ -209,88 +209,6 @@ body {
 .sr-legend-dot.occupied  { background: oklch(62% 0.16 28); }
 .sr-legend-dot.reserved  { background: oklch(80% 0.14 85); }
 
-.sr-map-canvas {
-  position: relative;
-  background: oklch(15% 0.015 255);
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid oklch(25% 0.015 255);
-  box-shadow: inset 0 2px 12px rgba(0,0,0,0.5), 0 4px 20px rgba(0,0,0,0.15);
-  width: 100%;
-}
-
-.sr-image-wrapper {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-}
-
-.sr-floor-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-  opacity: 0.92;
-}
-
-.sr-table-marker {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  border: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  z-index: 5;
-  gap: 1px;
-}
-
-.sr-table-marker.shape-circle { width: 48px; height: 48px; border-radius: 50%; }
-.sr-table-marker.shape-square { width: 46px; height: 46px; border-radius: 8px; }
-.sr-table-marker.shape-rect   { width: 122px; height: 48px; border-radius: 8px; }
-.sr-table-marker.shape-booth  { width: 60px; height: 42px; border-radius: 24px 24px 6px 6px; }
-
-.sr-table-marker:hover {
-  transform: translate(-50%, -50%) scale(1.12);
-  z-index: 10;
-}
-
-.sr-table-marker.is-available {
-  background: oklch(65% 0.15 145 / 0.88);
-  color: #fff;
-  box-shadow: 0 0 0 2px oklch(65% 0.15 145 / 0.3), 0 4px 12px rgba(0,0,0,0.35);
-}
-.sr-table-marker.is-available:hover {
-  background: oklch(65% 0.15 145);
-  box-shadow: 0 0 0 3px oklch(65% 0.15 145 / 0.5), 0 6px 16px rgba(0,0,0,0.4);
-}
-
-.sr-table-marker.is-occupied {
-  background: oklch(62% 0.16 28 / 0.9);
-  color: #fff;
-  box-shadow: 0 0 0 2px oklch(62% 0.16 28 / 0.3), 0 4px 12px rgba(0,0,0,0.35);
-}
-.sr-table-marker.is-occupied:hover {
-  background: oklch(62% 0.16 28);
-  box-shadow: 0 0 0 3px oklch(62% 0.16 28 / 0.5), 0 6px 16px rgba(0,0,0,0.4);
-}
-
-.sr-table-marker.is-reserved {
-  background: oklch(80% 0.14 85 / 0.9);
-  color: oklch(20% 0.02 85);
-  box-shadow: 0 0 0 2px oklch(80% 0.14 85 / 0.3), 0 4px 12px rgba(0,0,0,0.35);
-}
-.sr-table-marker.is-reserved:hover {
-  background: oklch(80% 0.14 85);
-  box-shadow: 0 0 0 3px oklch(80% 0.14 85 / 0.5), 0 6px 16px rgba(0,0,0,0.4);
-}
-
-.table-id  { font-size: 10px; line-height: 1; font-family: 'Playfair Display', serif; }
-.table-cap { font-size: 7px; opacity: 0.75; line-height: 1; font-weight: 600; font-family: 'Jost', sans-serif; }
-
 /* --- ESTILOS WALK-IN --- */
 .sr-walkin-form {
   max-width: 500px;
@@ -516,8 +434,6 @@ select.sr-input { appearance: none; -webkit-appearance: none; }
   .sr-sidebar-nav button { padding: 6px 12px; font-size: 0.85rem; flex-shrink: 0; }
   .sr-hostess-main { padding: 10px; height: 100%; overflow-y: auto; }
   .sr-floor-manager { height: 60vh; }
-  .sr-map-canvas { overflow: auto; }
-  .sr-image-wrapper { min-width: 600px; }
   .sr-modal .sr-formGrid { grid-template-columns: 1fr; }
   .sr-modal .sr-span2 { grid-column: span 1; }
 }
