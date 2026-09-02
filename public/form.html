@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>A2P 10DLC Brand Registration – Lindo La Loma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #14202e;
+    --navy-light: #1c2c3d;
+    --gold: #c9a15a;
+    --gold-dark: #a9813f;
+    --ink: #1c2430;
+    --muted: #667085;
+    --border: #e2e5ea;
+    --bg: #f5f4f0;
+    --card: #ffffff;
+    --danger: #b3261e;
+    --success: #1e7a4c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Jost', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+    padding-bottom: 60px;
+  }
+  header {
+    background: var(--navy);
+    color: #fff;
+    padding: 28px 20px 24px;
+    text-align: center;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin: 0 0 6px;
+    letter-spacing: 0.02em;
+  }
+  header p {
+    margin: 0;
+    color: var(--gold);
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 20px 16px 0;
+  }
+  .intro {
+    background: #fff7e6;
+    border: 1px solid #f0d999;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 0.85rem;
+    color: #6b4e12;
+    margin-bottom: 22px;
+    line-height: 1.6;
+  }
+  .intro strong { color: #4a3508; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 1px 3px rgba(20, 32, 46, 0.04);
+  }
+  .card h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: var(--navy);
+  }
+  .card .card-sub {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin: 0 0 16px;
+  }
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    margin-bottom: 5px;
+  }
+  label .req { color: var(--danger); margin-left: 2px; }
+  input, select {
+    width: 100%;
+    padding: 11px 12px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--gold-dark); }
+  input:invalid:not(:placeholder-shown) { border-color: var(--danger); }
+  .hint {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+  .hint.warn { color: #8a5a00; }
+  .row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .row3 {
+    display: grid;
+    grid-template-columns: 1.4fr 0.8fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 480px) {
+    .row2, .row3 { grid-template-columns: 1fr; }
+  }
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  button {
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 13px 18px;
+    border-radius: 9px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.05s;
+  }
+  button:active { transform: scale(0.98); }
+  .btn-primary {
+    background: linear-gradient(180deg, var(--gold), var(--gold-dark));
+    color: #2a1d05;
+  }
+  .btn-secondary {
+    background: var(--navy);
+    color: #fff;
+  }
+  .btn-outline {
+    background: #fff;
+    color: var(--navy);
+    border: 1px solid var(--border);
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #summarySection { display: none; }
+  #summarySection.visible { display: block; }
+  textarea#summaryOutput {
+    width: 100%;
+    min-height: 320px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fafafa;
+    color: var(--ink);
+    resize: vertical;
+  }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--navy);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  footer {
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 30px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>A2P 10DLC Brand Registration</h1>
+  <p>Lindo La Loma &mdash; Business Information Form</p>
+</header>
+
+<main>
+  <div class="intro">
+    <strong>Why we're asking:</strong> Twilio requires these exact legal details to register our SMS "Brand" for reservation texts. Please enter everything <strong>exactly as it appears on your IRS CP&#8209;575 letter</strong> (or state registration document) &mdash; even small mismatches (abbreviations, punctuation, extra spaces) can cause the registration to be rejected.
+  </div>
+
+  <form id="brandForm" novalidate>
+
+    <div class="card">
+      <h2>1. Company Information</h2>
+      <p class="card-sub">Your business's legal identity, as registered with the IRS or your state.</p>
+
+      <div class="field">
+        <label for="legalName">Legal Business Name <span class="req">*</span></label>
+        <input type="text" id="legalName" name="legalName" placeholder="e.g. LINDO LA LOMA LLC" required />
+        <div class="hint warn">Must match your IRS CP-575 letter or state registration exactly — no abbreviations.</div>
+      </div>
+
+      <div class="field">
+        <label for="brandName">Brand / DBA Friendly Name <span class="req">*</span></label>
+        <input type="text" id="brandName" name="brandName" placeholder="e.g. Lindo Michoacan La Loma" required />
+        <div class="hint">The name customers know — can differ from the legal name.</div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="regIdType">Registration ID Type <span class="req">*</span></label>
+          <select id="regIdType" name="regIdType" required>
+            <option value="EIN">EIN (US)</option>
+            <option value="DUNS">DUNS Number</option>
+            <option value="CCN">Government Business Registration ID</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="einNumber">EIN / Registration # <span class="req">*</span></label>
+          <input type="text" id="einNumber" name="einNumber" placeholder="12-3456789" pattern="\d{2}-?\d{7}" maxlength="10" required />
+        </div>
+      </div>
+      <div class="hint warn" style="margin-top:-8px; margin-bottom:16px;">9-digit IRS EIN, format XX-XXXXXXX. Double-check every digit.</div>
+
+      <div class="field">
+        <label for="businessType">Business Type <span class="req">*</span></label>
+        <select id="businessType" name="businessType" required>
+          <option value="">Select one…</option>
+          <option>Sole Proprietorship</option>
+          <option>Partnership</option>
+          <option>Limited Liability Company (LLC)</option>
+          <option>Corporation</option>
+          <option>Non-Profit Corporation</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="industry">Business Industry <span class="req">*</span></label>
+        <select id="industry" name="industry" required>
+          <option value="Hospitality" selected>Restaurants / Hospitality</option>
+          <option value="Food and Beverage">Food &amp; Beverage</option>
+          <option value="Retail">Retail</option>
+          <option value="Real Estate">Real Estate</option>
+          <option value="Professional Services">Professional Services</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="website">Company Website</label>
+        <input type="url" id="website" name="website" placeholder="https://www.example.com" />
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Registered Business Address</h2>
+      <p class="card-sub">The fiscal / legal address on file with the IRS or your state.</p>
+
+      <div class="field">
+        <label for="street">Street Address <span class="req">*</span></label>
+        <input type="text" id="street" name="street" placeholder="645 Carnegie Street" required />
+      </div>
+
+      <div class="row3">
+        <div class="field">
+          <label for="city">City <span class="req">*</span></label>
+          <input type="text" id="city" name="city" placeholder="Henderson" required />
+        </div>
+        <div class="field">
+          <label for="state">State <span class="req">*</span></label>
+          <select id="state" name="state" required>
+            <option value="">--</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="zip">ZIP Code <span class="req">*</span></label>
+          <input type="text" id="zip" name="zip" placeholder="89052" pattern="\d{5}(-\d{4})?" maxlength="10" required />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="country">Country <span class="req">*</span></label>
+        <select id="country" name="country" required>
+          <option value="United States" selected>United States</option>
+          <option value="Canada">Canada</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Authorized Representative</h2>
+      <p class="card-sub">The person Twilio/carriers can contact about this Brand — usually the owner or manager.</p>
+
+      <div class="row2">
+        <div class="field">
+          <label for="firstName">First Name <span class="req">*</span></label>
+          <input type="text" id="firstName" name="firstName" placeholder="Jane" required />
+        </div>
+        <div class="field">
+          <label for="lastName">Last Name <span class="req">*</span></label>
+          <input type="text" id="lastName" name="lastName" placeholder="Doe" required />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="repEmail">Email <span class="req">*</span></label>
+        <input type="email" id="repEmail" name="repEmail" placeholder="owner@lindolaloma.com" required />
+      </div>
+
+      <div class="field">
+        <label for="repPhone">Direct Phone Number <span class="req">*</span></label>
+        <input type="tel" id="repPhone" name="repPhone" placeholder="(702) 555-0123" required />
+      </div>
+
+      <div class="field">
+        <label for="jobTitle">Job Title <span class="req">*</span></label>
+        <input type="text" id="jobTitle" name="jobTitle" placeholder="Owner" required />
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. Staff Access PINs</h2>
+      <p class="card-sub">Choose the PINs your staff will use to open Hostess View and Manager View. At least 6 digits, numbers only.</p>
+
+      <div class="field">
+        <label for="hostessPin">Hostess View PIN <span class="req">*</span></label>
+        <input type="text" id="hostessPin" name="hostessPin" placeholder="e.g. 274815" inputmode="numeric" pattern="\d{6,}" minlength="6" maxlength="12" required />
+        <div class="hint">Numbers only, 6 digits minimum. Shared with hostess staff.</div>
+      </div>
+
+      <div class="field">
+        <label for="managerPin">Manager View PIN <span class="req">*</span></label>
+        <input type="text" id="managerPin" name="managerPin" placeholder="e.g. 930264" inputmode="numeric" pattern="\d{6,}" minlength="6" maxlength="12" required />
+        <div class="hint">Numbers only, 6 digits minimum. Should be different from the Hostess PIN and known only to management.</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn-primary">Generate Summary</button>
+    </div>
+  </form>
+
+  <div class="card" id="summarySection">
+    <h2>Summary</h2>
+    <p class="card-sub">Review everything below, then copy it or send it by email. Nothing on this page is transmitted anywhere automatically.</p>
+    <textarea id="summaryOutput" readonly></textarea>
+    <div class="actions" style="margin-top:14px;">
+      <button type="button" class="btn-secondary" id="copyBtn">Copy Summary</button>
+      <button type="button" class="btn-outline" id="emailBtn">Send via Email</button>
+    </div>
+  </div>
+
+  <footer>© 2026 Lindo La Loma Restaurant. This information is used only to register your SMS Brand with Twilio.</footer>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const US_STATES = [
+    "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware",
+    "District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa",
+    "Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota",
+    "Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey",
+    "New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon",
+    "Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah",
+    "Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"
+  ];
+  const stateSelect = document.getElementById('state');
+  US_STATES.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    stateSelect.appendChild(opt);
+  });
+  // Default to Nevada since that's where this restaurant is based — still fully editable.
+  stateSelect.value = 'Nevada';
+
+  const EMAIL_TO = 'joner1166@gmail.com';
+  const form = document.getElementById('brandForm');
+  const summarySection = document.getElementById('summarySection');
+  const summaryOutput = document.getElementById('summaryOutput');
+  const toast = document.getElementById('toast');
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  function fieldVal(id) {
+    return document.getElementById(id).value.trim();
+  }
+
+  function buildSummary() {
+    const lines = [
+      'A2P 10DLC BRAND REGISTRATION — LINDO LA LOMA',
+      '='.repeat(46),
+      '',
+      '1. COMPANY INFORMATION',
+      `Legal Business Name: ${fieldVal('legalName')}`,
+      `Brand Friendly Name (DBA): ${fieldVal('brandName')}`,
+      `Business Registration ID Type: ${fieldVal('regIdType')}`,
+      `Business Registration Number / EIN: ${fieldVal('einNumber')}`,
+      `Business Type: ${fieldVal('businessType')}`,
+      `Business Industry: ${fieldVal('industry')}`,
+      `Company Website: ${fieldVal('website') || '(not provided)'}`,
+      '',
+      '2. REGISTERED BUSINESS ADDRESS',
+      `Street Address: ${fieldVal('street')}`,
+      `City: ${fieldVal('city')}`,
+      `State: ${fieldVal('state')}`,
+      `ZIP Code: ${fieldVal('zip')}`,
+      `Country: ${fieldVal('country')}`,
+      '',
+      '3. AUTHORIZED REPRESENTATIVE',
+      `Name: ${fieldVal('firstName')} ${fieldVal('lastName')}`,
+      `Email: ${fieldVal('repEmail')}`,
+      `Phone: ${fieldVal('repPhone')}`,
+      `Job Title: ${fieldVal('jobTitle')}`,
+      '',
+      '4. STAFF ACCESS PINS',
+      `Hostess View PIN: ${fieldVal('hostessPin')}`,
+      `Manager View PIN: ${fieldVal('managerPin')}`,
+      '',
+      `Submitted: ${new Date().toLocaleString('en-US')}`,
+    ];
+    return lines.join('\n');
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    if (fieldVal('hostessPin') === fieldVal('managerPin')) {
+      const proceed = window.confirm('Hostess and Manager PINs are the same. It\'s safer to use two different PINs — continue anyway?');
+      if (!proceed) return;
+    }
+    summaryOutput.value = buildSummary();
+    summarySection.classList.add('visible');
+    summarySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    const text = summaryOutput.value;
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Summary copied to clipboard');
+    } catch (err) {
+      summaryOutput.focus();
+      summaryOutput.select();
+      document.execCommand('copy');
+      showToast('Summary copied to clipboard');
+    }
+  });
+
+  document.getElementById('emailBtn').addEventListener('click', () => {
+    const subject = encodeURIComponent(`A2P Brand Registration — ${fieldVal('legalName') || 'Lindo La Loma'}`);
+    const body = encodeURIComponent(summaryOutput.value);
+    window.location.href = `mailto:${EMAIL_TO}?subject=${subject}&body=${body}`;
+  });
+</script>
+
+</body>
+</html>
