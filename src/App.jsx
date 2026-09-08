@@ -31,8 +31,8 @@ const COUNTRY_CODES = [
 const SLOT_MINUTES = 15;
 const MAX_RESERVATIONS_PER_HOUR = 5;
 const RESTAURANT_CAPACITY = 200;
-const HOSTESS_PASSWORD = "1234";
-const MANAGER_PASSWORD = "1234";
+const HOSTESS_PASSWORD = "274815";
+const MANAGER_PASSWORD = "930245";
 const VIEW_AREA_WARNING = "View tables are limited and subject to availability. Please be aware you may have to wait longer, or be seated in another area if none are open.";
 
 // Horarios por día (0=Dom, 1=Lun, ..., 6=Sáb)
@@ -1423,7 +1423,7 @@ const ClientPreferencesView = React.memo(function ClientPreferencesView({
           <label style={{display:'flex',alignItems:'flex-start',gap:'10px',margin:'12px 0 4px',cursor:'pointer',fontSize:'0.78rem',color:'oklch(62% 0.02 90)',lineHeight:'1.7',outline: smsReminderShown && !smsOptIn ? '2px solid oklch(80% 0.1 80)' : 'none',borderRadius:'8px',padding: smsReminderShown && !smsOptIn ? '6px 8px' : '0'}}>
             <input type="checkbox" checked={smsOptIn} onChange={e => updateForm('smsOptIn', e.target.checked)} style={{marginTop:'3px',flexShrink:0,width:'16px',height:'16px',accentColor:'oklch(78% 0.13 85)'}} />
             <span>
-              I agree to receive SMS notifications about my reservation from Lindo Michoacan (up to 2 messages per reservation). Msg &amp; data rates may apply. Reply <strong>STOP</strong> to cancel, <strong>HELP</strong> for help. Consent is not required to complete your reservation.{' '}
+              I agree to receive SMS notifications about my reservation from Lindo La Loma (up to 2 messages per reservation). Msg &amp; data rates may apply. Reply <strong>STOP</strong> to cancel, <strong>HELP</strong> for help. Consent is not required to complete your reservation.{' '}
               <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
               {' | '}
               <a href="/terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a>
