@@ -131,6 +131,10 @@ create policy "reservations_insert_all" on public.reservations for insert with c
 create policy "reservations_update_all" on public.reservations for update using (true) with check (true);
 create policy "reservations_delete_all" on public.reservations for delete using (true);
 
+grant select on public.reservations to anon;
+grant select, insert, update, delete on public.reservations to authenticated;
+grant select, insert, update, delete on public.reservations to service_role;
+
 /* =========================================================
    9) Tabla table_status
    ========================================================= */
@@ -145,6 +149,10 @@ drop policy if exists "ts_update" on public.table_status;
 create policy "ts_select" on public.table_status for select using (true);
 create policy "ts_insert" on public.table_status for insert with check (true);
 create policy "ts_update" on public.table_status for update using (true) with check (true);
+
+grant select on public.table_status to anon;
+grant select, insert, update, delete on public.table_status to authenticated;
+grant select, insert, update, delete on public.table_status to service_role;
 alter table public.table_status replica identity full;
 do $$
 begin
@@ -189,6 +197,10 @@ drop policy if exists "bd_delete" on public.blackout_dates;
 create policy "bd_select" on public.blackout_dates for select using (true);
 create policy "bd_insert" on public.blackout_dates for insert with check (true);
 create policy "bd_delete" on public.blackout_dates for delete using (true);
+
+grant select on public.blackout_dates to anon;
+grant select, insert, update, delete on public.blackout_dates to authenticated;
+grant select, insert, update, delete on public.blackout_dates to service_role;
 alter table public.blackout_dates replica identity full;
 do $$
 begin
@@ -225,6 +237,10 @@ drop policy if exists "te_select" on public.table_events;
 drop policy if exists "te_insert" on public.table_events;
 create policy "te_select" on public.table_events for select using (true);
 create policy "te_insert" on public.table_events for insert with check (true);
+
+grant select on public.table_events to anon;
+grant select, insert, update, delete on public.table_events to authenticated;
+grant select, insert, update, delete on public.table_events to service_role;
 alter table public.table_events replica identity full;
 do $$
 begin
@@ -254,6 +270,10 @@ create policy "servers_select" on public.servers for select using (true);
 create policy "servers_insert" on public.servers for insert with check (true);
 create policy "servers_update" on public.servers for update using (true) with check (true);
 create policy "servers_delete" on public.servers for delete using (true);
+
+grant select on public.servers to anon;
+grant select, insert, update, delete on public.servers to authenticated;
+grant select, insert, update, delete on public.servers to service_role;
 alter table public.servers replica identity full;
 do $$
 begin
