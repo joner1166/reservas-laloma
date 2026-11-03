@@ -211,6 +211,16 @@ begin
 end $$;
 alter table public.blackout_dates add column if not exists notes text;
 alter table public.blackout_dates add column if not exists type text default 'closed';
+alter table public.blackout_dates drop constraint if exists blackout_dates_pkey;
+alter table public.blackout_dates add column if not exists id bigserial;
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conrelid = 'public.blackout_dates'::regclass and contype = 'p') then
+    execute 'alter table public.blackout_dates add primary key (id)';
+  end if;
+end $$;
+alter table public.blackout_dates add column if not exists start_time text null;
+alter table public.blackout_dates add column if not exists end_time text null;
 alter table public.table_status  add column if not exists server_names text[] default '{}';
 alter table public.table_status  add column if not exists reserved_name text default null;
 do $$

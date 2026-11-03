@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import "./App.css";
 import FloorPlanMap from "./FloorPlanMap";
 import { FLOOR_CONFIG, FLOOR_LABELS, ZONE_ORDER } from "./floorPlanData";
+import BlackoutManager from "./components/BlackoutManager";
 
 /*******************************************************
  * BLOQUE 1 — CONFIG / CONSTANTES
@@ -137,16 +138,25 @@ function isRestaurantOpen(dateISO) {
   return !!getDayHours(dateISO);
 }
 
-function isTimeAllowed(dateISO, timeHHMM) {
+function isSlotBlocked(timeHHMM, blocks) {
+  const t = minutesFromHHMM(timeHHMM);
+  return blocks.some(b => t >= minutesFromHHMM(b.start_time) && t < minutesFromHHMM(b.end_time));
+}
+
+function getTimeBlocks(dateISO, blackoutDates) {
+  return blackoutDates.filter(b => b.date_iso === dateISO && b.start_time && b.end_time);
+}
+
+function isTimeAllowed(dateISO, timeHHMM, blocks = []) {
   const hours = getDayHours(dateISO);
   if (!hours) return false;
   const requested = minutesFromHHMM(timeHHMM);
   const open = minutesFromHHMM(hours.open);
   const lastSlot = minutesFromHHMM(hours.close) - LAST_RESERVATION_BUFFER;
-  return requested >= open && requested <= lastSlot;
+  return requested >= open && requested <= lastSlot && !isSlotBlocked(timeHHMM, blocks);
 }
 
-function getTimeSlots(dateISO, applySameDayBuffer = false) {
+function getTimeSlots(dateISO, applySameDayBuffer = false, blocks = []) {
   const hours = getDayHours(dateISO);
   if (!hours) return [];
   const open = minutesFromHHMM(hours.open);
@@ -158,7 +168,10 @@ function getTimeSlots(dateISO, applySameDayBuffer = false) {
     earliest = Math.max(open, Math.ceil((nowMins + SAME_DAY_BUFFER) / SLOT_MINUTES) * SLOT_MINUTES);
   }
   const slots = [];
-  for (let m = earliest; m <= lastSlot; m += SLOT_MINUTES) slots.push(hhmmFromMinutes(m));
+  for (let m = earliest; m <= lastSlot; m += SLOT_MINUTES) {
+    const s = hhmmFromMinutes(m);
+    if (!isSlotBlocked(s, blocks)) slots.push(s);
+  }
   return slots;
 }
 
@@ -389,7 +402,7 @@ const LM_COLORS = {
 
 const HostessView = React.memo(function HostessView({
   // Acciones
-  onAddWaitlist, onAddPhoneRes, onSeatParty, onUnseatParty, onCancelRes, onSaveEdit, onNotifyReady, onCheckIn, onRemoveFromWaitlist, onUndoCancel, toggleBlackoutDate,
+  onAddWaitlist, onAddPhoneRes, onSeatParty, onUnseatParty, onCancelRes, onSaveEdit, onNotifyReady, onCheckIn, onRemoveFromWaitlist, onUndoCancel, toggleBlackoutDate, removeBlackoutRow,
   handleTableSelection, onRefresh,
 
   // Estado y UI
@@ -404,7 +417,6 @@ const HostessView = React.memo(function HostessView({
   waitList, history, seatedList, canceledList, blackoutDates, tableStatuses, tableServerNames, tableReservedNames, serverRoster,
   walkinLoading, phoneResLoading, newReservationTick, realtimeConnected
 }) {
-  const blackoutInputRef = useRef(null);
   const bookingDateRef = useRef(null);
   const headerDateRef = useRef(null);
   const autoCancelledRef = useRef(new Set());
@@ -437,7 +449,19 @@ const HostessView = React.memo(function HostessView({
   };
   const [editingRes, setEditingRes] = useState(null);
   const [editingWaitItem, setEditingWaitItem] = useState(null);
-  const [blackoutForm, setBlackoutForm] = useState({ date: '', notes: '' });
+  const submitBlackout = async ({ date, notes, type, start, end }) => {
+    if (!date) return false;
+    if (start || end) {
+      if (!start || !end || start >= end) { alert('Pick a valid start and end time.'); return false; }
+      const { data: affected } = await supabase.from('reservations').select('id')
+        .eq('dateISO', date).eq('status', 'reserved').gte('timeHHMM', start).lt('timeHHMM', end);
+      if (affected?.length && !window.confirm(`${affected.length} reservation(s) fall in this window. They will NOT be changed. Create the block anyway?`)) return false;
+      await toggleBlackoutDate(date, notes, type, start, end);
+    } else {
+      await toggleBlackoutDate(date, notes, type);
+    }
+    return true;
+  };
   const [showWaitPicker, setShowWaitPicker] = useState(false);
   const [exitingIds, setExitingIds] = useState(new Set());
   const [assignMode, setAssignMode] = useState(false);
@@ -617,7 +641,7 @@ const HostessView = React.memo(function HostessView({
                   <div className="sr-booking-field">
                     <label className="sr-fieldLabel">Time</label>
                     <select className="sr-booking-input" value={timeHHMM} onChange={e => setTimeHHMM(e.target.value)} disabled={isBlackout}>
-                      {getTimeSlots(dateISO).map(slot => (
+                      {getTimeSlots(dateISO, false, getTimeBlocks(dateISO, blackoutDates)).map(slot => (
                         <option key={slot} value={slot}>{formatTimeLabel(slot)}</option>
                       ))}
                     </select>
@@ -953,76 +977,7 @@ const HostessView = React.memo(function HostessView({
               </>
             )}
             {activeTab === 'blackout' && (
-              <div className="sr-walkin-form">
-                <div className="sr-formGrid" style={{marginBottom: '16px'}}>
-                  <div className="sr-field">
-                    <label className="sr-fieldLabel">Date</label>
-                    <input
-                      ref={blackoutInputRef}
-                      type="date"
-                      className="sr-input"
-                      style={{cursor: 'pointer'}}
-                      value={blackoutForm.date}
-                      onChange={e => setBlackoutForm(f => ({ ...f, date: e.target.value }))}
-                      onClick={() => blackoutInputRef.current?.showPicker()}
-                    />
-                  </div>
-                  <div className="sr-field">
-                    <label className="sr-fieldLabel">Reason</label>
-                    <input
-                      className="sr-input"
-                      placeholder="e.g. Evento privado, Chismas…"
-                      value={blackoutForm.notes}
-                      onChange={e => setBlackoutForm(f => ({ ...f, notes: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
-                  <button
-                    className="sr-btn"
-                    disabled={!blackoutForm.date}
-                    style={{background: LM_COLORS.danger, color: '#fff', border: 'none', flex: 1, opacity: !blackoutForm.date ? 0.5 : 1}}
-                    onClick={async () => {
-                      await toggleBlackoutDate(blackoutForm.date, blackoutForm.notes, 'closed');
-                      setBlackoutForm({ date: '', notes: '' });
-                    }}
-                  >
-                    Closed Today
-                  </button>
-                  <button
-                    className="sr-btn"
-                    disabled={!blackoutForm.date}
-                    style={{background: LM_COLORS.warn, color: '#fff', border: 'none', flex: 1, opacity: !blackoutForm.date ? 0.5 : 1}}
-                    onClick={async () => {
-                      await toggleBlackoutDate(blackoutForm.date, blackoutForm.notes, 'walkin_only');
-                      setBlackoutForm({ date: '', notes: '' });
-                    }}
-                  >
-                    Only Walk-In
-                  </button>
-                </div>
-
-                <div style={{marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                  {blackoutDates.length === 0 && <p style={{color: LM_COLORS.textFaint, fontSize: '0.72rem'}}>No blocked dates.</p>}
-                  {blackoutDates.map(b => (
-                    <div key={b.date_iso} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: b.type === 'walkin_only' ? 'oklch(93% 0.06 85)' : 'oklch(93% 0.03 25)', border: `1px solid ${b.type === 'walkin_only' ? 'oklch(80% 0.1 80)' : 'oklch(85% 0.06 25)'}`, borderRadius: '0', padding: '12px 16px'}}>
-                      <div>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                          <span style={{fontWeight: '700', fontSize: '0.76rem'}}>{b.date_iso}</span>
-                          <span style={{fontSize: '0.6rem', fontWeight: '800', padding: '2px 8px', borderRadius: '20px', background: b.type === 'walkin_only' ? LM_COLORS.warn : LM_COLORS.danger, color: '#fff'}}>
-                            {b.type === 'walkin_only' ? 'WALK-IN' : 'CLOSED'}
-                          </span>
-                        </div>
-                        {b.notes && <div style={{fontSize: '0.66rem', color: b.type === 'walkin_only' ? 'oklch(45% 0.12 70)' : 'oklch(45% 0.16 25)', marginTop: '2px'}}>{b.notes}</div>}
-                      </div>
-                      <button
-                        style={{background: 'none', border: 'none', cursor: 'pointer', color: LM_COLORS.danger, fontSize: '1.1rem', fontWeight: '700', padding: '4px 8px'}}
-                        onClick={() => toggleBlackoutDate(b.date_iso)}
-                      >✕</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <BlackoutManager blackoutDates={blackoutDates} onSubmit={submitBlackout} removeBlackoutRow={removeBlackoutRow} />
             )}
             {activeTab === 'servers' && (
               <div className="sr-walkin-form">
@@ -1139,8 +1094,8 @@ const HostessView = React.memo(function HostessView({
               <div className="sr-field"><label className="sr-fieldLabel">Last Name</label><input className="sr-input" value={editingRes.lastName} onChange={e => setEditingRes({...editingRes, lastName: e.target.value})} /></div>
               <div className="sr-field"><label className="sr-fieldLabel">Phone</label><input className="sr-input" value={editingRes.phone || ''} onChange={e => setEditingRes({...editingRes, phone: e.target.value})} /></div>
               <div className="sr-field"><label className="sr-fieldLabel">Email</label><input className="sr-input" value={editingRes.email || ''} onChange={e => setEditingRes({...editingRes, email: e.target.value})} /></div>
-              <div className="sr-field"><label className="sr-fieldLabel">Date</label><input className="sr-input" type="date" style={{cursor:'pointer'}} value={editingRes.dateISO || ''} onChange={e => setEditingRes({...editingRes, dateISO: e.target.value, timeHHMM: getTimeSlots(e.target.value)[0] || editingRes.timeHHMM})} onClick={e => e.target.showPicker()} /></div>
-              <div className="sr-field"><label className="sr-fieldLabel">Time</label><select className="sr-input" value={editingRes.timeHHMM || ''} onChange={e => setEditingRes({...editingRes, timeHHMM: e.target.value})}>{getTimeSlots(editingRes.dateISO).map(slot => (<option key={slot} value={slot}>{formatTimeLabel(slot)}</option>))}</select></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Date</label><input className="sr-input" type="date" style={{cursor:'pointer'}} value={editingRes.dateISO || ''} onChange={e => setEditingRes({...editingRes, dateISO: e.target.value, timeHHMM: getTimeSlots(e.target.value, false, getTimeBlocks(e.target.value, blackoutDates))[0] || editingRes.timeHHMM})} onClick={e => e.target.showPicker()} /></div>
+              <div className="sr-field"><label className="sr-fieldLabel">Time</label><select className="sr-input" value={editingRes.timeHHMM || ''} onChange={e => setEditingRes({...editingRes, timeHHMM: e.target.value})}>{getTimeSlots(editingRes.dateISO, false, getTimeBlocks(editingRes.dateISO, blackoutDates)).map(slot => (<option key={slot} value={slot}>{formatTimeLabel(slot)}</option>))}</select></div>
               <div className="sr-field"><label className="sr-fieldLabel">Guests</label><input className="sr-input" type="number" min="1" placeholder="—" value={editingRes.guests ?? ''} onFocus={e => e.target.select()} onChange={e => setEditingRes({...editingRes, guests: e.target.value === '' ? '' : parseInt(e.target.value) || 1})} /></div>
               <div className="sr-field"><label className="sr-fieldLabel">Celebration</label><select className="sr-input" value={editingRes.celebration || 'None'} onChange={e => setEditingRes({...editingRes, celebration: e.target.value})}><option>None</option><option>Birthday</option><option>Anniversary</option><option>Wedding</option><option>Graduation</option><option>Other</option></select></div>
               <div className="sr-field"><label className="sr-fieldLabel">Dietary</label><select className="sr-input" value={editingRes.dietary || 'None'} onChange={e => setEditingRes({...editingRes, dietary: e.target.value})}><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten Free</option><option>Dairy Free</option><option>Nut Allergy</option><option>Shellfish Allergy</option></select></div>
@@ -1248,7 +1203,7 @@ const ClientSearchView = React.memo(function ClientSearchView({
   guests, setGuests,
   timeHHMM, setTimeHHMM,
   isBlackout, isWalkInOnly, setStep,
-  bookedHourCounts, bookedHourGuests
+  bookedHourCounts, bookedHourGuests, timeBlocks
 }) {
   const range = getAvailableTimeRange(dateISO);
   const [tick, setTick] = useState(0);
@@ -1257,7 +1212,7 @@ const ClientSearchView = React.memo(function ClientSearchView({
     const id = setInterval(() => setTick(t => t + 1), 60000);
     return () => clearInterval(id);
   }, []);
-  const availableSlots = getTimeSlots(dateISO, true).filter(slot => {
+  const availableSlots = getTimeSlots(dateISO, true, timeBlocks).filter(slot => {
     const hour = Math.floor(minutesFromHHMM(slot) / 60);
     return (bookedHourCounts[hour] || 0) < MAX_RESERVATIONS_PER_HOUR &&
            (bookedHourGuests[hour] || 0) < RESTAURANT_CAPACITY;
@@ -1568,7 +1523,7 @@ const DIETARY_OPTIONS = ['None','Vegetarian','Vegan','Gluten-Free','Nut Allergy'
 const mgInput = { width: '100%', padding: '13px 14px', borderRadius: 10, border: '1px solid rgba(227,169,74,0.18)', background: 'rgba(255,255,255,0.03)', color: '#F1E8DA', fontFamily: "'Space Grotesk',system-ui,sans-serif", fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', colorScheme: 'dark' };
 const mgLabel = { display: 'block', fontSize: '0.68rem', color: '#C9A876', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 7 };
 
-const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDate, onDateChange, history, waitList, seatedList, canceledList, rows, tableStatuses, isBlackout, onRefresh, onSignOut }) {
+const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDate, onDateChange, history, waitList, seatedList, canceledList, rows, tableStatuses, isBlackout, timeBlocks, onRefresh, onSignOut }) {
   const [activeSection, setActiveSection] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
@@ -1604,7 +1559,7 @@ const ManagerView = React.memo(function ManagerView({ dateISO, dateLabel, stepDa
     if (isBlackout) return alert('Cannot make reservations on a closed day.');
     if (dateISO < dateISOFromDate(new Date())) return alert('Cannot make reservations for a past date.');
     if (!addForm.firstName.trim() || !addForm.lastName.trim()) return alert('First and last name are required.');
-    if (!isTimeAllowed(dateISO, addForm.timeHHMM)) {
+    if (!isTimeAllowed(dateISO, addForm.timeHHMM, timeBlocks)) {
       const range = getAvailableTimeRange(dateISO);
       return alert(range ? `Reservations only accepted between ${formatTimeLabel(range.open)} and ${formatTimeLabel(range.lastSlot)}.` : 'The restaurant is closed this day.');
     }
@@ -1981,12 +1936,13 @@ export default function App() {
   // dayStatus: 'open' | 'closed' | 'walkin_only'
   const dayStatus = useMemo(() => {
     if (!isRestaurantOpen(dateISO)) return 'closed';
-    const entry = blackoutDates.find(b => b.date_iso === dateISO);
+    const entry = blackoutDates.find(b => b.date_iso === dateISO && !b.start_time);
     if (!entry) return 'open';
     return entry.type || 'closed';
   }, [dateISO, blackoutDates]);
   const isBlackout = dayStatus === 'closed';
   const isWalkInOnly = dayStatus === 'walkin_only';
+  const timeBlocks = useMemo(() => getTimeBlocks(dateISO, blackoutDates), [dateISO, blackoutDates]);
 
   const history = useMemo(() => rows.filter((r) => r.status === "reserved").sort((a, b) => {
     const notifDiff = (b.notified_at ? 1 : 0) - (a.notified_at ? 1 : 0);
@@ -2071,8 +2027,8 @@ export default function App() {
   // Cargar y sincronizar blackout_dates en tiempo real
   useEffect(() => {
     const load = () =>
-      supabase.from('blackout_dates').select('date_iso, notes, type').then(({ data }) => {
-        if (data) setBlackoutDates(data.map(r => ({ date_iso: r.date_iso, notes: r.notes || '', type: r.type || 'closed' })));
+      supabase.from('blackout_dates').select('id, date_iso, notes, type, start_time, end_time').then(({ data }) => {
+        if (data) setBlackoutDates(data.map(r => ({ id: r.id, date_iso: r.date_iso, notes: r.notes || '', type: r.type || 'closed', start_time: r.start_time, end_time: r.end_time })));
       });
     load();
     const channel = supabase
@@ -2125,13 +2081,22 @@ export default function App() {
     setTimeHHMM(hhmmFromMinutes(mins));
   };
 
-  const toggleBlackoutDate = async (dateToToggle, notes, type = 'closed') => {
+  const toggleBlackoutDate = async (dateToToggle, notes, type = 'closed', startTime = null, endTime = null) => {
     if (!dateToToggle) return;
-    if (blackoutDates.some(b => b.date_iso === dateToToggle)) {
-      await supabase.from('blackout_dates').delete().eq('date_iso', dateToToggle);
+    if (startTime) {
+      await supabase.from('blackout_dates').insert({ date_iso: dateToToggle, notes: notes || null, type, start_time: startTime, end_time: endTime });
+      return;
+    }
+    const fullDayRow = blackoutDates.find(b => b.date_iso === dateToToggle && !b.start_time);
+    if (fullDayRow) {
+      await supabase.from('blackout_dates').delete().eq('id', fullDayRow.id);
     } else {
       await supabase.from('blackout_dates').insert({ date_iso: dateToToggle, notes: notes || null, type });
     }
+  };
+
+  const removeBlackoutRow = async (id) => {
+    await supabase.from('blackout_dates').delete().eq('id', id);
   };
 
   const handleTableSelection = async (table) => {
@@ -2160,6 +2125,8 @@ export default function App() {
     if (walkinSubmittingRef.current) return;
     walkinSubmittingRef.current = true;
     if (isBlackout) { walkinSubmittingRef.current = false; return alert("Cannot add to waitlist on a closed day."); }
+    const nowHHMM = hhmmFromMinutes(new Date().getHours() * 60 + new Date().getMinutes());
+    if (timeBlocks.some(b => b.type === 'closed' && isSlotBlocked(nowHHMM, [b]))) { walkinSubmittingRef.current = false; return alert("Cannot add to waitlist during a closed time window."); }
     const todayISO = dateISOFromDate(new Date());
     if (dateISO !== todayISO) { walkinSubmittingRef.current = false; return alert("Walk-ins can only be added for today's date. Please switch to today."); }
     if (!walkInForm.firstName) { walkinSubmittingRef.current = false; return alert("First name is required."); }
@@ -2234,7 +2201,7 @@ export default function App() {
     }
 
     // Validación de horario
-    if (!isTimeAllowed(dateISO, timeHHMM)) {
+    if (!isTimeAllowed(dateISO, timeHHMM, timeBlocks)) {
       const range = getAvailableTimeRange(dateISO);
       _resetPhoneRef();
       return alert(
@@ -2425,7 +2392,7 @@ export default function App() {
       setSubmitting(false);
       return;
     }
-    if (!isTimeAllowed(dateISO, timeHHMM)) {
+    if (!isTimeAllowed(dateISO, timeHHMM, timeBlocks)) {
       const range = getAvailableTimeRange(dateISO);
       return alert(
         range
@@ -2515,7 +2482,7 @@ export default function App() {
     <ManagerView
       dateISO={dateISO} dateLabel={dateLabel} stepDate={stepDate} onDateChange={handleDateChange}
       history={history} waitList={waitList} seatedList={seatedList}
-      canceledList={canceledList} rows={rows} tableStatuses={tableStatuses} isBlackout={isBlackout}
+      canceledList={canceledList} rows={rows} tableStatuses={tableStatuses} isBlackout={isBlackout} timeBlocks={timeBlocks}
       onRefresh={handleRefreshRows}
       onSignOut={() => setViewMode('manager-lock')}
     />
@@ -2539,6 +2506,7 @@ export default function App() {
         onNotifyReady={handleNotifyReady}
         onCheckIn={handleCheckIn}
         toggleBlackoutDate={toggleBlackoutDate}
+        removeBlackoutRow={removeBlackoutRow}
         handleTableSelection={handleTableSelection}
         onRefresh={handleRefreshRows}
         activeFloor={activeFloor}
@@ -2598,6 +2566,7 @@ export default function App() {
           setStep={setStep}
           bookedHourCounts={bookedHourCounts}
           bookedHourGuests={bookedHourGuests}
+          timeBlocks={timeBlocks}
         />
       </ClientStepShell>
     );
