@@ -110,6 +110,17 @@ function formatBookedAt(iso) {
   if (isNaN(dt.getTime())) return "";
   return `${pad2(dt.getMonth() + 1)}/${pad2(dt.getDate())} ${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
 }
+function formatPhoneDisplay(phone) {
+  if (!phone) return '';
+  const match = COUNTRY_CODES.find(c => phone.startsWith(c.code));
+  const code = match ? match.code : (phone.startsWith('+') ? phone.slice(0, phone.length - 10) : '');
+  const rest = phone.slice(code.length);
+  if (rest.length === 10) {
+    return `${code} ${rest.slice(0, 3)} ${rest.slice(3, 6)} ${rest.slice(6)}`.trim();
+  }
+  const groups = rest.match(/.{1,3}/g) || [];
+  return `${code} ${groups.join(' ')}`.trim();
+}
 function clampGuests(n) {
   const x = Number(n);
   return Math.min(Math.max(Number.isFinite(x) ? x : 1, 1), MAX_GUESTS);
@@ -703,7 +714,7 @@ const HostessView = React.memo(function HostessView({
                           );
                         })()}
                       </div>
-                      <small style={{ color: LM_COLORS.textFaint }}>{item.checked_in_at ? 'Checked in at' : 'In at'} {new Date(item.checked_in_at || item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{item.phone ? ` · ${item.phone}` : ''}</small>
+                      <small style={{ color: LM_COLORS.textFaint }}>{item.checked_in_at ? 'Checked in at' : 'In at'} {new Date(item.checked_in_at || item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}{item.phone ? <> · <span style={{ fontSize: '1.1em' }}>{formatPhoneDisplay(item.phone)}</span></> : ''}</small>
                       {item.notes && <div style={{ fontSize: '0.68rem', fontStyle: 'italic', color: LM_COLORS.textMuted, marginTop: '2px' }}>"{item.notes}"</div>}
                       {item.notified_at && (() => {
                         const remaining = Math.max(0, 10 * 60 * 1000 - (nowSec - new Date(item.notified_at).getTime()));
@@ -754,7 +765,7 @@ const HostessView = React.memo(function HostessView({
                         </div>
                         <span style={{ fontWeight: '700', fontFamily: "'Playfair Display',serif", fontSize: '1.1rem' }}>{res.timeHHMM ? formatTimeLabel(res.timeHHMM) : ""}</span>
                       </div>
-                      {res.phone && <div style={{ fontSize: '0.68rem', color: LM_COLORS.textMuted, marginTop: '6px', fontWeight: '500' }}>{res.phone}</div>}
+                      {res.phone && <div style={{ fontSize: '0.68rem', color: LM_COLORS.textMuted, marginTop: '6px', fontWeight: '500' }}><span style={{ fontSize: '1.1em' }}>{formatPhoneDisplay(res.phone)}</span></div>}
                       {res.notes && <div style={{ color: LM_COLORS.textMuted, fontSize: '0.68rem', background: 'oklch(95% 0.006 90)', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{res.notes}"</div>}
                       <div style={{ fontSize: '0.68rem', color: LM_COLORS.textMuted, marginTop: '6px', fontWeight: '500' }}>Booked by {res.source === 'online' ? 'Client View' : 'Hostess'} · {formatBookedAt(res.created_at)}</div>
                       {res.notified_at && (() => {
@@ -798,7 +809,7 @@ const HostessView = React.memo(function HostessView({
                         <span style={{ fontWeight: '700', color: LM_COLORS.success }}>Seated {item.seated_at ? new Date(item.seated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}</span>
                       </div>
                       {item.timeHHMM && <div style={{ fontSize: '0.68rem', color: LM_COLORS.textFaint, marginTop: '2px' }}>Res. time: {formatTimeLabel(item.timeHHMM)}</div>}
-                      {item.phone && <div style={{ fontSize: '0.68rem', color: LM_COLORS.textMuted, marginTop: '2px', fontWeight: '500' }}>{item.phone}</div>}
+                      {item.phone && <div style={{ fontSize: '0.68rem', color: LM_COLORS.textMuted, marginTop: '2px', fontWeight: '500' }}><span style={{ fontSize: '1.1em' }}>{formatPhoneDisplay(item.phone)}</span></div>}
                       {item.notes && <div style={{ color: LM_COLORS.textMuted, fontSize: '0.68rem', background: 'oklch(95% 0.006 90)', padding: '6px 12px', borderRadius: '6px', marginTop: '6px', display: 'inline-block' }}>"{item.notes}"</div>}
                     </div>
                     <button
@@ -820,7 +831,7 @@ const HostessView = React.memo(function HostessView({
                         <div><strong style={{ fontSize: '1.2rem', fontWeight: '600', fontFamily: "'Playfair Display',serif", textDecoration: 'line-through', color: LM_COLORS.textFaint }}>{item.firstName} {item.lastName}</strong><span style={{ color: LM_COLORS.textFaint, marginLeft: '8px' }}>({item.guests} pax)</span>{item.notified_at && <span style={{ background: LM_COLORS.danger, color: '#fff', borderRadius: '3px', padding: '3px 9px', fontSize: '0.62rem', fontWeight: '700', marginLeft: '8px', verticalAlign: 'middle' }}>Didn't Show</span>}</div>
                         <span style={{ fontWeight: '700', color: LM_COLORS.textFaint }}>{item.timeHHMM ? formatTimeLabel(item.timeHHMM) : ""}</span>
                       </div>
-                      {item.phone && <div style={{ fontSize: '0.68rem', color: LM_COLORS.textFaint, marginTop: '2px' }}>{item.phone}</div>}
+                      {item.phone && <div style={{ fontSize: '0.68rem', color: LM_COLORS.textFaint, marginTop: '2px' }}><span style={{ fontSize: '1.1em' }}>{formatPhoneDisplay(item.phone)}</span></div>}
                       {item.notes && <div style={{ color: LM_COLORS.textFaint, fontSize: '0.68rem', marginTop: '4px', fontStyle: 'italic' }}>"{item.notes}"</div>}
                     </div>
                     <div style={{ flexShrink: 0 }}>
@@ -1508,7 +1519,7 @@ function RecordCard({ r, onClick }) {
           ? r.created_at && <div>Time: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong></div>
           : r.timeHHMM && <div>Time: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{r.timeHHMM}</strong></div>
         }
-        {r.phone && <div>Phone: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{r.phone}</strong></div>}
+        {r.phone && <div>Phone: <strong style={{ color: '#F1E8DA', fontWeight: 600, fontSize: '1.1em' }}>{formatPhoneDisplay(r.phone)}</strong></div>}
         {sourceLabel && <div>Source: <strong style={{ color: '#F1E8DA', fontWeight: 600 }}>{sourceLabel}</strong></div>}
         {r.celebration && r.celebration !== 'None' && <div>Celebration: <strong style={{ color: '#E9B65C', fontWeight: 600 }}>{r.celebration}</strong></div>}
         {r.dietary && r.dietary !== 'None' && <div>Dietary: <strong style={{ color: '#E9B65C', fontWeight: 600 }}>{r.dietary}</strong></div>}
